@@ -46,6 +46,18 @@ namespace SysBot.Pokemon
         [Category(Raid), Description("[RaidBot] Extra time in milliseconds to wait after deleting a friend.")]
         public int ExtraTimeDeleteFriend { get; set; } = 0;
 
+        [Category(Raid), Description("[SWSH] Extra time in milliseconds to wait to toggle airplane mode.")]
+        public int ExtraTimeAirplane { get; set; } = 0;
+
+        [Category(Raid), Description("[SWSH] Time in milliseconds to wait for game to unfreeze after toggling airplane mode and YComm state to refresh.")]
+        public int AirplaneConnectionFreezeDelay { get; set; } = 0;
+
+        [Category(Raid), Description("[SWSH] Extra time in milliseconds to enter a lobby for AutoRoll.")]
+        public int ExtraTimeLoadLobbyAR { get; set; } = 0;
+
+        [Category(Raid), Description("[SWSH] Extra time in milliseconds between A button clicks when collecting watts. More than 250ms shouldn't be needed.")]
+        public int ExtraTimeAButtonClickAR { get; set; } = 0;
+
         // Miscellaneous settings.
         [Category(Misc), Description("[SWSH] Extra time in milliseconds to wait after clicking + to reconnect to Y-Comm.")]
         public int ExtraTimeReconnectYComm { get; set; } = 0;

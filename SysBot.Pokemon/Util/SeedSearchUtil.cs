@@ -125,5 +125,171 @@ namespace SysBot.Pokemon
             }
             return true;
         }
+
+        public static void SpecificSeedSearch(DenUtil.RaidData raidInfo, out long frames, out ulong seedRes, out ulong threeDay, out string ivSpread)
+        {
+            threeDay = seedRes = 0;
+            frames = 0;
+            ivSpread = string.Empty;
+            ulong seed = raidInfo.Den.Seed;
+            var rng = new Xoroshiro128Plus(seed);
+            for (long i = 0; i < raidInfo.SearchRange; i++)
+            {
+                if (i > 0)
+                {
+                    rng = new Xoroshiro128Plus(seed);
+                    seed = rng.Next();
+                    rng = new Xoroshiro128Plus(seed);
+                }
+
+                uint EC = (uint)rng.NextInt(0xFFFFFFFF);
+                uint SIDTID = (uint)rng.NextInt(0xFFFFFFFF);
+                uint PID = (uint)rng.NextInt(0xFFFFFFFF);
+                uint shinytype = GetShinyType(PID, SIDTID);
+
+                if (shinytype == (uint)raidInfo.Shiny)
+                {
+                    rng = GetIVs(rng, raidInfo.IVs, raidInfo.GuaranteedIVs, out uint[,] allIVs, out bool IVMatch);
+                    if (!IVMatch)
+                        continue;
+
+                    GetCharacteristic(EC, allIVs, raidInfo.GuaranteedIVs - 1, out bool charMatch, raidInfo.Characteristic);
+                    if (!charMatch)
+                        continue;
+
+                    rng = GetAbility(rng, raidInfo.Den.IsEvent ? raidInfo.RaidDistributionEncounter.Ability : (uint)raidInfo.RaidEncounter.Ability, out uint abilityT);
+                    bool abilityMatch = raidInfo.Ability == AbilityType.Any ? abilityT != (uint)raidInfo.Ability : abilityT == (uint)raidInfo.Ability;
+                    if (!abilityMatch)
+                        continue;
+
+                    rng = GetGender(rng, raidInfo.Ratio, raidInfo.Den.IsEvent ? raidInfo.RaidDistributionEncounter.Gender : (uint)raidInfo.RaidEncounter.Gender, out uint genderT);
+                    bool genderMatch = raidInfo.Gender == GenderType.Any ? genderT != (uint)raidInfo.Gender : genderT == (uint)raidInfo.Gender;
+                    if (!genderMatch)
+                        continue;
+
+                    GetNature(rng, raidInfo.Den.IsEvent ? raidInfo.RaidDistributionEncounter.Species : raidInfo.RaidEncounter.Species, raidInfo.Den.IsEvent ? raidInfo.RaidDistributionEncounter.AltForm : raidInfo.RaidEncounter.AltForm, out uint natureT);
+                    bool natureMatch = raidInfo.Nature == Nature.Random ? natureT != (uint)raidInfo.Nature : natureT == (uint)raidInfo.Nature;
+                    if (!natureMatch)
+                        continue;
+
+                    ivSpread = DenUtil.IVSpreadByStar(GetIVSpread(allIVs), raidInfo, seed);
+                    frames = i;
+                    seedRes = seed;
+                    for (int d = 3; d > 0; d--)
+                        seed -= 0x82A2B175229D6A5B;
+                    threeDay = seed;
+                    return;
+                }
+
+                if (i >= raidInfo.SearchRange)
+                    return;
+            }
+        }
+
+        public static uint GetCharacteristic(uint ec, uint[,] ivlist, uint guaranteedIVs, out bool charMatch, Characteristics characteristic = Characteristics.Any)
+        {
+            uint[] statOrder = new uint[6] { 0, 1, 2, 5, 3, 4 };
+            uint charStat = ec % 6;
+            for (uint i = 0; i < 6; i++)
+            {
+                uint stat = (charStat + i) % 6;
+                if (ivlist[guaranteedIVs, statOrder[stat]] == 31)
+                {
+                    charMatch = CharMatch(stat, characteristic);
+                    return stat;
+                }
+            }
+            charMatch = CharMatch(charStat, characteristic);
+            return charStat;
+        }
+
+        public static Xoroshiro128Plus GetGender(Xoroshiro128Plus rng, GenderRatio ratio, uint genderIn, out uint gender)
+        {
+            gender = genderIn switch
+            {
+                0 => ratio == GenderRatio.Genderless ? 2 : ratio == GenderRatio.Female ? 1 : ratio == GenderRatio.Male ? 0 : ((rng.NextInt(253) + 1) < (uint)ratio ? (uint)GenderType.Female : (uint)GenderType.Male),
+                1 => 0,
+                2 => 1,
+                3 => 2,
+                _ => (rng.NextInt(253) + 1) < (uint)ratio ? (uint)GenderType.Female : (uint)GenderType.Male,
+            };
+            return rng;
+        }
+
+        public static Xoroshiro128Plus GetAbility(Xoroshiro128Plus rng, uint nestAbility, out uint ability)
+        {
+            ability = nestAbility switch
+            {
+                4 => (uint)rng.NextInt(3),
+                3 => (uint)rng.NextInt(2),
+                _ => nestAbility,
+            };
+            return rng;
+        }
+
+        public static void GetNature(Xoroshiro128Plus rng, uint species, uint altform, out uint nature)
+        {
+            nature = species switch
+            {
+                849 => altform == 0 ? (uint)TradeExtensions.Amped[rng.NextInt(13)] : (uint)TradeExtensions.LowKey[rng.NextInt(12)],
+                _ => (uint)rng.NextInt(25),
+            };
+        }
+
+        public static Xoroshiro128Plus GetIVs(Xoroshiro128Plus rng, uint[] ivs, uint guaranteedIVs, out uint[,] allIVs, out bool match)
+        {
+            Xoroshiro128Plus origrng = rng;
+            GetShinyIVs(rng, out allIVs);
+            rng = origrng;
+            uint[] ivRow = new uint[6] { 255, 255, 255, 255, 255, 255 };
+            List<bool> ivCheck = new();
+
+            for (uint fixedIV = 0; fixedIV < guaranteedIVs;)
+            {
+                uint index = (uint)rng.NextInt(6);
+                if (ivRow[index] == 255)
+                {
+                    ivRow[index] = 31;
+                    fixedIV++;
+                }
+            }
+
+            for (int rand = 0; rand < 6; rand++)
+            {
+                if (ivRow[rand] == 255)
+                    ivRow[rand] = (uint)rng.NextInt(32);
+            }
+
+            for (int i = 0; i < 6; i++)
+            {
+                if (ivs[i] != 255)
+                    ivCheck.Add(ivs[i] == allIVs[guaranteedIVs - 1, i]);
+            }
+
+            if (ivCheck.Contains(false))
+                match = false;
+            else match = true;
+
+            return rng;
+        }
+
+        private static string GetIVSpread(uint[,] ivResult)
+        {
+            string ivlist = "";
+            for (int ivcount = 0; ivcount < 5; ivcount++)
+            {
+                for (int j = 0; j < 6; j++)
+                {
+                    ivlist += ivResult[ivcount, j];
+                    if (j < 5)
+                        ivlist += "/";
+                    else if (j == 5)
+                        ivlist += "\n";
+                }
+            }
+            return ivlist;
+        }
+
+        private static bool CharMatch(uint stat, Characteristics characteristic) => characteristic == Characteristics.Any || (uint)characteristic == stat;
     }
 }

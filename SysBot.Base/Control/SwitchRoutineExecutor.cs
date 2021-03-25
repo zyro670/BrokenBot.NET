@@ -92,5 +92,17 @@ namespace SysBot.Base
             } while (sw.ElapsedMilliseconds < waitms);
             return false;
         }
+
+        public async Task DaySkip(CancellationToken token) => await Connection.SendAsync(SwitchCommand.DaySkip(UseCRLF), token).ConfigureAwait(false);
+        public async Task ResetNTP(CancellationToken token) => await Connection.SendAsync(SwitchCommand.ResetTimeNTP(UseCRLF), token).ConfigureAwait(false);
+        public async Task ResetTime(CancellationToken token) => await Connection.SendAsync(SwitchCommand.ResetTime(UseCRLF), token).ConfigureAwait(false);
+
+        public async Task HoldUSB(SwitchButton b, int hold, int delay, CancellationToken token)
+        {
+            await Connection.SendAsync(SwitchCommand.Hold(b), token).ConfigureAwait(false);
+            await Task.Delay(hold);
+            await Connection.SendAsync(SwitchCommand.Release(b), token).ConfigureAwait(false);
+            await Task.Delay(delay);
+        }
     }
 }

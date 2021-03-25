@@ -88,7 +88,6 @@
             ((System.ComponentModel.ISupportInitialize)(this.PB_Lamp)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
-
         }
 
         #endregion

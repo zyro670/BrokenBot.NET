@@ -38,12 +38,18 @@ namespace SysBot.Pokemon.Discord
 
         public void TradeCanceled(PokeRoutineExecutor<T> routine, PokeTradeDetail<T> info, PokeTradeResult msg)
         {
+            if (info.Type == PokeTradeType.TradeCord)
+                TradeCordHelper<T>.HandleTradedCatches(Trader.Id, false);
+
             OnFinish?.Invoke(routine);
             Trader.SendMessageAsync($"Trade canceled: {msg}").ConfigureAwait(false);
         }
 
         public void TradeFinished(PokeRoutineExecutor<T> routine, PokeTradeDetail<T> info, T result)
         {
+            if (info.Type == PokeTradeType.TradeCord)
+                TradeCordHelper<T>.HandleTradedCatches(Trader.Id, true);
+
             OnFinish?.Invoke(routine);
             var tradedToUser = Data.Species;
             var message = tradedToUser != 0 ? $"Trade finished. Enjoy your {(Species)tradedToUser}!" : "Trade finished!";

@@ -7,5 +7,9 @@
         Seed,
         Clone,
         Dump,
+        FixOT,
+        TradeCord,
+        Giveaway,
+        SupportTrade,
     }
 }
