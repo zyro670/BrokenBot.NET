@@ -39,6 +39,12 @@ namespace SysBot.Pokemon.Twitch
                 var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
                 PKM pkm = sav.GetLegal(template, out var result);
 
+				if (pkm.Nickname == "Egg")
+					TradeExtensions.EggTrade((PK8)pkm);
+
+				if (pkm.Species == 132)
+					TradeExtensions.DittoTrade((PK8)pkm);
+
                 if (!pkm.CanBeTraded())
                 {
                     msg = $"Skipping trade, @{username}: Provided Pokémon content is blocked from trading!";

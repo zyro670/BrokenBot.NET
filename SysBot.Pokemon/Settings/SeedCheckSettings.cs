@@ -12,6 +12,12 @@ namespace SysBot.Pokemon
 
         [Category(FeatureToggle), Description("Allows returning only the closest shiny frame, the first star and square shiny frames, or the first three shiny frames.")]
         public SeedCheckResults ResultDisplayMode { get; set; }
+
+        [Category(FeatureToggle), Description("When enabled, Seed Check results will be posted to a Discord channel instead of DMs.")]
+        public bool PostResultToChannel { get; set; }
+
+        [Category(FeatureToggle), Description("When enabled, Seed Check results will be posted to a Discord channel and DMs.")]
+        public bool PostResultToBoth { get; set; }
     }
 
     public enum SeedCheckResults

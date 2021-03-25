@@ -34,6 +34,11 @@ namespace SysBot.Pokemon
         [TypeConverter(typeof(ExpandableObjectConverter))]
         public DistributionSettings Distribution { get; set; } = new();
 
+        [Category(BotTrade), Description("Settings for TradeCord.")]
+        [TypeConverter(typeof(ExpandableObjectConverter))]
+        public TradeCordSettings TradeCord { get; set; } = new();
+
+
         [Category(BotTrade)]
         [TypeConverter(typeof(ExpandableObjectConverter))]
         public SeedCheckSettings SeedCheckSWSH { get; set; } = new();
@@ -63,6 +68,22 @@ namespace SysBot.Pokemon
         [Category(BotEncounter), Description("Stop conditions for EggBot, FossilBot, and EncounterBot.")]
         [TypeConverter(typeof(ExpandableObjectConverter))]
         public StopConditionSettings StopConditions { get; set; } = new();
+
+        [Category(BotEncounter)]
+        [TypeConverter(typeof(ExpandableObjectConverter))]
+        public LairBotSettings Lair { get; set; } = new();
+
+        [Category(BotEncounter)]
+        [TypeConverter(typeof(ExpandableObjectConverter))]
+        public DenSettings Den { get; set; } = new();
+
+        [Category(BotEncounter)]
+        [TypeConverter(typeof(ExpandableObjectConverter))]
+        public BoolSettings Bool { get; set; } = new();
+
+        [Category(BotEncounter)]
+        [TypeConverter(typeof(ExpandableObjectConverter))]
+        public CurryBotSettings Curry { get; set; } = new();
 
         // Integration
 

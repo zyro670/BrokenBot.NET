@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net7.0</TargetFramework>
@@ -7,7 +7,25 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="BotDen\FlatbuffersResource\NestDistributionEncSH.json" />
+    <None Remove="BotDen\FlatbuffersResource\NestDistributionEncSW.json" />
+    <None Remove="BotDen\FlatbuffersResource\shieldEnc.bin" />
+    <None Remove="BotDen\FlatbuffersResource\swordEnc.bin" />
+    <None Remove="Helpers\DexFlavor.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="BotDen\FlatbuffersResource\NestDistributionEncSH.json" />
+    <EmbeddedResource Include="BotDen\FlatbuffersResource\NestDistributionEncSW.json" />
+    <EmbeddedResource Include="Helpers\DexFlavor.txt" />
+    <EmbeddedResource Include="BotDen\FlatbuffersResource\shieldEnc.bin" />
+    <EmbeddedResource Include="BotDen\FlatbuffersResource\swordEnc.bin" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
     <PackageReference Include="PKHeX.Core" Version="23.1.30" />
+    <PackageReference Include="KdSoft.FlatBuffers" Version="1.12.0" />
     <ProjectReference Include="..\SysBot.Base\SysBot.Base.csproj" />
   </ItemGroup>
 
