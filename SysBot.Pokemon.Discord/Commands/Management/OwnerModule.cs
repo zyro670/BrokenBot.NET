@@ -95,6 +95,28 @@ namespace SysBot.Pokemon.Discord
             }
         }
 
+        [Command("addtc")]
+        [Summary("Adds a channel to the list of TradeCord channels that are accepting commands.")]
+        [RequireOwner]
+        // ReSharper disable once UnusedParameter.Global
+        public async Task AddTC()
+        {
+            var obj = GetReference(Context.Message.Channel);
+            SysCordSettings.Settings.TradeCordChannels.AddIfNew(new[] { obj });
+            await ReplyAsync("Done.").ConfigureAwait(false);
+        }
+
+        [Command("removetc")]
+        [Summary("Removes a channel from the list of TradeCord channels that are accepting commands.")]
+        [RequireOwner]
+        // ReSharper disable once UnusedParameter.Global
+        public async Task RemoveTC()
+        {
+            var obj = GetReference(Context.Message.Channel);
+            SysCordSettings.Settings.TradeCordChannels.RemoveAll(z => z.ID == obj.ID);
+            await ReplyAsync("Done.").ConfigureAwait(false);
+        }
+
         [Command("sudoku")]
         [Alias("kill", "shutdown")]
         [Summary("Causes the entire process to end itself!")]
