@@ -44,6 +44,27 @@
         RemoteControl = 6_000,
 
         // Add your own custom bots here so they don't clash for future main-branch bot releases.
+
+        /// <summary> Searches, injects, or skips to den seeds. </summary>
+        DenBot = 6001,
+
+        /// <summary> Attempts to fix advert names and minor legality issues of what a trade partner shows. </summary>
+        FixOT = 6002,
+
+        /// <summary> Discord mini-game that generates random Pokémon. </summary>
+        TradeCord = 6003,
+
+        /// <summary> Automates Dynamax Adventures. </summary>
+        LairBot = 6004,
+
+        /// <summary> Easily and quickly resets various in-game flags. </summary>
+        BoolBot = 6005,
+
+        /// <summary> Easily and quickly resets various in-game flags. </summary>
+        CurryBot = 6006,
+
+        /// <summary> Resets Swords Of Justice via the camp method. </summary>
+        SoJCamp = 6007,
     }
 
     public static class PokeRoutineTypeExtensions

@@ -118,9 +118,9 @@ namespace SysBot.Pokemon
             {
                 if (detail.Trade.IsProcessing && !canRemoveWhileProcessing)
                     continue;
-                Remove(detail);
                 if (detail.Trade.Type == PokeTradeType.TradeCord)
                 	TradeExtensions.TradeCordPath.Remove(TradeExtensions.TradeCordPath.FirstOrDefault(x => x.Contains(detail.UserID.ToString())));
+                Remove(detail);
             }
 
             return canRemoveWhileProcessing
