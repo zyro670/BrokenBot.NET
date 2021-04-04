@@ -67,7 +67,7 @@ namespace SysBot.Pokemon.Discord
             var code = Info.GetRandomTradeCode();
             await GiveawayAsync(code, content).ConfigureAwait(false);
         }
-        
+
         [Command("giveaway")]
         [Alias("ga", "giveme", "gimme")]
         [Summary("Makes the bot trade you the specified giveaway Pokémon.")]
@@ -292,7 +292,7 @@ namespace SysBot.Pokemon.Discord
         [Alias("l", "list")]
         [Summary("List user's Pokémon.")]
         [RequireQueueRole(nameof(DiscordManager.RolesTradeCord))]
-        public async Task PokeList([Summary("Species name of a Pokémon")] [Remainder] string name)
+        public async Task PokeList([Summary("Species name of a Pokémon")][Remainder] string name)
         {
             TradeCordParanoiaChecks(Context);
             var filters = name.Split('=').Length == 3 ? name.Split('=')[1].ToLower().Trim() + " " + name.Split('=')[2].ToLower().Trim() : name.Split('=').Length == 2 ? name.Split('=')[1].ToLower().Trim() : "";
@@ -659,7 +659,7 @@ namespace SysBot.Pokemon.Discord
                 await Context.Message.Channel.SendMessageAsync("TID has to be 6 digits long and only contain numbers!").ConfigureAwait(false);
                 return;
             }
-            
+
             if (!int.TryParse(trainerInfo.Find(x => x.Contains("sid:")).Split(':')[1].Trim(), out int sid))
             {
                 await Context.Message.Channel.SendMessageAsync("SID has to be 4 digits long and only contain numbers!").ConfigureAwait(false);
@@ -781,7 +781,7 @@ namespace SysBot.Pokemon.Discord
         [Alias("dex")]
         [Summary("Show missing dex entries and dex stats.")]
         [RequireQueueRole(nameof(DiscordManager.RolesTradeCord))]
-        public async Task TradeCordDex([Summary("Optional parameter \"Missing\" for missing entries.")]string mode = "")
+        public async Task TradeCordDex([Summary("Optional parameter \"Missing\" for missing entries.")] string mode = "")
         {
             TradeCordParanoiaChecks(Context);
             var embed = new EmbedBuilder { Color = Color.DarkBlue };
@@ -823,7 +823,7 @@ namespace SysBot.Pokemon.Discord
             var array = Directory.GetFiles(dir).Where(x => x.Contains(".pk8")).Select(x => int.Parse(x.Split('\\')[2].Split('-', '_')[0].Replace("★", "").Trim())).ToArray();
             array = array.OrderBy(x => x).ToArray();
             index = Indexing(array);
-            var newname = (pkm.IsShiny ? "★" + index.ToString() : index.ToString()) + $"_{(Ball)pkm.Ball}" + " - " + speciesName + form  + $"{(pkm.IsEgg ? " (Egg)" : "")}" + ".pk8";
+            var newname = (pkm.IsShiny ? "★" + index.ToString() : index.ToString()) + $"_{(Ball)pkm.Ball}" + " - " + speciesName + form + $"{(pkm.IsEgg ? " (Egg)" : "")}" + ".pk8";
             var fn = Path.Combine(dir, Util.CleanFileName(newname));
             File.WriteAllBytes(fn, pkm.DecryptedPartyData);
             TCInfo.Catches.Add(new TradeExtensions.Catch { Species = speciesName, Ball = ((Ball)pkm.Ball).ToString(), Egg = pkm.IsEgg, Form = form, ID = index, Path = fn, Shiny = pkm.IsShiny, Traded = false });

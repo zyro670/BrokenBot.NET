@@ -206,10 +206,10 @@ namespace SysBot.Pokemon
                     case 146: pkm.Met_Location = 244; break;
                 };
             }
-            
+
             if (pkm.IsShiny && pkm.Met_Location == 244)
                 CommonEdits.SetShiny(pkm, Shiny.AlwaysStar);
-            
+
             if (TradeEvo.Contains(pkm.Species))
                 pkm.HeldItem = 229;
 
@@ -255,7 +255,7 @@ namespace SysBot.Pokemon
             var pkm2 = PKMConverter.GetPKMfromBytes(File.ReadAllBytes(info.Catches.FirstOrDefault(x => x.ID == info.Daycare2.ID).Path));
             if (pkm1 == null || pkm2 == null)
                 return new PK8();
-            
+
             var ballRng = $"\nBall: {(Ball)Random.Next(2, 27)}";
             var ballRngDC = Random.Next(1, 3);
             bool specificEgg = (evo1 == evo2 && ValidEgg.Contains(evo1)) || ((evo1 == 132 || evo2 == 132) && (ValidEgg.Contains(evo1) || ValidEgg.Contains(evo2))) || ((evo1 == 29 || evo1 == 32) && (evo2 == 29 || evo2 == 32));

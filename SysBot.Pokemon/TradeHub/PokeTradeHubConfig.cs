@@ -50,6 +50,10 @@ namespace SysBot.Pokemon
 
         [Category(Bots)]
         [TypeConverter(typeof(ExpandableObjectConverter))]
+        public LairSettings Lair { get; set; } = new();
+
+        [Category(Bots)]
+        [TypeConverter(typeof(ExpandableObjectConverter))]
         public RaidSettings Raid { get; set; } = new();
 
         [Category(Bots)]
