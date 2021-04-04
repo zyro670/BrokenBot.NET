@@ -10,12 +10,14 @@ namespace SysBot.Base
     public abstract class RoutineExecutor<T> : IRoutineExecutor where T : class, IConsoleBotConfig
     {
         public readonly IConsoleConnectionAsync Connection;
+        public readonly ISwitchConnectionAsync SwitchConnection;
         public readonly T Config;
 
         protected RoutineExecutor(IConsoleBotManaged<IConsoleConnection, IConsoleConnectionAsync> cfg)
         {
             Config = (T)cfg;
             Connection = cfg.CreateAsynchronous();
+            SwitchConnection = (ISwitchConnectionAsync)Connection;
         }
 
         public string LastLogged { get; private set; } = "Not Started";
