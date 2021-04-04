@@ -51,11 +51,14 @@ namespace SysBot.Pokemon
                                                 521, 592, 593,
                                                 668 };
 
-        public static int[] Legends = { 144, 145, 146, 150, 151, 243, 244, 245, 249, 250, 251, 377, 378, 379, 380, 381,
-                                        382, 383, 384, 385, 480, 481, 482, 483, 484, 485, 486, 487, 488, 494, 638, 639,
-                                        640, 641, 642, 643, 644, 645, 646, 647, 649, 716, 717, 718, 719, 721, 772, 773,
-                                        785, 786, 787, 788, 789, 790, 791, 792, 800, 801, 802, 807, 808, 809, 888, 889,
-                                        890, 891, 892, 893, 894, 895, 896, 897, 898 };
+        public static int[] Legends = { 144, 145, 146, 150, 151,
+                                        243, 244, 245, 249, 250, 251,
+                                        377, 378, 379, 380, 381, 382, 383, 384, 385,
+                                        480, 481, 482, 483, 484, 485, 486, 487, 488,
+                                        494, 638, 639, 640, 641, 642, 643, 644, 645, 646, 647, 649,
+                                        716, 717, 718, 719, 721,
+                                        772, 773, 785, 786, 787, 788, 789, 790, 791, 792, 793, 794, 795, 796, 797, 798, 799, 800, 801, 802, 803, 804, 805, 806, 807, 808, 809,
+                                        888, 889, 890, 891, 892, 893, 894, 895, 896, 897, 898 };
 
         public static int[] ShinyLock = { (int)Species.Victini, (int)Species.Keldeo, (int)Species.Volcanion, (int)Species.Cosmog, (int)Species.Cosmoem, (int)Species.Magearna,
                                           (int)Species.Marshadow, (int)Species.Zacian, (int)Species.Zamazenta, (int)Species.Eternatus, (int)Species.Kubfu, (int)Species.Urshifu,
@@ -70,7 +73,6 @@ namespace SysBot.Pokemon
         public static string[] LGPEBalls = { "Poke", "Premier", "Great", "Ultra", "Master" };
         public static int[] CherishOnly = { 251, 385, 494, 649, 719, 721, 801, 802, 807, 893 };
         public static int[] Pokeball = { 151, 722, 723, 724, 725, 726, 727, 728, 729, 730, 772, 773, 789, 790, 810, 811, 812, 813, 814, 815, 816, 817, 818, 891, 892 };
-        public static int[] UBs = { 793, 794, 795, 796, 797, 798, 799, 803, 804, 805, 806 };
         public static int[] GalarFossils = { 880, 881, 882, 883 };
         public static int[] SilvallyMemory = { 0, 904, 905, 906, 907, 908, 909, 910, 911, 912, 913, 914, 915, 916, 917, 918, 919, 920 };
         public static int[] GenesectDrives = { 0, 116, 117, 118, 119 };
@@ -172,7 +174,7 @@ namespace SysBot.Pokemon
             else return false;
         }
 
-        public static PKM RngRoutine(PKM pkm)
+        public static PKM RngRoutine(PKM pkm, IBattleTemplate template, Shiny shiny)
         {
             var troublesomeForms = pkm.Species == (int)Species.Giratina || pkm.Species == (int)Species.Silvally || pkm.Species == (int)Species.Genesect || pkm.Species == (int)Species.Articuno || pkm.Species == (int)Species.Zapdos || pkm.Species == (int)Species.Moltres;
             pkm.Form = pkm.Species == (int)Species.Silvally || pkm.Species == (int)Species.Genesect || pkm.Species == (int)Species.Giratina ? Random.Next(pkm.PersonalInfo.FormCount) : pkm.Form;
@@ -220,17 +222,29 @@ namespace SysBot.Pokemon
             pkm.SetMaximumPPCurrent(pkm.Moves);
             pkm.FixMoves();
             if (!GalarFossils.Contains(pkm.Species) && !pkm.FatefulEncounter)
-                pkm.SetAbilityIndex(Legends.Contains(pkm.Species) || UBs.Contains(pkm.Species) ? 0 : pkm.Met_Location == 244 || pkm.Met_Location == 30001 ? 2 : Random.Next(3));
+                pkm.SetAbilityIndex(Legends.Contains(pkm.Species) ? 0 : pkm.Met_Location == 244 || pkm.Met_Location == 30001 ? 2 : Random.Next(3));
 
+            pkm.ClearHyperTraining();
             var la = new LegalityAnalysis(pkm);
             var enc = la.Info.EncounterMatch;
-            pkm.IVs = enc is EncounterStatic8N ? pkm.SetRandomIVs(5) : pkm.FatefulEncounter ? pkm.IVs : pkm.SetRandomIVs(4);
+            pkm.IVs = enc is EncounterStatic8N ? pkm.SetRandomIVs(5) : pkm.FatefulEncounter ? pkm.IVs : enc is EncounterSlot8 || enc is EncounterStatic8U ? pkm.SetRandomIVs(4) : pkm.SetRandomIVs(3);
+            if (enc is EncounterStatic8)
+            {
+                while (!new LegalityAnalysis(pkm).Valid)
+                {
+                    if (!SimpleEdits.TryApplyHardcodedSeedWild8((PK8)pkm, enc, pkm.IVs, shiny))
+                    {
+                        var criteria = EncounterCriteria.GetCriteria(template);
+                        Overworld8RNG.ApplyDetails(pkm, criteria, shiny, pkm.FlawlessIVCount);
+                    }
+                }
+            }
+
             if (pkm.Species == (int)Species.Melmetal && !pkm.FatefulEncounter)
                 pkm.Met_Level = 15;
 
             if (!LegalEdits.ValidBall(pkm) || pkm.Species == (int)Species.Mew)
                 BallApplicator.ApplyBallLegalRandom(pkm);
-            pkm = LegalityAttempt(pkm);
             pkm = TrashBytes(pkm);
             return pkm;
         }
@@ -367,7 +381,7 @@ namespace SysBot.Pokemon
             pkm.Move1_PPUps = pkm.Move2_PPUps = pkm.Move3_PPUps = pkm.Move4_PPUps = 0;
             pkm.SetMaximumPPCurrent(pkm.Moves);
             pkm.SetSuggestedHyperTrainingData();
-            pkm.SetSuggestedRibbons();
+            pkm.SetSuggestedRibbons(la.EncounterMatch);
         }
 
         public static List<string> SpliceAtWord(string entry, int start, int length)
@@ -460,33 +474,6 @@ namespace SysBot.Pokemon
             var resourcePath = "SysBot.Pokemon.Helpers.DexFlavor.txt";
             using StreamReader reader = new(System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream(resourcePath));
             return reader.ReadToEnd().Split('\n')[species];
-        }
-
-        public static PKM LegalityAttempt(PKM pkm)
-        {
-            var la = new LegalityAnalysis(pkm);
-            if (!la.Valid && pkm.Version != (int)GameVersion.GO)
-            {
-                var list = la.Results.ToList().FindAll(x => x.Judgement == Severity.Invalid);
-                foreach (var invalid in list)
-                {
-                    switch (invalid.Identifier)
-                    {
-                        case CheckIdentifier.IVs: pkm.IVs = pkm.FlawlessIVCount < 3 ? pkm.SetRandomIVs(3) : pkm.FlawlessIVCount < 4 ? pkm.SetRandomIVs(4) : pkm.SetRandomIVs(5); break;
-                        case CheckIdentifier.GameOrigin: pkm.Version = (int)la.EncounterMatch.Version; break;
-                        case CheckIdentifier.Form: pkm.HeldItem = pkm.Species == (int)Species.Giratina && pkm.Form == 1 ? pkm.HeldItem = 112 : pkm.HeldItem; break;
-                        case CheckIdentifier.Nickname: CommonEdits.SetDefaultNickname(pkm, la); break;
-                        case CheckIdentifier.Ability: pkm.AbilityNumber = pkm.AbilityNumber == 4 ? pkm.AbilityNumber = 1 : pkm.AbilityNumber; pkm.RefreshAbility(pkm.AbilityNumber); break;
-                        case CheckIdentifier.Shiny: _ = pkm.ShinyXor == 0 ? CommonEdits.SetShiny(pkm, Shiny.AlwaysStar) : pkm.ShinyXor <= 16 ? CommonEdits.SetShiny(pkm, Shiny.AlwaysSquare) : CommonEdits.SetShiny(pkm, Shiny.Never); break;
-                    };
-                }
-            }
-            else if (pkm.Version == (int)GameVersion.GO && !la.Valid)
-                pkm = pkm.Legalize();
-
-            pkm = TrashBytes(pkm, la);
-            pkm.RefreshChecksum();
-            return pkm;
         }
 
         public static PK8 CherishHandler(MysteryGift mg, ITrainerInfo info)

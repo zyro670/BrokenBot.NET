@@ -15,6 +15,7 @@ namespace SysBot.Pokemon.Discord
     public class TradeAdditionsModule : ModuleBase<SocketCommandContext>
     {
         private static TradeQueueInfo<PK8> Info => SysCordInstance.Self.Hub.Queues.Info;
+        public PokeTradeHub<PK8> Hub = SysCordInstance.Self.Hub;
         private readonly TradeExtensions.TCRng TCRng = new();
         private TradeExtensions.TCUserInfo TCInfo = new();
         private readonly string InfoPath = "TradeCord\\UserInfo.json";
@@ -109,7 +110,7 @@ namespace SysBot.Pokemon.Discord
         {
             var code = Info.GetRandomTradeCode();
             var sig = Context.User.GetFavor();
-            await Context.AddToQueueAsync(code, Context.User.Username, sig, new PK8(), PokeRoutineType.FlexTrade, PokeTradeType.FixOT).ConfigureAwait(false);
+            await Context.AddToQueueAsync(code, Context.User.Username, sig, new PK8(), PokeRoutineType.FixOT, PokeTradeType.FixOT).ConfigureAwait(false);
         }
 
         [Command("fixOT")]
@@ -119,7 +120,41 @@ namespace SysBot.Pokemon.Discord
         public async Task FixAdOT([Summary("Trade Code")] int code)
         {
             var sig = Context.User.GetFavor();
-            await Context.AddToQueueAsync(code, Context.User.Username, sig, new PK8(), PokeRoutineType.FlexTrade, PokeTradeType.FixOT).ConfigureAwait(false);
+            await Context.AddToQueueAsync(code, Context.User.Username, sig, new PK8(), PokeRoutineType.FixOT, PokeTradeType.FixOT).ConfigureAwait(false);
+        }
+
+        [Command("fixOTList")]
+        [Alias("fl", "fq")]
+        [Summary("Prints the users in the FixOT queue.")]
+        [RequireSudo]
+        public async Task GetFixListAsync()
+        {
+            string msg = Info.GetTradeList(PokeRoutineType.FixOT);
+            var embed = new EmbedBuilder();
+            embed.AddField(x =>
+            {
+                x.Name = "Pending Trades";
+                x.Value = msg;
+                x.IsInline = false;
+            });
+            await ReplyAsync("These are the users who are currently waiting:", embed: embed.Build()).ConfigureAwait(false);
+        }
+
+        [Command("TradeCordList")]
+        [Alias("tcl", "tcq")]
+        [Summary("Prints users in the TradeCord queue.")]
+        [RequireSudo]
+        public async Task GetTradeCordListAsync()
+        {
+            string msg = Info.GetTradeList(PokeRoutineType.TradeCord);
+            var embed = new EmbedBuilder();
+            embed.AddField(x =>
+            {
+                x.Name = "Pending TradeCord Trades";
+                x.Value = msg;
+                x.IsInline = false;
+            });
+            await ReplyAsync("These are the users who are currently waiting:", embed: embed.Build()).ConfigureAwait(false);
         }
 
         [Command("TradeCordCatch")]
@@ -144,7 +179,7 @@ namespace SysBot.Pokemon.Discord
             {
                 var embedTime = new EmbedBuilder { Color = Color.DarkBlue };
                 var timeName = $"{Context.User.Username}, you're too quick!";
-                var timeValue = $"Please try again in {(timeRemaining.Seconds < 1 ? 1 : timeRemaining.Seconds):N0} {(_ = timeRemaining.Seconds > 1 ? "seconds" : "second")}!";
+                var timeValue = $"Please try again in {(timeRemaining.TotalSeconds < 1 ? 1 : timeRemaining.TotalSeconds):N0} {(_ = timeRemaining.TotalSeconds > 1 ? "seconds" : "second")}!";
                 await EmbedUtil(embedTime, timeName, timeValue).ConfigureAwait(false);
                 return;
             }
@@ -156,7 +191,7 @@ namespace SysBot.Pokemon.Discord
             else
             {
                 while (TCRng.SpeciesRNG == 0)
-                    TCRng.SpeciesRNG = SpeciesRand(TradeCordPKM(TradeExtensions.Random.Next(1, 899), out string res), res);
+                    TCRng.SpeciesRNG = SpeciesRand(TradeCordPK(TradeExtensions.Random.Next(1, 899), out string res), res);
             }
 
             List<string> trainerInfo = new();
@@ -185,7 +220,6 @@ namespace SysBot.Pokemon.Discord
                 if (TCRng.CatchPKM.Species == 0)
                     SetHandler(speciesName, trainerInfo);
 
-                TradeExtensions.LegalityAttempt(TCRng.CatchPKM);
                 if (!await CatchHandler(speciesName).ConfigureAwait(false))
                     return;
             }
@@ -241,7 +275,7 @@ namespace SysBot.Pokemon.Discord
             TradeExtensions.TradeCordPath.Add(match.Path);
             TradeExtensions.UpdateUserInfo(TCInfo, InfoPath);
             var sig = Context.User.GetFavor();
-            await Context.AddToQueueAsync(code, Context.User.Username, sig, (PK8)pkm, PokeRoutineType.FlexTrade, PokeTradeType.TradeCord).ConfigureAwait(false);
+            await Context.AddToQueueAsync(code, Context.User.Username, sig, (PK8)pkm, PokeRoutineType.TradeCord, PokeTradeType.TradeCord).ConfigureAwait(false);
         }
 
         [Command("TradeCord")]
@@ -856,6 +890,9 @@ namespace SysBot.Pokemon.Discord
 
         private bool SettingsCheck()
         {
+            if (!Hub.Config.Legality.AllowBatchCommands)
+                Hub.Config.Legality.AllowBatchCommands = true;
+
             List<int> rateCheck = new();
             IEnumerable<int> p = new[] { Info.Hub.Config.TradeCord.CatchRate, Info.Hub.Config.TradeCord.CherishRate, Info.Hub.Config.TradeCord.EggRate, Info.Hub.Config.TradeCord.GmaxRate, Info.Hub.Config.TradeCord.SquareShinyRate, Info.Hub.Config.TradeCord.StarShinyRate };
             rateCheck.AddRange(p);
@@ -1040,7 +1077,7 @@ namespace SysBot.Pokemon.Discord
         private void SetHandler(string speciesName, List<string> trainerInfo)
         {
             string formHack = string.Empty;
-            var formEdgeCaseRng = TradeExtensions.Random.Next(2);
+            var formEdgeCaseRng = TradeExtensions.Random.Next(11);
             string[] poipoleRng = { "Poke", "Beast" };
             int[] ignoreForm = { 382, 383, 487, 646, 649, 716, 717, 773, 778, 800, 845, 875, 877, 888, 889, 890, 893, 898 };
             string shinyType = TCRng.ShinyRNG >= 100 - Info.Hub.Config.TradeCord.SquareShinyRate ? "\nShiny: Square" : TCRng.ShinyRNG >= 100 - Info.Hub.Config.TradeCord.StarShinyRate ? "\nShiny: Star" : "";
@@ -1049,12 +1086,12 @@ namespace SysBot.Pokemon.Discord
                 TradeExtensions.FormOutput(TCRng.SpeciesRNG, 0, out string[] forms);
                 formHack = TCRng.SpeciesRNG switch
                 {
-                    (int)Species.Meowstic or (int)Species.Indeedee => _ = formEdgeCaseRng == 1 ? "-M" : "-F",
+                    (int)Species.Meowstic or (int)Species.Indeedee => _ = formEdgeCaseRng < 5 ? "-M" : "-F",
                     (int)Species.NidoranF or (int)Species.NidoranM => _ = TCRng.SpeciesRNG == (int)Species.NidoranF ? "-F" : "-M",
-                    (int)Species.Sinistea or (int)Species.Polteageist => _ = formEdgeCaseRng == 1 ? "" : "-Antique",
-                    (int)Species.Pikachu => _ = formEdgeCaseRng == 1 ? "" : TradeExtensions.PartnerPikachuHeadache[TradeExtensions.Random.Next(TradeExtensions.PartnerPikachuHeadache.Length)],
-                    (int)Species.Dracovish or (int)Species.Dracozolt => _ = formEdgeCaseRng == 1 ? "" : "\nAbility: Sand Rush",
-                    (int)Species.Arctovish or (int)Species.Arctozolt => _ = formEdgeCaseRng == 1 ? "" : "\nAbility: Slush Rush",
+                    (int)Species.Sinistea or (int)Species.Polteageist => _ = formEdgeCaseRng < 5 ? "" : "-Antique",
+                    (int)Species.Pikachu => _ = formEdgeCaseRng < 5 ? "" : TradeExtensions.PartnerPikachuHeadache[TradeExtensions.Random.Next(TradeExtensions.PartnerPikachuHeadache.Length)],
+                    (int)Species.Dracovish or (int)Species.Dracozolt => _ = formEdgeCaseRng < 5 ? "" : "\nAbility: Sand Rush",
+                    (int)Species.Arctovish or (int)Species.Arctozolt => _ = formEdgeCaseRng < 5 ? "" : "\nAbility: Slush Rush",
                     (int)Species.Zygarde => forms[TradeExtensions.Random.Next(forms.Length - 1)],
                     _ => EventPokeType == "" ? forms[TradeExtensions.Random.Next(forms.Length)] : EventPokeType == "Base" ? "" : forms[int.Parse(EventPokeType)],
                 };
@@ -1064,7 +1101,7 @@ namespace SysBot.Pokemon.Discord
             {
                 (int)Species.Poipole or (int)Species.Naganadel => $"\nBall: {poipoleRng[TradeExtensions.Random.Next(poipoleRng.Length)]}",
                 (int)Species.Meltan or (int)Species.Melmetal => $"\nBall: {TradeExtensions.LGPEBalls[TradeExtensions.Random.Next(TradeExtensions.LGPEBalls.Length)]}",
-                (int)Species.Dracovish or (int)Species.Dracozolt or (int)Species.Arctovish or (int)Species.Arctozolt => _ = formEdgeCaseRng == 1 ? $"\nBall: Poke" : $"\nBall: {(Ball)TradeExtensions.Random.Next(1, 26)}",
+                (int)Species.Dracovish or (int)Species.Dracozolt or (int)Species.Arctovish or (int)Species.Arctozolt => _ = formEdgeCaseRng < 5 ? $"\nBall: Poke" : $"\nBall: {(Ball)TradeExtensions.Random.Next(1, 26)}",
                 (int)Species.Treecko or (int)Species.Torchic or (int)Species.Mudkip => $"\nBall: {(Ball)TradeExtensions.Random.Next(2, 27)}",
                 _ => TradeExtensions.Pokeball.Contains(TCRng.SpeciesRNG) ? $"\nBall: Poke" : $"\nBall: {(Ball)TradeExtensions.Random.Next(1, 27)}",
             };
@@ -1075,14 +1112,15 @@ namespace SysBot.Pokemon.Discord
             if (shinyType != "" && TCRng.SpeciesRNG == (int)Species.Mew)
                 trainerInfo.RemoveAll(x => x.Contains("Language"));
 
-            var set = new ShowdownSet($"{speciesName}{(formHack != "" ? $"-{formHack}" : "")}{ballRng}{shinyType}\n{string.Join("\n", trainerInfo)}");
+            var set = new ShowdownSet($"{speciesName}{(formHack != "" ? $"-{formHack}" : "")}{ballRng}{shinyType}\n{string.Join("\n", trainerInfo)}{(TCRng.SpeciesRNG == 151 && shinyType != "" ? ".Version=3" : "")}");
             if (set.CanToggleGigantamax(set.Species, set.Form) && TCRng.GmaxRNG >= 100 - Info.Hub.Config.TradeCord.GmaxRate)
                 set.CanGigantamax = true;
 
             var template = AutoLegalityWrapper.GetTemplate(set);
             var sav = AutoLegalityWrapper.GetTrainerInfo(8);
             TCRng.CatchPKM = (PK8)sav.GetLegal(template, out _);
-            TradeExtensions.RngRoutine(TCRng.CatchPKM);
+            Shiny shiny = TCRng.ShinyRNG >= 100 - Info.Hub.Config.TradeCord.SquareShinyRate ? Shiny.AlwaysSquare : TCRng.ShinyRNG >= 100 - Info.Hub.Config.TradeCord.StarShinyRate ? Shiny.AlwaysStar : Shiny.Never;
+            TradeExtensions.RngRoutine(TCRng.CatchPKM, template, shiny);
         }
 
         private async Task<bool> EggHandler(string trainerInfo, int evo1, int evo2)
@@ -1122,26 +1160,21 @@ namespace SysBot.Pokemon.Discord
             do
             {
                 while (TCRng.SpeciesRNG == 0)
-                    TCRng.SpeciesRNG = SpeciesRand(TradeCordPKM(TradeExtensions.Random.Next(1, 899), out string res), res);
+                    TCRng.SpeciesRNG = SpeciesRand(TradeCordPK(TradeExtensions.Random.Next(1, 899), out string res), res);
 
                 if (Info.Hub.Config.TradeCord.PokeEventType == PokeEventType.EventPoke)
                     MGRngEvent = MysteryGiftRng();
 
                 if (Info.Hub.Config.TradeCord.PokeEventType != PokeEventType.Legends && Info.Hub.Config.TradeCord.PokeEventType != PokeEventType.EventPoke)
                 {
-                    var temp = (PK8)TradeCordPKM(TCRng.SpeciesRNG, out _);
-                    type = GameInfo.Strings.Types[temp.PersonalInfo.Type1] == Info.Hub.Config.TradeCord.PokeEventType.ToString() ? GameInfo.Strings.Types[temp.PersonalInfo.Type1] : GameInfo.Strings.Types[temp.PersonalInfo.Type2] == Info.Hub.Config.TradeCord.PokeEventType.ToString() ? GameInfo.Strings.Types[temp.PersonalInfo.Type2] : "";
-                    EventPokeType = type != "" ? "Base" : "";
-                    if (type == "" && temp.PersonalInfo.FormCount > 1)
+                    var temp = TradeCordPK(TCRng.SpeciesRNG, out _);
+                    for (int i = 0; i < temp.PersonalInfo.FormCount; i++)
                     {
-                        for (int i = 1; i < temp.PersonalInfo.FormCount; i++)
-                        {
-                            temp.Form = i;
-                            type = GameInfo.Strings.Types[temp.PersonalInfo.Type1] == Info.Hub.Config.TradeCord.PokeEventType.ToString() ? GameInfo.Strings.Types[temp.PersonalInfo.Type1] : GameInfo.Strings.Types[temp.PersonalInfo.Type2] == Info.Hub.Config.TradeCord.PokeEventType.ToString() ? GameInfo.Strings.Types[temp.PersonalInfo.Type2] : "";
-                            EventPokeType = type != "" ? $"{temp.Form}" : "";
-                            if (EventPokeType != "")
-                                break;
-                        }
+                        temp.Form = i;
+                        type = GameInfo.Strings.Types[temp.PersonalInfo.Type1] == Info.Hub.Config.TradeCord.PokeEventType.ToString() ? GameInfo.Strings.Types[temp.PersonalInfo.Type1] : GameInfo.Strings.Types[temp.PersonalInfo.Type2] == Info.Hub.Config.TradeCord.PokeEventType.ToString() ? GameInfo.Strings.Types[temp.PersonalInfo.Type2] : "";
+                        EventPokeType = type != "" ? $"{temp.Form}" : "";
+                        if (EventPokeType != "")
+                            break;
                     }
                 }
 
@@ -1333,7 +1366,7 @@ namespace SysBot.Pokemon.Discord
             }
         }
 
-        private int SpeciesRand(PKM pkm, string res) => res != "Failed" && !pkm.IsNicknamed ? pkm.Species : 0;
-        private PKM TradeCordPKM(int species, out string res) => AutoLegalityWrapper.GetTrainerInfo(8).GetLegal(AutoLegalityWrapper.GetTemplate(new ShowdownSet(SpeciesName.GetSpeciesNameGeneration(species, 2, 8))), out res);
+        private int SpeciesRand(PK8 pk, string res) => res == "Regenerated" && (!pk.FatefulEncounter ? !pk.IsNicknamed : pk.SWSH) ? pk.Species : 0;
+        private PK8 TradeCordPK(int species, out string res) => (PK8)AutoLegalityWrapper.GetTrainerInfo(8).GetLegal(AutoLegalityWrapper.GetTemplate(new ShowdownSet(SpeciesName.GetSpeciesNameGeneration(species, 2, 8))), out res);
     }
 }
