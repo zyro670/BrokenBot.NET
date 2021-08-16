@@ -523,6 +523,7 @@
         SpeciesBoost,
         GmaxBoost,
         CherishBoost,
+        ItemBoost,
     }
 
     public enum Gen8Dex : int
@@ -1213,5 +1214,83 @@
         Favorites,
         Buddy,
         Nickname,
+        Evolution,
+        GiveItem,
+        GiftItem,
+        TakeItem,
+        ItemList,
+        DropItem,
+        TimeZone,
+    }
+
+    public enum TCItems
+    {
+        // Hack
+        ShinyCharm = -2,
+        Sweets = -1,
+        // Evolution items
+        None = 0,
+        SunStone = 80,
+        MoonStone = 81,
+        FireStone = 82,
+        ThunderStone = 83,
+        WaterStone = 84,
+        LeafStone = 85,
+        ShinyStone = 107,
+        DuskStone = 108,
+        DawnStone = 109,
+        OvalStone = 110,
+        KingsRock = 221,
+        Everstone = 229,
+        MetalCoat = 233,
+        DragonScale = 235,
+        Upgrade = 252,
+        Protector = 321,
+        Electirizer = 322,
+        Magmarizer = 323,
+        DubiousDisc = 324,
+        ReaperCloth = 325,
+        RazorClaw = 326,
+        PrismScale = 537,
+        WhippedDream = 646,
+        Sachet = 647,
+        IceStone = 849,
+        StrawberrySweet = 1109,
+        BerrySweet = 1111,
+        LoveSweet = 1110,
+        StarSweet = 1114,
+        CloverSweet = 1112,
+        FlowerSweet = 1113,
+        RibbonSweet = 1115,
+        SweetApple = 1116,
+        TartApple = 1117,
+        CrackedPot = 1253,
+        ChippedPot = 1254,
+        GalaricaCuff = 1582,
+        GalaricaWreath = 1592,
+    }
+
+    public enum AlcremieForms
+    {
+        None = -1,
+        VanillaCream = 0,
+        RubyCream = 1,
+        MatchaCream = 2,
+        MintCream = 3,
+        LemonCream = 4,
+        SaltedCream = 5,
+        RubySwirl = 6,
+        CaramelSwirl = 7,
+        RainbowSwirl = 8,
+    }
+
+    public enum TimeOfDay
+    {
+        Any,
+        Dawn,
+        Morning,
+        Day,
+        Dusk,
+        Night,
     }
 }

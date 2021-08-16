@@ -120,6 +120,7 @@ namespace SysBot.Pokemon.Discord
             TradeCordCooldown(id);
             var ctx = new TradeExtensions.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.Catch };
             var result = TradeExtensions.ProcessTradeCord(ctx, new string[] { }, true, Hub.Config.TradeCord);
+
             if (!result.Success)
             {
                 if (result.Poke.Species != 0)
@@ -145,20 +146,26 @@ namespace SysBot.Pokemon.Discord
             else if (result.FailedCatch)
             {
                 var spookyRng = TradeExtensions.Random.Next(101);
-                var imgRng = TradeExtensions.Random.Next(1, 3);
-                string imgGarf = "https://i.imgur.com/BOb6IbW.png";
-                string imgConk = "https://i.imgur.com/oSUQhYv.png";
+                var imgRng = TradeExtensions.Random.Next(5);
+                string[] sketchyCatches = { "https://i.imgur.com/BOb6IbW.png", "https://i.imgur.com/oSUQhYv.png", "https://i.imgur.com/81hlmGV.png", "https://i.imgur.com/7LBHLmf.png", "https://i.imgur.com/NEWEVtm.png" };
                 var ball = (Ball)TradeExtensions.Random.Next(2, 26);
                 var speciesRand = TradeExtensions.RandomInit().SpeciesRNG;
-                var descF = $"You threw {(ball == Ball.Ultra ? "an" : "a")} {(ball == Ball.Cherish ? Ball.Poke : ball)} Ball at a wild {(spookyRng >= 90 ? "...whatever that thing is" : SpeciesName.GetSpeciesNameGeneration(speciesRand, 2, 8))}...";
-                msg = $"{(spookyRng >= 90 ? "One wiggle... Two... It breaks free and stares at you, smiling. You run for dear life." : "...but it managed to escape!")}{result.Message}";
+                var descF = $"You threw {(ball == Ball.Ultra ? "an" : "a")} {ball} Ball at a wild {(spookyRng >= 90 ? "...whatever that thing is" : SpeciesName.GetSpeciesNameGeneration(speciesRand, 2, 8))}...";
+                msg = $"{(spookyRng >= 90 ? "One wiggle... Two... It breaks free and stares at you, smiling. You run for dear life." : "...but it managed to escape!")}";
+
+                if (spookyRng >= 90 && result.Item != string.Empty)
+                {
+                    bool article = TradeCordHelper.ArticleChoice(result.Item[0]);
+                    msg += $"&^&\nAs you were running for your life, you tripped on {(article ? "an" : "a")} {result.Item}!";
+                }
+                else msg += result.Message;
 
                 var authorF = new EmbedAuthorBuilder { Name = name };
                 var footerF = new EmbedFooterBuilder { Text = $"{(spookyRng >= 90 ? $"But deep inside you know there is no escape... {(result.EggPokeID != 0 ? $"Egg ID {result.EggPokeID}" : "")}" : result.EggPokeID != 0 ? $"Egg ID {result.EggPokeID}" : "")}" };
                 var embedF = new EmbedBuilder
                 {
                     Color = Color.Teal,
-                    ImageUrl = spookyRng >= 90 && imgRng == 1 ? imgGarf : spookyRng >= 90 && imgRng == 2 ? imgConk : "",
+                    ImageUrl = spookyRng >= 90 ? sketchyCatches[imgRng] : "",
                     Description = descF,
                     Author = authorF,
                     Footer = footerF,
@@ -183,22 +190,24 @@ namespace SysBot.Pokemon.Discord
             var desc = $"You threw {(result.Poke.Ball == 2 ? "an" : "a")} {(Ball)result.Poke.Ball} Ball at a {(result.Poke.IsShiny ? $"**shiny** wild **{finalName}**" : $"wild {finalName}")}...";
 
             var author = new EmbedAuthorBuilder { Name = name };
-            if (!Hub.Config.TradeCord.UseLargerPokeBalls)
+            var footer = new EmbedFooterBuilder
             {
-                author.IconUrl = ballImg;
-                ballImg = "";
-            }
+                Text = $"Catch {result.User.CatchCount} | Pokémon ID {result.PokeID}{(result.EggPokeID == 0 ? "" : $" | Egg ID {result.EggPokeID}")}",
+                IconUrl = TradeCordHelper.TimeOfDayString(result.User.TimeZoneOffset),
+            };
 
-            var footer = new EmbedFooterBuilder { Text = $"Catch {result.User.CatchCount} | Pokémon ID {result.PokeID}{(result.EggPokeID == 0 ? "" : $" | Egg ID {result.EggPokeID}")}" };
             var embed = new EmbedBuilder
             {
-                Color = (result.Poke.IsShiny && result.Poke.FatefulEncounter) || result.Poke.ShinyXor == 0 ? Color.Gold : result.Poke.ShinyXor <= 16 ? Color.LightOrange : Color.Teal,
+                Color = (result.Poke.IsShiny && result.Poke.FatefulEncounter) || result.Poke.ShinyXor == 0 ? Color.Gold : result.Poke.IsShiny ? Color.LightOrange : Color.Teal,
                 ImageUrl = pokeImg,
-                ThumbnailUrl = ballImg,
                 Description = desc,
                 Author = author,
                 Footer = footer,
             };
+
+            if (!Hub.Config.TradeCord.UseLargerPokeBalls)
+                embed.Author.IconUrl = ballImg;
+            else embed.ThumbnailUrl = ballImg;
 
             await Util.EmbedUtil(Context, result.EmbedName, result.Message, embed).ConfigureAwait(false);
         }
@@ -214,6 +223,12 @@ namespace SysBot.Pokemon.Discord
 
             if (!TradeCordParanoiaChecks(out string msg))
             {
+                await Util.EmbedUtil(Context, name, msg).ConfigureAwait(false);
+                return;
+            }
+            else if (TradeExtensions.TradeCordPath.TryGetValue(Context.User.Id, out _))
+            {
+                msg = "Please wait until your previous trade is fully processed.";
                 await Util.EmbedUtil(Context, name, msg).ConfigureAwait(false);
                 return;
             }
@@ -449,8 +464,8 @@ namespace SysBot.Pokemon.Discord
 
             var ot = pkm.OT_Name;
             var gender = $"{(Gender)pkm.OT_Gender}";
-            var tid = $"{pkm.DisplayTID}";
-            var sid = $"{pkm.DisplaySID}";
+            var tid = $"{pkm.TrainerID7}";
+            var sid = $"{pkm.TrainerSID7}";
             var lang = $"{(LanguageID)pkm.Language}";
 
             var ctx = new TradeExtensions.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.TrainerInfoSet };
@@ -632,7 +647,7 @@ namespace SysBot.Pokemon.Discord
                 footerMsg = $"\n\n{TradeExtensions.DexFlavor(result.Poke.Species, result.Poke.Form, canGmax)}";
             else
             {
-                double status = result.User.Buddy.HatchSteps / (double)result.Poke.PersonalInfo.HatchCycles;
+                double status = result.Poke.CurrentFriendship / (double)result.Poke.PersonalInfo.HatchCycles;
                 if (status is >= 0 and <= 0.25)
                     footerMsg = "It looks as though this Egg will take a long time yet to hatch.";
                 else if (status is > 0.25 and <= 0.5)
@@ -646,12 +661,15 @@ namespace SysBot.Pokemon.Discord
             var ballImg = $"https://raw.githubusercontent.com/BakaKaito/HomeImages/main/Ballimg/50x50/{((Ball)result.Poke.Ball).ToString().ToLower()}ball.png";
             var form = TradeExtensions.FormOutput(result.Poke.Species, result.Poke.Form, out _).Replace("-", "");
             var lvlProgress = (Experience.GetEXPToLevelUpPercentage(result.Poke.CurrentLevel, result.Poke.EXP, result.Poke.PersonalInfo.EXPGrowth) * 100.0).ToString("N1");
-            msg = $"\nNickname: {result.User.Buddy.Nickname}" +
-                  $"\nSpecies: {SpeciesName.GetSpeciesNameGeneration(result.Poke.Species, 2, 8)}" +
-                  $"\nForm: {(form == string.Empty ? "Base" : form)}" +
-                  $"\nAbility: {result.User.Buddy.Ability}" +
-                  $"\nLevel: {result.Poke.CurrentLevel}" +
-                  $"{(!result.Poke.IsEgg && result.Poke.CurrentLevel < 100 ? $"\nProgress to next level: {lvlProgress}%" : "")}";
+            msg = $"\n**Nickname:** {result.User.Buddy.Nickname}" +
+                  $"\n**Species:** {SpeciesName.GetSpeciesNameGeneration(result.Poke.Species, 2, 8)} {GameInfo.GenderSymbolUnicode[result.Poke.Gender].Replace("-", "")}" +
+                  $"\n**Form:** {(form == string.Empty ? "-" : form)}" +
+                  $"\n**Ability:** {result.User.Buddy.Ability}" +
+                  $"\n**Level:** {result.Poke.CurrentLevel}" +
+                  $"\n**Friendship:** {result.Poke.CurrentFriendship}" +
+                  $"\n**Held item:** {TradeCordHelper.GetItemString(result.Poke.HeldItem)}" +
+                  $"\n**Time of day:** {TradeCordHelper.TimeOfDayString(result.User.TimeZoneOffset, false)}" +
+                  $"{(!result.Poke.IsEgg && result.Poke.CurrentLevel < 100 ? $"\n**Progress to next level:** {lvlProgress}%" : "")}";
 
             var author = new EmbedAuthorBuilder { Name = result.EmbedName, IconUrl = ballImg };
             var embed = new EmbedBuilder { Color = result.Poke.IsShiny ? Color.Blue : Color.DarkBlue, ThumbnailUrl = pokeImg }.WithFooter(x =>
@@ -690,6 +708,217 @@ namespace SysBot.Pokemon.Discord
             }
 
             var ctx = new TradeExtensions.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.Nickname };
+            var result = TradeExtensions.ProcessTradeCord(ctx, new string[] { input }, true, Hub.Config.TradeCord);
+            await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
+        }
+
+        [Command("TradeCordEvolution")]
+        [Alias("evolve", "evo")]
+        [Summary("Evolves the active buddy, if applicable.")]
+        [RequireQueueRole(nameof(DiscordManager.RolesTradeCord))]
+        public async Task TradeCordEvolution([Remainder][Summary("Usable item or Alcremie form.")] string input = "")
+        {
+            string name = $"{Context.User.Username}'s Evolution";
+            if (!TradeCordParanoiaChecks(out string msg))
+            {
+                await Util.EmbedUtil(Context, name, msg).ConfigureAwait(false);
+                return;
+            }
+
+            input = input.Replace(" ", "").ToLower();
+            var ctx = new TradeExtensions.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.Evolution };
+            var result = TradeExtensions.ProcessTradeCord(ctx, new string[] { input }, true, Hub.Config.TradeCord);
+            if (!result.Success)
+            {
+                await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
+                return;
+            }
+
+            bool canGmax = new ShowdownSet(ShowdownParsing.GetShowdownText(result.Poke)).CanGigantamax;
+            var pokeImg = TradeExtensions.PokeImg(result.Poke, canGmax, Hub.Config.TradeCord.UseFullSizeImages);
+            string flavorText = TradeExtensions.DexFlavor(result.Poke.Species, result.Poke.Form, canGmax);
+
+            var author = new EmbedAuthorBuilder { Name = name };
+            var embed = new EmbedBuilder
+            {
+                Color = result.Poke.IsShiny ? Color.Blue : Color.DarkBlue,
+                ThumbnailUrl = pokeImg,
+                Description = result.Message,
+                Author = author,
+            }.WithFooter(x => { x.Text = flavorText; x.IconUrl = "https://i.imgur.com/nXNBrlr.png"; });
+
+            await Context.Channel.SendMessageAsync(null, false, embed : embed.Build()).ConfigureAwait(false);
+        }
+
+        [Command("TradeCordGiveItem")]
+        [Alias("giveitem")]
+        [Summary("Gives an item for your buddy to hold.")]
+        [RequireQueueRole(nameof(DiscordManager.RolesTradeCord))]
+        public async Task GiveItem([Remainder][Summary("Item name")] string input)
+        {
+            string name = $"{Context.User.Username}'s Give Item";
+            if (!TradeCordParanoiaChecks(out string msg))
+            {
+                await Util.EmbedUtil(Context, name, msg).ConfigureAwait(false);
+                return;
+            }
+
+            input = input.Replace(" ", "").ToLower();
+            var item = TradeExtensions.EnumParse<TCItems>(input);
+            if (item <= 0)
+            {
+                msg = "Not a valid item or item cannot be held.";
+                await Util.EmbedUtil(Context, name, msg).ConfigureAwait(false);
+                return;
+            }
+
+            var ctx = new TradeExtensions.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.GiveItem };
+            var result = TradeExtensions.ProcessTradeCord(ctx, new string[] { input }, true, Hub.Config.TradeCord);
+            await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
+        }
+
+        [Command("TradeCordGiftItem")]
+        [Alias("giftitem")]
+        [Summary("Gifts an item to the mentioned user.")]
+        [RequireQueueRole(nameof(DiscordManager.RolesTradeCord))]
+        public async Task GiftItem([Remainder][Summary("Item name")] string input)
+        {
+            string name = $"{Context.User.Username}'s Gift Item";
+            var embed = new EmbedBuilder { Color = Color.Purple };
+
+            if (!TradeCordParanoiaChecks(out string msg))
+            {
+                await Util.EmbedUtil(Context, name, msg).ConfigureAwait(false);
+                return;
+            }
+            else if (Context.Message.MentionedUsers.Count == 0)
+            {
+                msg = "Please mention a user you're gifting an item to.";
+                await Util.EmbedUtil(Context, name, msg, embed).ConfigureAwait(false);
+                return;
+            }
+            else if (Context.Message.MentionedUsers.First().Id == Context.User.Id)
+            {
+                msg = "...Why?";
+                await Util.EmbedUtil(Context, name, msg, embed).ConfigureAwait(false);
+                return;
+            }
+            else if (Context.Message.MentionedUsers.First().IsBot)
+            {
+                msg = $"You tried to gift your item to {Context.Message.MentionedUsers.First().Username} but it had no idea what to do with it!";
+                await Util.EmbedUtil(Context, name, msg, embed).ConfigureAwait(false);
+                return;
+            }
+
+            input = input.ToLower().Split('<')[0].Trim();
+            var count = input.Split(' ').Last();
+            if (!int.TryParse(count, out _))
+            {
+                msg = "Could not parse the item count.";
+                await Util.EmbedUtil(Context, name, msg).ConfigureAwait(false);
+                return;
+            }
+
+            input = input.Replace(count, "").Replace(" ", "");
+            var item = TradeExtensions.EnumParse<TCItems>(input);
+            if (item <= 0)
+            {
+                msg = "Not a valid item or item cannot be gifted.";
+                await Util.EmbedUtil(Context, name, msg).ConfigureAwait(false);
+                return;
+            }
+
+            var mentionID = Context.Message.MentionedUsers.First().Id;
+            var mentionName = Context.Message.MentionedUsers.First().Username;
+            var ctx = new TradeExtensions.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, GifteeID = mentionID, GifteeName = mentionName, Context = TCCommandContext.GiftItem };
+            var result = TradeExtensions.ProcessTradeCord(ctx, new string[] { input, count }, true, Hub.Config.TradeCord);
+            await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
+        }
+
+        [Command("TradeCordTakeItem")]
+        [Alias("takeitem")]
+        [Summary("Takes an item from your active buddy.")]
+        [RequireQueueRole(nameof(DiscordManager.RolesTradeCord))]
+        public async Task TakeItem()
+        {
+            string name = $"{Context.User.Username}'s Take Item";
+            if (!TradeCordParanoiaChecks(out string msg))
+            {
+                await Util.EmbedUtil(Context, name, msg).ConfigureAwait(false);
+                return;
+            }
+
+            var ctx = new TradeExtensions.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.TakeItem };
+            var result = TradeExtensions.ProcessTradeCord(ctx, new string[] {}, true, Hub.Config.TradeCord);
+            await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
+        }
+
+        [Command("TradeCordItemList")]
+        [Alias("itemlist", "il")]
+        [Summary("Shows a list of items and their counts.")]
+        [RequireQueueRole(nameof(DiscordManager.RolesTradeCord))]
+        public async Task ItemList([Remainder][Summary("Item name or search filter")] string input)
+        {
+            string name = $"{Context.User.Username}'s Item List";
+            if (!TradeCordParanoiaChecks(out string msg))
+            {
+                await Util.EmbedUtil(Context, name, msg).ConfigureAwait(false);
+                return;
+            }
+
+            input = input.ToLower().Replace(" ", "");
+            var ctx = new TradeExtensions.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.ItemList };
+            var result = TradeExtensions.ProcessTradeCord(ctx, new string[] { input }, false, Hub.Config.TradeCord);
+            if (!result.Success)
+            {
+                await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
+                return;
+            }
+
+            await Util.ListUtil(Context, result.EmbedName, result.Message).ConfigureAwait(false);
+        }
+
+        [Command("TradeCordDropItem")]
+        [Alias("dropitem", "drop")]
+        [Summary("Drops one or more items.")]
+        [RequireQueueRole(nameof(DiscordManager.RolesTradeCord))]
+        public async Task DropItem([Remainder][Summary("Item name or filter")] string input)
+        {
+            string name = $"{Context.User.Username}'s Item Drop";
+            if (!TradeCordParanoiaChecks(out string msg))
+            {
+                await Util.EmbedUtil(Context, name, msg).ConfigureAwait(false);
+                return;
+            }
+
+            input = input.Replace(" ", "").ToLower();
+            var item = TradeExtensions.EnumParse<TCItems>(input);
+            if (item <= 0)
+            {
+                msg = "Not a valid item or item cannot be dropped.";
+                await Util.EmbedUtil(Context, name, msg).ConfigureAwait(false);
+                return;
+            }
+
+            var ctx = new TradeExtensions.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.DropItem };
+            var result = TradeExtensions.ProcessTradeCord(ctx, new string[] { input }, true, Hub.Config.TradeCord);
+            await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
+        }
+
+        [Command("TradeCordTimeZone")]
+        [Alias("timezone", "tz")]
+        [Summary("Set UTC time offset for certain time of day events.")]
+        [RequireQueueRole(nameof(DiscordManager.RolesTradeCord))]
+        public async Task SetTimeZone([Summary("UTC hour offset (negative, zero, or positive)")] string input)
+        {
+            string name = $"{Context.User.Username}'s Time Zone";
+            if (!TradeCordParanoiaChecks(out string msg))
+            {
+                await Util.EmbedUtil(Context, name, msg).ConfigureAwait(false);
+                return;
+            }
+
+            var ctx = new TradeExtensions.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.TimeZone };
             var result = TradeExtensions.ProcessTradeCord(ctx, new string[] { input }, true, Hub.Config.TradeCord);
             await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
         }
@@ -788,7 +1017,7 @@ namespace SysBot.Pokemon.Discord
 
             msg = string.Empty;
             List<int> rateCheck = new();
-            IEnumerable<int> p = new[] { Info.Hub.Config.TradeCord.TradeCordCooldown, Info.Hub.Config.TradeCord.CatchRate, Info.Hub.Config.TradeCord.CherishRate, Info.Hub.Config.TradeCord.EggRate, Info.Hub.Config.TradeCord.GmaxRate, Info.Hub.Config.TradeCord.SquareShinyRate, Info.Hub.Config.TradeCord.StarShinyRate };
+            IEnumerable<int> p = new[] { Hub.Config.TradeCord.TradeCordCooldown, Hub.Config.TradeCord.CatchRate, Hub.Config.TradeCord.CherishRate, Hub.Config.TradeCord.EggRate, Hub.Config.TradeCord.ItemRate, Hub.Config.TradeCord.GmaxRate, Hub.Config.TradeCord.SquareShinyRate, Hub.Config.TradeCord.StarShinyRate };
             rateCheck.AddRange(p);
             if (rateCheck.Any(x => x < 0 || x > 100))
             {
