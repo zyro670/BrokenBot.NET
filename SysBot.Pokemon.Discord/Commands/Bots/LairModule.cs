@@ -12,25 +12,7 @@ namespace SysBot.Pokemon.Discord
     public class LairModule : ModuleBase<SocketCommandContext>
     {
         [Command("hunt")]
-        [Alias("h", "find", "encounter")]
-        [Summary("Hunt the specified Pokémon species. Enter without spaces or symbols.")]
-        [RequireSudo]
-        public async Task Hunt([Summary("Sets the Lair Pokémon Species")] string species)
-        {
-            var parse = EnumParse<LairSpecies>(species);
-            if (parse == default)
-            {
-                await ReplyAsync("Not a valid Lair Species.").ConfigureAwait(false);
-                return;
-            }
-
-            SysCordInstance.Self.Hub.Config.Lair.LairSpecies = parse;
-            var msg = $"{Context.User.Mention} Legendary Species has been set to {parse}.";
-            await ReplyAsync(msg).ConfigureAwait(false);
-        }
-
-        [Command("huntBulk")]
-        [Alias("hb")]
+        [Alias("h")]
         [Summary("Sets all three Scientist Notes. Enter all three species without spaces or symbols in their names; species separated by spaces.")]
         [RequireSudo]
         public async Task Hunt([Summary("Sets the Lair Pokémon Species in bulk.")] string species1, string species2, string species3)
@@ -38,7 +20,7 @@ namespace SysBot.Pokemon.Discord
             string[] input = new string[] { species1, species2, species3 };
             for (int i = 0; i < input.Length; i++)
             {
-                var parse = EnumParse<LairSpecies>(input[i]);
+                var parse = TradeExtensions.EnumParse<LairSpecies>(input[i]);
                 if (parse == default)
                 {
                     await ReplyAsync($"{input[i]} is not a valid Lair Species.").ConfigureAwait(false);
@@ -83,7 +65,7 @@ namespace SysBot.Pokemon.Discord
         [RequireSudo]
         public async Task SetLairBall([Summary("Sets the ball for catching Lair Pokémon.")] string ball)
         {
-            var parse = EnumParse<Ball>(ball);
+            var parse = TradeExtensions.EnumParse<LairBall>(ball);
             if (parse == default)
             {
                 await ReplyAsync("Not a valid ball. Correct format is, for example, \"$slb Love\".").ConfigureAwait(false);
@@ -126,8 +108,6 @@ namespace SysBot.Pokemon.Discord
             else _ = Task.Run(async () => await LairEmbedLoop(channels));
             LairBotUtil.EmbedsInitialized ^= true;
         }
-
-        private T EnumParse<T>(string input) where T : struct, Enum => !Enum.TryParse(input, true, out T result) ? new() : result;
 
         private async Task LairEmbedLoop(List<ulong> channels)
         {

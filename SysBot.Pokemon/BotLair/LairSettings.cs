@@ -12,10 +12,7 @@ namespace SysBot.Pokemon
         [Category(Lair), Description("LairBot mode.")]
         public LairBotModes LairBotMode { get; set; } = LairBotModes.OffsetLog;
 
-        [Category(Lair), Description("Legendary Pokémon to be hunted.")]
-        public LairSpecies LairSpecies { get; set; } = LairSpecies.None;
-
-        [Category(Lair), Description("Legendary Pokémon queue.")]
+        [Category(Lair), Description("Legendary Pokémon hunt queue.")]
         public LairSpecies[] LairSpeciesQueue { get; set; } = { LairSpecies.None, LairSpecies.None, LairSpecies.None };
 
         [Category(Lair), Description("Toggle \"True\" to reset the flag of the legendary you JUST caught. It is best to start on a save with all legends not caught, as this reads all the legend flags before the adventure, then just restores it to the previous state after the adventure.")]
@@ -43,7 +40,7 @@ namespace SysBot.Pokemon
         public string SeedToInject { get; set; } = string.Empty;
 
         [Category(Lair), Description("Select your desired ball to catch Pokémon with.")]
-        public Ball LairBall { get; set; } = Ball.None;
+        public LairBall LairBall { get; set; } = LairBall.Poke;
 
         [Category(Lair), Description("Output Showdown Set for all catches regardless of match.")]
         public bool AlwaysOutputShowdown { get; set; } = false;

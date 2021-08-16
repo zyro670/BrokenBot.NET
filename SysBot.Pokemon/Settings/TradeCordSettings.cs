@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel;
-using PKHeX.Core;
 
 namespace SysBot.Pokemon
 {
@@ -32,8 +31,11 @@ namespace SysBot.Pokemon
         [Category(FeatureToggle), Description("Enter the likelihood of a successful catch. Default: 90.")]
         public int CatchRate { get; set; } = 90;
 
-        [Category(FeatureToggle), Description("Enter the likelihood of \"hatching\" an egg. Default: 75.")]
-        public int EggRate { get; set; } = 75;
+        [Category(FeatureToggle), Description("Enter the likelihood of obtaining an egg. Default: 30.")]
+        public int EggRate { get; set; } = 30;
+
+        [Category(FeatureToggle), Description("Enter the likelihood of finding an item. Default: 20.")]
+        public int ItemRate { get; set; } = 20;
 
         [Category(FeatureToggle), Description("Enter the likelihood of a Cherish Ball event, if a compatible Pokémon was rolled. Default: 15.")]
         public int CherishRate { get; set; } = 15;
@@ -79,6 +81,6 @@ namespace SysBot.Pokemon
         Fairy,
         Legends,
         EventPoke,
-        PikaClones,
+        RodentLite,
     }
 }
