@@ -24,6 +24,8 @@ namespace SysBot.Pokemon
         public const uint DexRecMon = 0x45072B18;
         public const uint DexRecMonGender = 0x45072B20;
         public const uint DexRecLocation = 0x45072B98;
+        public const uint BerryPouchOffset = 0x45067C50;// 212 bytes
+        public const uint IngredientPouchOffset = 0x45068B00;// 100 bytes
 
         // Raid Offsets
         // The dex number of the Pokémon the host currently has chosen. 
