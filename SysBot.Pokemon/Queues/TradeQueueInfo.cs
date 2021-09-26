@@ -88,6 +88,7 @@ namespace SysBot.Pokemon
             {
                 Hub.Queues.ClearAll();
                 UsersInQueue.Clear();
+                TradeCordHelper.TradeCordTrades.Clear();
             }
         }
 
@@ -111,7 +112,10 @@ namespace SysBot.Pokemon
             int removedCount = ClearTrade(details, Hub);
 
             if (removedCount == details.Count)
+            {
+                ClearTCTrade(details);
                 return QueueResultRemove.Removed;
+            }
 
             bool canRemoveWhileProcessing = Hub.Config.Queues.CanDequeueIfProcessing;
             foreach (var detail in details)

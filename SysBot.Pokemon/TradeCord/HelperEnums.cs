@@ -1194,6 +1194,75 @@
         Calyrex = 898,
     }
 
+    public enum Halloween
+    {
+        Gastly,
+        Haunter,
+        Gengar,
+        Corsola,
+        Cursola,
+        Shedinja,
+        Sableye,
+        Duskull,
+        Dusclops,
+        Dusknoir,
+        Drifloon,
+        Drifblim,
+        Froslass,
+        Rotom,
+        Yamask,
+        Cofagrigus,
+        Runerigus,
+        Litwick,
+        Lampent,
+        Chandelure,
+        Golett,
+        Golurk,
+        Honedge,
+        Doublade,
+        Aegislash,
+        Phantump,
+        Trevenant,
+        Pumpkaboo,
+        Gourgeist,
+        Mimikyu,
+        Dhelmise,
+        Sinistea,
+        Polteageist,
+        Dreepy,
+        Drakloak,
+        Dragapult,
+        Marowak,
+        Sandygast,
+        Palossand,
+        Spiritomb,
+        Giratina,
+        Lunala,
+        Blacephalon,
+        Spectrier,
+        Decidueye,
+        Marshadow,
+        Moltres,
+        Yveltal,
+        Guzzlord,
+        Umbreon,
+        Deino,
+        Zweilous,
+        Hydreigon,
+        Zorua,
+        Zoroark,
+        Impidimp,
+        Morgrem,
+        Grimmsnarl,
+        Eternatus,
+        Incineroar,
+        Zubat,
+        Golbat,
+        Crobat,
+        Ditto,
+        MrMime,
+    }
+
     public enum TCCommandContext
     {
         Catch,
@@ -1221,6 +1290,7 @@
         ItemList,
         DropItem,
         TimeZone,
+        DeleteUser,
     }
 
     public enum TCItems
@@ -1240,6 +1310,8 @@
         DuskStone = 108,
         DawnStone = 109,
         OvalStone = 110,
+        GriseousOrb = 112,
+        SootheBell = 218,
         KingsRock = 221,
         Everstone = 229,
         MetalCoat = 233,
@@ -1255,6 +1327,23 @@
         WhippedDream = 646,
         Sachet = 647,
         IceStone = 849,
+        FightingMemory = 904,
+        FlyingMemory = 905,
+        PoisonMemory = 906,
+        GroundMemory = 907,
+        RockMemory = 908,
+        BugMemory = 909,
+        GhostMemory = 910,
+        SteelMemory = 911,
+        FireMemory = 912,
+        WaterMemory = 913,
+        GrassMemory = 914,
+        ElectricMemory = 915,
+        PsychicMemory = 916,
+        IceMemory = 917,
+        DragonMemory = 918,
+        DarkMemory = 919,
+        FairyMemory = 920,
         StrawberrySweet = 1109,
         BerrySweet = 1111,
         LoveSweet = 1110,
@@ -1284,6 +1373,14 @@
         RainbowSwirl = 8,
     }
 
+    public enum RegionalFormArgument
+    {
+        None = -1,
+        Kanto = 0,
+        Alola = 1,
+        Galar = 2,
+    }
+
     public enum TimeOfDay
     {
         Any,
@@ -1292,5 +1389,46 @@
         Day,
         Dusk,
         Night,
+    }
+
+    public enum TableEnum
+    {
+        Users = 0,
+        TrainerInfo = 1,
+        Dex = 2,
+        Perks = 3,
+        Daycare = 4,
+        Buddy = 5,
+        Items = 6,
+        Catches = 7,
+    }
+
+    public enum SQLTableContext
+    {
+        Select,
+        Update,
+        Insert,
+        Delete,
+    }
+
+    public enum CurryBerries
+    {
+        Starf = 207,
+        Enigma = 208,
+        Micle = 209,
+        Custap = 210,
+        Jaboca = 211,
+        Rowap = 212,
+    }
+
+    public enum CurryIngredients
+    {
+        SmokePokeTail = 1091,
+        LargeLeek = 1092,
+        FancyApple = 1093,
+        BoiledEgg = 1099,
+        FruitBunch = 1256,
+        MoomooCheese = 1257,
+        Gigantamix = 1264,
     }
 }
