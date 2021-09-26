@@ -285,7 +285,12 @@ namespace SysBot.Pokemon.Discord
             }
 
             var c = bot.Bot.Connection;
-            var bytes = Task.Run(async () => await c.Screengrab(token).ConfigureAwait(false)).Result;
+            var bytes = await c.Screengrab(token).ConfigureAwait(false);
+            if (bytes.Length == 1)
+            {
+                await ReplyAsync($"Failed to take a screenshot for bot at {address}. Is the bot connected?").ConfigureAwait(false);
+                return;
+            }
             MemoryStream ms = new(bytes);
             await Context.Channel.SendFileAsync(ms, "cap.png");
         }

@@ -232,23 +232,23 @@ namespace SysBot.Base
 
         public async Task<byte[]> Screengrab(CancellationToken token)
         {
-            await SendAsync(SwitchCommand.Screengrab(), token).ConfigureAwait(false);
-            byte[] buffer = new byte[1_000_000];
-            int ofs = 0;
+            List<byte> flexBuffer = new();
+            int received = 0;
 
+            await SendAsync(SwitchCommand.Screengrab(), token).ConfigureAwait(false);
             await Task.Delay(Connection.ReceiveBufferSize / DelayFactor + BaseDelay, token).ConfigureAwait(false);
             while (Connection.Available > 0)
             {
-                int recv = Connection.Receive(buffer, ofs, Connection.ReceiveBufferSize, SocketFlags.None);
-                ofs += recv;
+                byte[] buffer = new byte[Connection.ReceiveBufferSize];
+                received += Connection.Receive(buffer, 0, Connection.ReceiveBufferSize, SocketFlags.None);
+                flexBuffer.AddRange(buffer);
                 await Task.Delay(MaximumTransferSize / DelayFactor + BaseDelay, token).ConfigureAwait(false);
             }
 
-            if (ofs % 2 != 0)
-                ofs -= 1;
-
-            buffer = buffer.SliceSafe(0, ofs);
-            return Decoder.ConvertHexByteStringToBytes(buffer);
+            byte[] data = new byte[flexBuffer.Count];
+            flexBuffer.CopyTo(data);
+            var result = data.SliceSafe(0, received);
+            return Decoder.ConvertHexByteStringToBytes(result);
         }
     }
 }

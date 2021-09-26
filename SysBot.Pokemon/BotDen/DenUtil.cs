@@ -145,7 +145,7 @@ namespace SysBot.Pokemon
                 var speciesID = (int)(raidInfo.Den.IsEvent ? raidInfo.RaidDistributionEncounterTable.Entries(i).Value.Species : raidInfo.RaidEncounterTable.Entries(i).Value.Species);
                 var form = (int)(raidInfo.Den.IsEvent ? raidInfo.RaidDistributionEncounterTable.Entries(i).Value.AltForm : raidInfo.RaidEncounterTable.Entries(i).Value.AltForm);
                 var speciesName = SpeciesName.GetSpeciesNameGeneration(speciesID, 2, 8);
-                var pkm = AutoLegalityWrapper.GetTrainerInfo(8).GetLegal(AutoLegalityWrapper.GetTemplate(new ShowdownSet($"{speciesName}{TradeExtensions.FormOutput(speciesID, form, out _)}")), out _);
+                var pkm = AutoLegalityWrapper.GetTrainerInfo(8).GetLegal(AutoLegalityWrapper.GetTemplate(new ShowdownSet($"{speciesName}{TradeCordHelperUtil.FormOutput(speciesID, form, out _)}")), out _);
                 var personal = pkm.PersonalInfo;
                 var IVs = raidInfo.Den.IsEvent ? (uint)raidInfo.RaidDistributionEncounterTable.Entries(i).Value.FlawlessIVs : (uint)raidInfo.RaidEncounterTable.Entries(i).Value.FlawlessIVs;
 

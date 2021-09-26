@@ -169,6 +169,7 @@ namespace SysBot.Pokemon.Discord
             _client.Ready += LoadLoggingAndEcho;
             _client.MessageReceived += HandleMessageAsync;
             _client.ReactionAdded += ExtraCommandUtil.HandleReactionAsync;
+            _client.UserBanned += ExtraCommandUtil.TCUserBanned;
         }
 
         private async Task HandleMessageAsync(SocketMessage arg)

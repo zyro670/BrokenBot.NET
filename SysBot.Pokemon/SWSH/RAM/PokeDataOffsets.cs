@@ -19,7 +19,6 @@ namespace SysBot.Pokemon
         public const uint ItemTreasureAddress = 0x45068970;
         public const uint LastUsedBallOffset = 0x4C428C80;
         public const uint PokeBallOffset = 0x45067B88; // 0x74 size
-        public const uint XYCoordinates = 0x1D5B690; // +0x8 for Y
         public const uint DenOffset = 0x450C8A70;
         public const uint DexRecMon = 0x45072B18;
         public const uint DexRecMonGender = 0x45072B20;

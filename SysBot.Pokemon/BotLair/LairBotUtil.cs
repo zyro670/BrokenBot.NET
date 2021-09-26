@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace SysBot.Pokemon
 {
@@ -128,6 +129,38 @@ namespace SysBot.Pokemon
             return selectIndex;
         }
 
+        public static bool AbilityImmunity(int ourAbility, int encounterAbility, int[] encounterTypes, MoveType ourMoveType, int ourMoveID, PK8[]? party = default)
+        {
+            if (ourAbility == (int)Ability.Turboblaze || ourAbility == (int)Ability.Teravolt || ourAbility == (int)Ability.MoldBreaker)
+                return false;
+
+            bool partyStop = false;
+            if (party != default)
+            {
+                switch (ourMoveType)
+                {
+                    case MoveType.Water: partyStop = party.Any(x => x.Ability == (int)Ability.StormDrain); break;
+                    case MoveType.Electric: partyStop = party.Any(x => x.Ability == (int)Ability.LightningRod); break;
+                };
+            }
+
+            if (partyStop)
+                return true;
+
+            if (ourMoveType == MoveType.Ground && ourMoveID != (int)Move.ThousandArrows && (encounterTypes[0] == 2 || encounterTypes[1] == 2))
+                return true;
+
+            return encounterAbility switch
+            {
+                (int)Ability.DrySkin or (int)Ability.WaterAbsorb or (int)Ability.StormDrain when ourMoveType == MoveType.Water => true,
+                (int)Ability.VoltAbsorb or (int)Ability.LightningRod or (int)Ability.MotorDrive when ourMoveType == MoveType.Electric => true,
+                (int)Ability.Levitate when ourMoveType == MoveType.Ground => true,
+                (int)Ability.FlashFire when ourMoveType == MoveType.Fire => true,
+                (int)Ability.SapSipper when ourMoveType == MoveType.Grass => true,
+                _ => false,
+            };
+        }
+
         public static double[] WeightedDamage(PK8[] party, PK8 pk, PK8 lairPk, bool dmax)
         {
             if (TerrainDur >= 0)
@@ -144,12 +177,7 @@ namespace SysBot.Pokemon
                 double typeMultiplier = -1.0;
                 var move = MoveRoot.Moves.FirstOrDefault(x => x.MoveID == pk.Moves[i]);
                 var power = Convert.ToDouble(move.Power);
-                bool waterImmune = move.Type == MoveType.Water && (lairPk.Ability == (int)Ability.DrySkin || lairPk.Ability == (int)Ability.WaterAbsorb || lairPk.Ability == (int)Ability.StormDrain || party.Any(x => x.Ability == (int)Ability.StormDrain));
-                bool electricImmune = move.Type == MoveType.Electric && (lairPk.Ability == (int)Ability.VoltAbsorb || lairPk.Ability == (int)Ability.LightningRod || lairPk.Ability == (int)Ability.MotorDrive || party.Any(x => x.Ability == (int)Ability.LightningRod));
-                bool groundImmune = move.MoveID != (int)Move.ThousandArrows && move.Type == MoveType.Ground && (lairPk.Ability == (int)Ability.Levitate || types[0] == (int)MoveType.Flying || types[1] == (int)MoveType.Flying);
-                bool fireImmune = move.Type == MoveType.Fire && lairPk.Ability == (int)Ability.FlashFire;
-                bool grassImmune = move.Type == MoveType.Grass && lairPk.Ability == (int)Ability.SapSipper;
-                bool ignoreAbility = pk.Ability == (int)Ability.Turboblaze || pk.Ability == (int)Ability.Teravolt || pk.Ability == (int)Ability.MoldBreaker;
+                bool immune = AbilityImmunity(pk.Ability, lairPk.Ability, types, move.Type, move.MoveID, party);
 
                 var typeMulti = TypeDamageMultiplier(types, (int)move.Type);
                 if (typeMulti[0] == 0.0 || typeMulti[1] == 0.0)
@@ -167,7 +195,7 @@ namespace SysBot.Pokemon
 
                 bool usefulStatus = (!dmax && ((move.MoveID == (int)Move.Toxic && lairPk.Status_Condition != (int)StatusCondition.Poisoned) || move.MoveID == (int)Move.Counter || move.MoveID == (int)Move.LifeDew || 
                     move.MoveID == (int)Move.WideGuard || (move.MoveID == (int)Move.Yawn && lairPk.Status_Condition != (int)StatusCondition.Asleep))) || (move.MoveID == (int)Move.Protect && dmax);
-                if ((!ignoreAbility && (waterImmune || electricImmune || fireImmune || grassImmune || groundImmune)) || (move.Category == MoveCategory.Status && !usefulStatus) || (move.MoveID == (int)Move.DreamEater && lairPk.Status_Condition != (int)StatusCondition.Asleep))
+                if (immune || (move.Category == MoveCategory.Status && !usefulStatus) || (move.MoveID == (int)Move.DreamEater && lairPk.Status_Condition != (int)StatusCondition.Asleep))
                     typeMultiplier = -1.0;
 
                 double target = move.Target switch
@@ -273,9 +301,10 @@ namespace SysBot.Pokemon
         {
             using Stream stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("SysBot.Pokemon.BotLair.MoveInfo.json");
             using TextReader reader = new StreamReader(stream);
-            var root = TradeExtensions.GetRoot<MoveInfo.MoveInfoRoot>("", reader);
+            JsonSerializer serializer = new();
+            var root = (MoveInfo.MoveInfoRoot?)serializer.Deserialize(reader, typeof(MoveInfo.MoveInfoRoot));
             reader.Close();
-            return root;
+            return root ?? new();
         }
     }
 }

@@ -39,20 +39,17 @@ namespace SysBot.Pokemon
 
         private async Task ResetLegendaryLairFlags(CancellationToken token)
         {
-            uint offset = ResetLegendFlagOffset;
-            var enumVal = Enum.GetNames(typeof(LairSpecies));
+            var enumVal = Enum.GetNames(typeof(LairSpeciesBlock));
             Log("Beginning caught flag reset.");
-
-            for (int i = 1; i < 48; i++)
+            for (uint i = 0; i < enumVal.Length; i++)
             {
+                uint offset = ResetLegendFlagOffset + (i * 0x38);
                 var val = BitConverter.ToUInt16(await Connection.ReadBytesAsync(offset, 2, token).ConfigureAwait(false), 0);
                 if (val == 1)
                 {
                     Log($"Resetting caught flag for {enumVal[i]}.");
-                    await Connection.WriteBytesAsync(new byte[] { 0 }, offset, token).ConfigureAwait(false);
+                    await Connection.WriteBytesAsync(new byte[1], offset, token).ConfigureAwait(false);
                 }
-
-                offset += 0x38;
             }
             Log("Caught flag reset complete.");
             return;

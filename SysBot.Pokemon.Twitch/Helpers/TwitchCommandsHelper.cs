@@ -40,7 +40,7 @@ namespace SysBot.Pokemon.Twitch
                 PKM pkm = sav.GetLegal(template, out var result);
 
                 var nickname = pkm.Nickname.ToLower();
-                if (nickname == "egg" && System.Enum.IsDefined(typeof(ValidEgg), pkm.Species))
+                if (nickname == "egg" && Breeding.CanHatchAsEgg(pkm.Species))
                     TradeExtensions.EggTrade((PK8)pkm);
 
 				if (pkm.Species == 132 && (nickname.Contains("atk") || nickname.Contains("spa") || nickname.Contains("spe") || nickname.Contains("6iv")))

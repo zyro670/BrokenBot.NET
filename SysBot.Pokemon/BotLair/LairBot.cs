@@ -153,7 +153,7 @@ namespace SysBot.Pokemon
                 {
                     await Click(A, 0_500, token).ConfigureAwait(false);
                     if (LairBoss.Species == 0)
-                        LairBoss = await ReadUntilPresentAbsolute(await ParsePointer("[[[[[[main+26365B8]+68]+78]+88]+D08]+950]+D0", token).ConfigureAwait(false), 0_500, 0_200, token).ConfigureAwait(false);
+                        LairBoss = await ReadUntilPresentAbsolute(await ParsePointer("[[[[[[main+26365B8]+68]+78]+88]+D08]+950]+D0", token).ConfigureAwait(false), 0_500, 0_200, token).ConfigureAwait(false) ?? new();
                 }
 
                 if (raidCount == 1 && Settings.UseStopConditionsPathReset)
@@ -172,11 +172,11 @@ namespace SysBot.Pokemon
 #pragma warning restore CS8601 // Possible null reference assignment.
 
                 LairEncounterCount++;
-                Log($"Raid Battle {raidCount}. Encounter {LairEncounterCount}: {SpeciesName.GetSpeciesNameGeneration(lairPk.Species, 2, 8)}{TradeExtensions.FormOutput(lairPk.Species, lairPk.Form, out _)}.");
+                Log($"Raid Battle {raidCount}. Encounter {LairEncounterCount}: {SpeciesName.GetSpeciesNameGeneration(lairPk.Species, 2, 8)}{TradeCordHelperUtil.FormOutput(lairPk.Species, lairPk.Form, out _)}.");
                 if (PlayerPk == null)
                     PlayerPk = new();
 
-                Log($"Sending out: {SpeciesName.GetSpeciesNameGeneration(PlayerPk.Species, 2, 8)}{TradeExtensions.FormOutput(PlayerPk.Species, PlayerPk.Form, out _)}.");
+                Log($"Sending out: {SpeciesName.GetSpeciesNameGeneration(PlayerPk.Species, 2, 8)}{TradeCordHelperUtil.FormOutput(PlayerPk.Species, PlayerPk.Form, out _)}.");
                 await BattleRoutine(party, lairPk, token).ConfigureAwait(false);
 
                 if (raidCount == 4 || Lost)
@@ -253,7 +253,7 @@ namespace SysBot.Pokemon
 
             var speedIndex = speedStat.Count > 0 ? speedStat.IndexOf(speedStat.Max()) : 0;
             var selection = pkList[monIndex == -1 ? speedIndex : monIndex];
-            Log($"Selecting {SpeciesName.GetSpeciesNameGeneration(selection.Species, 2, 8)}{TradeExtensions.FormOutput(selection.Species, selection.Form, out _)}.");
+            Log($"Selecting {SpeciesName.GetSpeciesNameGeneration(selection.Species, 2, 8)}{TradeCordHelperUtil.FormOutput(selection.Species, selection.Form, out _)}.");
             await MoveAndRentalClicks(monIndex == -1 ? speedIndex : monIndex, token).ConfigureAwait(false);
         }
 
@@ -456,7 +456,7 @@ namespace SysBot.Pokemon
                 await Click(A, 1_000, token).ConfigureAwait(false);
             }
 
-            Log($"{(raidCount == 4 || Settings.CatchLairPokémon || upgrade ? "Caught" : "Defeated")} {SpeciesName.GetSpeciesNameGeneration(lairPk.Species, 2, 8)}{TradeExtensions.FormOutput(lairPk.Species, lairPk.Form, out _)}.");
+            Log($"{(raidCount == 4 || Settings.CatchLairPokémon || upgrade ? "Caught" : "Defeated")} {SpeciesName.GetSpeciesNameGeneration(lairPk.Species, 2, 8)}{TradeCordHelperUtil.FormOutput(lairPk.Species, lairPk.Form, out _)}.");
         }
 
         private async Task Results(CancellationToken token)
