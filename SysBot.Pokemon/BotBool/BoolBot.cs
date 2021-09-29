@@ -67,20 +67,51 @@ namespace SysBot.Pokemon
                 await Connection.WriteBytesAsync(BitConverter.GetBytes((short)dex[i]), offset, token).ConfigureAwait(false);
                 switch (dex[i])
                 {
-                    case DexRecSpecies.Ponyta or DexRecSpecies.Rapidash or DexRecSpecies.Slowpoke or DexRecSpecies.Farfetchd or DexRecSpecies.Weezing or DexRecSpecies.MrMime or
-                    DexRecSpecies.Zigzagoon or DexRecSpecies.Linoone or DexRecSpecies.Darumaka or DexRecSpecies.Darmanitan or DexRecSpecies.Yamask or DexRecSpecies.Cofagrigus or DexRecSpecies.Corsola or DexRecSpecies.Shellos or DexRecSpecies.Meowth:
-                        await Connection.WriteBytesAsync(BitConverter.GetBytes(dex[i] == DexRecSpecies.Meowth ? (short)0x02 : (short)0x01), offset + 0x04, token).ConfigureAwait(false); break;
+                    case DexRecSpecies.Meowstic or DexRecSpecies.Indeedee when Version == GameVersion.SH:
+                        await Connection.WriteBytesAsync(BitConverter.GetBytes((short)0x01), offset + 0x04, token).ConfigureAwait(false);
+                        await Connection.WriteBytesAsync(BitConverter.GetBytes((short)0x01), gender, token).ConfigureAwait(false); break;
 
+                    case DexRecSpecies.Meowstic or DexRecSpecies.Indeedee when Version == GameVersion.SW:
+                        await Connection.WriteBytesAsync(BitConverter.GetBytes((short)0x00), offset + 0x04, token).ConfigureAwait(false);
+                        await Connection.WriteBytesAsync(BitConverter.GetBytes((short)0x00), gender, token).ConfigureAwait(false); break;
+
+                    // Shield Exclusives
+                    case DexRecSpecies.Ponyta or DexRecSpecies.Kabuto or DexRecSpecies.Corsola or DexRecSpecies.Larvitar or DexRecSpecies.Pupitar
+                        or DexRecSpecies.Lotad or DexRecSpecies.Lombre or DexRecSpecies.Sableye or DexRecSpecies.Lunatone or DexRecSpecies.Gible or DexRecSpecies.Croagunk or DexRecSpecies.Solosis or
+                        DexRecSpecies.Duosion or DexRecSpecies.Vullaby or DexRecSpecies.Mandibuzz or DexRecSpecies.Spritzee or DexRecSpecies.Aromatisse or DexRecSpecies.Skrelp
+                        or DexRecSpecies.Dragalge or DexRecSpecies.Goomy or DexRecSpecies.Sliggoo or DexRecSpecies.Oranguru or DexRecSpecies.Drampa or DexRecSpecies.Cursola or
+                        DexRecSpecies.Eiscue or DexRecSpecies.Arcanine when Version == GameVersion.SW:
+                        {
+                            Log($"{dex[i]} is not possible on this game version!");
+                            await Connection.WriteBytesAsync(BitConverter.GetBytes((short)0x00), offset, token).ConfigureAwait(false);
+                            await Connection.WriteBytesAsync(BitConverter.GetBytes((short)0x00), offset + 0x04, token).ConfigureAwait(false);
+                            await Connection.WriteBytesAsync(BitConverter.GetBytes((short)0x00), gender, token).ConfigureAwait(false); break;
+                        }
+                    // Sword Exclusives
+                    case DexRecSpecies.Farfetchd or DexRecSpecies.Omanyte or DexRecSpecies.Seedot or DexRecSpecies.Nuzleaf or DexRecSpecies.Mawile or DexRecSpecies.Solrock or DexRecSpecies.Bagon or
+                    DexRecSpecies.Darumaka or DexRecSpecies.Scraggy or DexRecSpecies.Gothita or DexRecSpecies.Gothorita or DexRecSpecies.Gothitelle or DexRecSpecies.Rufflet or DexRecSpecies.Braviary or
+                    DexRecSpecies.Deino or DexRecSpecies.Zweilous or DexRecSpecies.Swirlix or DexRecSpecies.Slurpuff or DexRecSpecies.Clauncher or DexRecSpecies.Clawitzer or DexRecSpecies.Passimian or
+                    DexRecSpecies.Turtonator or DexRecSpecies.Jangmoo or DexRecSpecies.Hakamoo or DexRecSpecies.Stonjourner or DexRecSpecies.Ninetales when Version == GameVersion.SH:
+                        {
+                            Log($"{dex[i]} is not possible on this game version!");
+                            await Connection.WriteBytesAsync(BitConverter.GetBytes((short)0x00), offset, token).ConfigureAwait(false);
+                            await Connection.WriteBytesAsync(BitConverter.GetBytes((short)0x00), offset + 0x04, token).ConfigureAwait(false);
+                            await Connection.WriteBytesAsync(BitConverter.GetBytes((short)0x00), gender, token).ConfigureAwait(false); break;
+                        }
+
+                    // Alt forms
+                    case DexRecSpecies.Ponyta or DexRecSpecies.Slowpoke or DexRecSpecies.Farfetchd or DexRecSpecies.Weezing or DexRecSpecies.MrMime or
+                DexRecSpecies.Zigzagoon or DexRecSpecies.Linoone or DexRecSpecies.Darumaka or DexRecSpecies.Yamask or DexRecSpecies.Corsola or DexRecSpecies.Shellos or DexRecSpecies.Meowth:
+                        await Connection.WriteBytesAsync(BitConverter.GetBytes(dex[i] == DexRecSpecies.Meowth ? (short)0x02 : (short)0x01), offset + 0x04, token).ConfigureAwait(false); break;
                     // Male only
-                    case DexRecSpecies.NidoranM or DexRecSpecies.Nidorino or DexRecSpecies.Nidoking or DexRecSpecies.Hitmonlee or DexRecSpecies.Hitmonchan or DexRecSpecies.Tauros or DexRecSpecies.Tyrogue or
-                    DexRecSpecies.Gallade or DexRecSpecies.Throh or DexRecSpecies.Sawk or DexRecSpecies.Rufflet or DexRecSpecies.Braviary or DexRecSpecies.IndeedeeM or DexRecSpecies.Impidimp or DexRecSpecies.Morgrem or DexRecSpecies.Grimmsnarl:
+                    case DexRecSpecies.NidoranM or DexRecSpecies.Hitmonlee or DexRecSpecies.Hitmonchan or DexRecSpecies.Tauros or DexRecSpecies.Tyrogue or
+                 DexRecSpecies.Throh or DexRecSpecies.Sawk or DexRecSpecies.Rufflet or DexRecSpecies.Braviary or DexRecSpecies.Impidimp or DexRecSpecies.Morgrem or DexRecSpecies.Grimmsnarl:
                         await Connection.WriteBytesAsync(BitConverter.GetBytes((short)0x00), gender, token).ConfigureAwait(false); break;
 
                     // Genderless
-                    case DexRecSpecies.Magnemite or DexRecSpecies.Magneton or DexRecSpecies.Staryu or DexRecSpecies.Starmie or DexRecSpecies.Ditto or DexRecSpecies.Lunatone or DexRecSpecies.Solrock
-                    or DexRecSpecies.Baltoy or DexRecSpecies.Claydol or DexRecSpecies.Beldum or DexRecSpecies.Metang or DexRecSpecies.Metagross or DexRecSpecies.Bronzor or DexRecSpecies.Bronzong or DexRecSpecies.Magnezone
-                    or DexRecSpecies.Rotom or DexRecSpecies.Klink or DexRecSpecies.Klang or DexRecSpecies.Klinklang or DexRecSpecies.Cryogonal or DexRecSpecies.Golett or DexRecSpecies.Golurk or DexRecSpecies.Carbink or
-                    DexRecSpecies.Dhelmise or DexRecSpecies.Sinistea or DexRecSpecies.Polteageist or DexRecSpecies.Falinks:
+                    case DexRecSpecies.Magnemite or DexRecSpecies.Ditto or DexRecSpecies.Lunatone or DexRecSpecies.Solrock or DexRecSpecies.Baltoy or DexRecSpecies.Claydol or DexRecSpecies.Beldum or
+                    DexRecSpecies.Bronzor or DexRecSpecies.Bronzong or DexRecSpecies.Rotom or DexRecSpecies.Klink or DexRecSpecies.Klang or DexRecSpecies.Cryogonal or DexRecSpecies.Golett or
+                    DexRecSpecies.Golurk or DexRecSpecies.Carbink or DexRecSpecies.Dhelmise or DexRecSpecies.Sinistea or DexRecSpecies.Falinks:
                         await Connection.WriteBytesAsync(BitConverter.GetBytes((short)0x02), gender, token).ConfigureAwait(false); break;
 
                     default:
@@ -143,6 +174,9 @@ namespace SysBot.Pokemon
                     {
                         for (int d = 0; d < dex.Length; d++)
                         {
+                            if (dex[d] == DexRecSpecies.None)
+                                break;
+
                             if (species == dex[d])
                             {
                                 Log($"Recommended species found: {species}!");
