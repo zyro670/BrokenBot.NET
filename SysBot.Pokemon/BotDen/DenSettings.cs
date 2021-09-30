@@ -13,10 +13,10 @@ namespace SysBot.Pokemon
         [Category(DenSkip), Description("DenBot mode.")]
         public DenMode DenMode { get; set; } = DenMode.SeedSearch;
 
-        [Category(DenSkip), Description("Select Den Type. Also used for AutoRoll's soft/hard lock.")]
+        [Category(DenSkip), Description("Select Den Type.")]
         public DenType DenType { get; set; } = DenType.Vanilla;
 
-        [Category(DenSkip), Description("Den ID (1 - 100 if Vanilla, 1 - 90 if IoA, 1 - 86 if CT). Also used for AutoRoll's soft/hard lock.")]
+        [Category(DenSkip), Description("Den ID (1 - 100 if Vanilla, 1 - 90 if IoA, 1 - 86 if CT).")]
         public uint DenID { get; set; } = 1;
 
         [Category(DenSkip), Description("Star level (0 - 4).")]
@@ -45,6 +45,9 @@ namespace SysBot.Pokemon
 
         [Category(DenSkip), Description("Host after skipping?")]
         public bool HostAfterSkip { get; set; } = false;
+
+        [Category(DenSkip), Description("Seed to inject. Please disclose seed-injected raids.")]
+        public string SeedToInject { get; set; } = string.Empty;
 
         [Category(DenSkip), Description("Should we reset network time. \"Reset\" - based on current system time, \"ResetNTP\" - sync with network.")]
         public TimeReset TimeReset { get; set; } = TimeReset.Reset;
@@ -80,7 +83,7 @@ namespace SysBot.Pokemon
             public Characteristics Characteristic { get; set; } = Characteristics.Any;
         }
 
-        public class DenFiltersCategoryConverter : TypeConverter
+        private sealed class DenFiltersCategoryConverter : TypeConverter
         {
             public override bool GetPropertiesSupported(ITypeDescriptorContext context) => true;
 

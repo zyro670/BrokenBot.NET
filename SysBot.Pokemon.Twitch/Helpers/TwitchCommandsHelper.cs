@@ -39,11 +39,12 @@ namespace SysBot.Pokemon.Twitch
                 var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
                 PKM pkm = sav.GetLegal(template, out var result);
 
-				if (pkm.Nickname == "Egg")
-					TradeExtensions.EggTrade((PK8)pkm);
+                var nickname = pkm.Nickname.ToLower();
+                if (nickname == "egg" && System.Enum.IsDefined(typeof(ValidEgg), pkm.Species))
+                    TradeExtensions.EggTrade((PK8)pkm);
 
-				if (pkm.Species == 132)
-					TradeExtensions.DittoTrade((PK8)pkm);
+				if (pkm.Species == 132 && (nickname.Contains("atk") || nickname.Contains("spa") || nickname.Contains("spe") || nickname.Contains("6iv")))
+					TradeExtensions.DittoTrade(pkm);
 
                 if (!pkm.CanBeTraded())
                 {

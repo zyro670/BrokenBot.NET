@@ -1,6 +1,5 @@
 ﻿using PKHeX.Core;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Collections.Generic;
 using FlatbuffersResource;
@@ -11,10 +10,8 @@ namespace SysBot.Pokemon
     // Thanks to Zaksabeast for the FlatBuffers tutorial and den hashes, Lusamine for the wonderful IV spreads by flawless IVs, and Kurt for pkNX's easily serializable text dumps.
     public class DenUtil
     {
-        private readonly string SwordTable = "SysBot.Pokemon.BotDen.FlatbuffersResource.swordEnc.bin";
-        private readonly string ShieldTable = "SysBot.Pokemon.BotDen.FlatbuffersResource.shieldEnc.bin";
-        private static readonly string SwordDistributionTable = "SysBot.Pokemon.BotDen.FlatbuffersResource.NestDistributionEncSW.json";
-        private static readonly string ShieldDistributionTable = "SysBot.Pokemon.BotDen.FlatbuffersResource.NestDistributionEncSH.json";
+        private static readonly string SwordTable = "SysBot.Pokemon.BotDen.FlatbuffersResource.swordEnc.bin";
+        private static readonly string ShieldTable = "SysBot.Pokemon.BotDen.FlatbuffersResource.shieldEnc.bin";
 
         public class RaidData
         {
@@ -22,16 +19,16 @@ namespace SysBot.Pokemon
             private DenSettings? settings;
             private RaidSpawnDetail? den;
             private EncounterNest8 raidEnc;
-            private NestHoleDistributionEncounter? distEnc;
+            private NestHoleDistributionEncounter8 distEnc;
             private EncounterNest8Table raidEncounterTable;
-            private NestHoleDistributionEncounterTable? raidDistributionEncounterTable;
+            private NestHoleDistributionEncounter8Table raidDistributionEncounterTable;
 
             public SAV8SWSH TrainerInfo { get => trainerInfo ?? new(); set => trainerInfo = value; }
             public RaidSpawnDetail Den { get => den ?? new(new byte[] { }, 0); set => den = value; }
             public EncounterNest8 RaidEncounter { get => raidEnc; set => raidEnc = value; }
             public EncounterNest8Table RaidEncounterTable { get => raidEncounterTable; set => raidEncounterTable = value; }
-            public NestHoleDistributionEncounter RaidDistributionEncounter { get => distEnc ?? new(); set => distEnc = value; }
-            public NestHoleDistributionEncounterTable? RaidDistributionEncounterTable { get => raidDistributionEncounterTable ?? new(); set => raidDistributionEncounterTable = value; }
+            public NestHoleDistributionEncounter8 RaidDistributionEncounter { get => distEnc; set => distEnc = value; }
+            public NestHoleDistributionEncounter8Table RaidDistributionEncounterTable { get => raidDistributionEncounterTable; set => raidDistributionEncounterTable = value; }
             public GenderType Gender { get => Settings.DenFilters.Gender; }
             public GenderRatio Ratio { get => Settings.DenFilters.GenderRatio; }
             public AbilityType Ability { get => Settings.DenFilters.Ability; }
@@ -42,34 +39,12 @@ namespace SysBot.Pokemon
             public uint GuaranteedIVs { get => Settings.DenFilters.GuaranteedIVs; }
             public long SearchRange { get => Settings.SearchRange; }
             public DenSettings Settings { get => settings ?? new(); set => settings = value; }
+            public uint DenID { get; set; }
         };
 
-        public class NestHoleDistributionEncounterTable
+        public static uint GetDenOffset(uint id, DenType type, out uint denID)
         {
-            public HashSet<NestHoleDistributionEncounter> Entries { get; set; } = new();
-        }
-
-        public class NestHoleDistributionEncounter
-        {
-            public uint EntryIndex { get; set; }
-            public uint Species { get; set; }
-            public uint AltForm { get; set; }
-            public uint Level { get; set; }
-            public uint DynamaxLevel { get; set; }
-            public uint Ability { get; set; }
-            public bool IsGigantamax { get; set; }
-            public uint[] Probabilities { get; set; } = new uint[] { };
-            public uint Gender { get; set; }
-            public uint FlawlessIVs { get; set; }
-            public uint ShinyLock { get; set; }
-            public uint Nature { get; set; }
-            public uint MinRank { get; set; }
-            public uint MaxRank { get; set; }
-        }
-
-        public static uint GetDenOffset(PokeTradeHub<PK8> hub)
-        {
-            uint denID = GetDenID(hub.Config.Den);
+            denID = GetDenID(id, type);
             uint shiftedOffset = PokeDataOffsets.DenOffset;
             if (denID >= 190)
                 return shiftedOffset += 0x300 + (denID * 0x18);
@@ -78,19 +53,38 @@ namespace SysBot.Pokemon
             else return shiftedOffset + (denID * 0x18);
         }
 
-        public static uint GetDenID(DenSettings settings)
+        // Taken from CaptureSight.
+        public static uint GetEventDenOffset(int lang, uint id, DenType type, out uint denID)
         {
-            uint denID = settings.DenType switch
+            denID = GetDenID(id, type);
+            return lang switch
             {
-                DenType.Vanilla => settings.DenID <= 100 && settings.DenID > 0 ? _ = settings.DenID - 1 : 99,
-                DenType.IoA => settings.DenID <= 90 && settings.DenID > 0 ? _ = settings.DenID - 1 + 100 : 189,
-                DenType.CT => settings.DenID <= 86 && settings.DenID > 0 ? _ = settings.DenID - 1 + 190 : 276,
+                (int)ConsoleLanguageParameter.ChineseTraditional => 0x2F9EA4C0,
+                (int)ConsoleLanguageParameter.ChineseSimplified => 0x2F9EA520,
+                (int)ConsoleLanguageParameter.Korean => 0x2F9EA920,
+                (int)ConsoleLanguageParameter.Italian => 0x2F9EB2A0,
+                (int)ConsoleLanguageParameter.Japanese => 0x2F9EB480,
+                (int)ConsoleLanguageParameter.Spanish => 0x2F9EB4E0,
+                (int)ConsoleLanguageParameter.French => 0x2F9EB510,
+                (int)ConsoleLanguageParameter.German => 0x2F9EB5F0,
+                (int)ConsoleLanguageParameter.Dutch => 0x2F9EC4D0,
+                _ => 0x2F9EB320,
+            };
+        }
+
+        public static uint GetDenID(uint id, DenType type)
+        {
+            uint denID = type switch
+            {
+                DenType.Vanilla => id <= 100 && id > 0 ? _ = id - 1 : 99,
+                DenType.IoA => id <= 90 && id > 0 ? _ = id - 1 + 100 : 189,
+                DenType.CT => id <= 86 && id > 0 ? _ = id - 1 + 190 : 276,
                 _ => 1,
             };
             return denID;
         }
 
-        public static RaidData GetRaid(RaidData raidInfo, byte[] denData)
+        public static RaidData GetRaid(RaidData raidInfo, byte[] denData, byte[] eventData)
         {
             raidInfo.Den = new RaidSpawnDetail(denData, 0)
             {
@@ -107,7 +101,7 @@ namespace SysBot.Pokemon
 
             if (raidInfo.Den.IsEvent)
             {
-                raidInfo.RaidDistributionEncounter = GetSpawnEvent(raidInfo, out NestHoleDistributionEncounterTable? table);
+                raidInfo.RaidDistributionEncounter = GetSpawnEvent(raidInfo, eventData, out NestHoleDistributionEncounter8Table table);
                 raidInfo.RaidDistributionEncounterTable = table;
             }
             else
@@ -122,18 +116,15 @@ namespace SysBot.Pokemon
         public static string IVSpreadByStar(string ivSpread, RaidData raidInfo, ulong seed)
         {
             var splitIV = ivSpread.Split('\n');
-            List<string> speciesList = new List<string>();
-            if (raidInfo.RaidDistributionEncounterTable == null)
-                return string.Empty;
+            List<string> speciesList = new();
 
-            var distEntries = raidInfo.RaidDistributionEncounterTable.Entries.ToList();
-#pragma warning disable CS8629
-            for (int i = 0; i < (raidInfo.Den.IsEvent ? distEntries.Count : raidInfo.RaidEncounterTable.EntriesLength); i++)
+#pragma warning disable CS8629 // Nullable value type may be null.
+            for (int i = 0; i < (raidInfo.Den.IsEvent ? raidInfo.RaidDistributionEncounterTable.EntriesLength : raidInfo.RaidEncounterTable.EntriesLength); i++)
             {
                 List<uint> probList = new();
                 for (int a = 0; a < 5; a++)
                 {
-                    var prob = raidInfo.Den.IsEvent ? distEntries[i].Probabilities[a] : raidInfo.RaidEncounterTable.Entries(i).Value.Probabilities(a);
+                    var prob = raidInfo.Den.IsEvent ? raidInfo.RaidDistributionEncounterTable.Entries(i).Value.Probabilities(a) : raidInfo.RaidEncounterTable.Entries(i).Value.Probabilities(a);
                     probList.Add(prob);
                 }
 
@@ -150,13 +141,13 @@ namespace SysBot.Pokemon
                     continue;
 
                 var rng = new Xoroshiro128Plus(seed);
-                var gmax = raidInfo.Den.IsEvent ? distEntries[i].IsGigantamax : raidInfo.RaidEncounterTable.Entries(i).Value.IsGigantamax;
-                var speciesID = (int)(raidInfo.Den.IsEvent ? distEntries[i].Species : raidInfo.RaidEncounterTable.Entries(i).Value.Species);
-                var form = (int)(raidInfo.Den.IsEvent ? distEntries[i].AltForm : raidInfo.RaidEncounterTable.Entries(i).Value.AltForm);
+                var gmax = raidInfo.Den.IsEvent ? raidInfo.RaidDistributionEncounterTable.Entries(i).Value.IsGigantamax : raidInfo.RaidEncounterTable.Entries(i).Value.IsGigantamax;
+                var speciesID = (int)(raidInfo.Den.IsEvent ? raidInfo.RaidDistributionEncounterTable.Entries(i).Value.Species : raidInfo.RaidEncounterTable.Entries(i).Value.Species);
+                var form = (int)(raidInfo.Den.IsEvent ? raidInfo.RaidDistributionEncounterTable.Entries(i).Value.AltForm : raidInfo.RaidEncounterTable.Entries(i).Value.AltForm);
                 var speciesName = SpeciesName.GetSpeciesNameGeneration(speciesID, 2, 8);
                 var pkm = AutoLegalityWrapper.GetTrainerInfo(8).GetLegal(AutoLegalityWrapper.GetTemplate(new ShowdownSet($"{speciesName}{TradeExtensions.FormOutput(speciesID, form, out _)}")), out _);
                 var personal = pkm.PersonalInfo;
-                var IVs = raidInfo.Den.IsEvent ? distEntries[i].FlawlessIVs : (uint)raidInfo.RaidEncounterTable.Entries(i).Value.FlawlessIVs;
+                var IVs = raidInfo.Den.IsEvent ? (uint)raidInfo.RaidDistributionEncounterTable.Entries(i).Value.FlawlessIVs : (uint)raidInfo.RaidEncounterTable.Entries(i).Value.FlawlessIVs;
 
                 uint EC = (uint)rng.NextInt(0xFFFFFFFF);
                 uint SIDTID = (uint)rng.NextInt(0xFFFFFFFF);
@@ -166,11 +157,11 @@ namespace SysBot.Pokemon
                 rng = SeedSearchUtil.GetIVs(rng, raidInfo.IVs, IVs, out uint[,] allIVs, out _);
                 var characteristic = SeedSearchUtil.GetCharacteristic(EC, allIVs, IVs - 1, out _);
 
-                var ability = raidInfo.Den.IsEvent ? distEntries[i].Ability : (uint)raidInfo.RaidEncounterTable.Entries(i).Value.Ability;
+                var ability = raidInfo.Den.IsEvent ? (uint)raidInfo.RaidDistributionEncounterTable.Entries(i).Value.Ability : (uint)raidInfo.RaidEncounterTable.Entries(i).Value.Ability;
                 rng = SeedSearchUtil.GetAbility(rng, ability, out uint abilityT);
 
                 var ratio = personal.OnlyFemale ? 254 : personal.OnlyMale ? 0 : personal.Genderless ? 255 : personal.Gender;
-                var gender = raidInfo.Den.IsEvent ? distEntries[i].Gender : (uint)raidInfo.RaidEncounterTable.Entries(i).Value.Gender;              
+                var gender = raidInfo.Den.IsEvent ? (uint)raidInfo.RaidDistributionEncounterTable.Entries(i).Value.Gender : (uint)raidInfo.RaidEncounterTable.Entries(i).Value.Gender;              
                 rng = SeedSearchUtil.GetGender(rng, (GenderRatio)ratio, gender, out uint genderT);
 
                 SeedSearchUtil.GetNature(rng, (uint)speciesID, (uint)form, out uint natureT);
@@ -179,7 +170,7 @@ namespace SysBot.Pokemon
                 speciesList.Add(star + " - " + speciesName + (gmax ? "-Gmax" : "") + " - " + splitIV[IVs - 1] + "\n" +
                 (GenderType)genderT + " - " + (Nature)natureT + " - " + (abilityT != 2 ? abilityT + 1 : "H") + ": " + (Ability)pkm.Ability + " - " + (ShinyType)shinytype + " - " + TradeExtensions.Characteristics[characteristic]);
             }
-#pragma warning restore CS8629
+#pragma warning restore CS8629 // Nullable value type may be null.
             speciesList.Sort();
             return string.Join("\n", speciesList);
         }
@@ -188,7 +179,7 @@ namespace SysBot.Pokemon
         {
             tables = new();
             var randroll = (int)raidInfo.Den.RandRoll;
-            var data = new ByteBuffer(new DenUtil().ReadResourceBinary(raidInfo.TrainerInfo));
+            var data = new ByteBuffer(ReadResourceBinary(raidInfo.TrainerInfo));
             var nestTable = EncounterNest8Archive.GetRootAsEncounterNest8Archive(data);
             for (int i = 0; i < nestTable.TablesLength; i++)
             {
@@ -196,20 +187,20 @@ namespace SysBot.Pokemon
                 if (!table.HasValue)
                     return new EncounterNest8();
 
-                var denhash = denHashes[GetDenID(raidInfo.Settings), raidInfo.Den.IsRare ? 1 : 0];
+                var denhash = denHashes[raidInfo.DenID, raidInfo.Den.IsRare ? 1 : 0];
                 if (table.Value.TableID == denhash && table.Value.GameVersion == (raidInfo.TrainerInfo.Version == GameVersion.SW ? 1 : 2))
                 {
                     tables = table.Value;
                     var entryLength = table.Value.EntriesLength;
+                    int prob = 1;
                     for (int p = 0; p < entryLength; p++)
                     {
                         var entry = table.Value.Entries(p);
                         if (!entry.HasValue)
                             return new EncounterNest8();
 
-                        var prob = (int)entry.Value.Probabilities(raidInfo.Den.Stars);
-                        randroll -= prob;
-                        if (randroll < 0)
+                        prob += (int)entry.Value.Probabilities(raidInfo.Den.Stars);
+                        if (prob > randroll)
                             return (EncounterNest8)entry;
                     }
                 }
@@ -217,25 +208,75 @@ namespace SysBot.Pokemon
             return new EncounterNest8();
         }
 
-        public static NestHoleDistributionEncounter GetSpawnEvent(RaidData raidInfo, out NestHoleDistributionEncounterTable? nestEventTable)
+        public static EncounterNest8 GetSpawnShort(RaidData raidInfo)
         {
             var randroll = (int)raidInfo.Den.RandRoll;
-            nestEventTable = ReadResourceJson(raidInfo.TrainerInfo);
-            if (nestEventTable == null)
-                return new NestHoleDistributionEncounter();
-
-            var entries = nestEventTable.Entries.ToList();
-            for (int p = 0; p < entries.Count; p++)
+            var entryLength = raidInfo.RaidEncounterTable.EntriesLength;
+            int prob = 1;
+            for (int p = 0; p < entryLength; p++)
             {
-                var prob = (int)entries[p].Probabilities[raidInfo.Den.Stars];
-                randroll -= prob;
-                if (randroll < 0)
-                    return entries[p];
+                var entry = raidInfo.RaidEncounterTable.Entries(p);
+                if (!entry.HasValue)
+                    return new EncounterNest8();
+
+                prob += (int)entry.Value.Probabilities(raidInfo.Den.Stars);
+                if (prob > randroll)
+                    return (EncounterNest8)entry;
             }
-            return new NestHoleDistributionEncounter();
+            return new EncounterNest8();
         }
 
-        private byte[]? ReadResourceBinary(SAV8SWSH trainerInfo)
+        public static NestHoleDistributionEncounter8 GetSpawnEvent(RaidData raidInfo, byte[] data, out NestHoleDistributionEncounter8Table nestEventTable)
+        {
+            var randroll = (int)raidInfo.Den.RandRoll;
+            var bb = new ByteBuffer(data);
+            int prob = 1;
+            nestEventTable = new();
+            var tables = NestHoleDistributionEncounter8Archive.GetRootAsNestHoleDistributionEncounter8Archive(bb);
+            for (int i = 0; i < tables.TablesLength; i++)
+            {
+                var table = tables.Tables(i);
+                if (!table.HasValue)
+                    return new NestHoleDistributionEncounter8();
+
+                if (table.Value.GameVersion == (raidInfo.TrainerInfo.Version == GameVersion.SW ? 1 : 2))
+                {
+                    nestEventTable = table.Value;
+                    var entryLength = table.Value.EntriesLength;
+                    for (int p = 0; p < entryLength; p++)
+                    {
+                        var entry = table.Value.Entries(p);
+                        if (!entry.HasValue)
+                            return new NestHoleDistributionEncounter8();
+
+                        prob += (int)entry.Value.Probabilities(raidInfo.Den.Stars);
+                        if (prob > randroll)
+                            return (NestHoleDistributionEncounter8)entry;
+                    }
+                }
+            }
+            return new NestHoleDistributionEncounter8();
+        }
+
+        public static NestHoleDistributionEncounter8 GetSpawnEventShort(RaidData raidInfo)
+        {
+            var randroll = (int)raidInfo.Den.RandRoll;
+            var entryLength = raidInfo.RaidDistributionEncounterTable.EntriesLength;
+            int prob = 1;
+            for (int p = 0; p < entryLength; p++)
+            {
+                var entry = raidInfo.RaidDistributionEncounterTable.Entries(p);
+                if (!entry.HasValue)
+                    return new NestHoleDistributionEncounter8();
+
+                prob += (int)entry.Value.Probabilities(raidInfo.Den.Stars);
+                if (prob > randroll)
+                    return (NestHoleDistributionEncounter8)entry;
+            }
+            return new NestHoleDistributionEncounter8();
+        }
+
+        private static byte[]? ReadResourceBinary(SAV8SWSH trainerInfo)
         {
             using Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(trainerInfo.Version == GameVersion.SW ? SwordTable : ShieldTable);
             if (stream == null)
@@ -244,15 +285,6 @@ namespace SysBot.Pokemon
             byte[] array = new byte[stream.Length];
             stream.Read(array, 0, array.Length);
             return array;
-        }
-
-        private static NestHoleDistributionEncounterTable? ReadResourceJson(SAV8SWSH trainerInfo)
-        {
-            using Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(trainerInfo.Version == GameVersion.SW ? SwordDistributionTable : ShieldDistributionTable);
-            using TextReader reader = new StreamReader(stream);
-            var table = TradeExtensions.GetRoot<NestHoleDistributionEncounterTable>("", reader);
-            reader.Close();
-            return table;
         }
 
         public static ulong GetTargetSeed(ulong seed, int skips)
@@ -282,51 +314,8 @@ namespace SysBot.Pokemon
             return -1;
         }
 
-        public static void GenerateJson() // Literally only used for lazy distribution nest updates
-        {
-            var files = Directory.GetFiles(Directory.GetCurrentDirectory(), "nestDist*");
-            foreach (var file in files)
-            {
-                var jsonName = file.Contains("nestDist_sw") ? "NestDistributionEncSW.json" : "NestDistributionEncSH.json";
-                File.Create(jsonName).Close();
-                var text = File.ReadAllText(file).Split('\n');
-                var tables = new NestHoleDistributionEncounterTable();
-                for (int i = 0; i < text.Length; i++)
-                {
-                    if (i == 0)
-                        continue;
-
-                    var entry = text[i].Split('	');
-                    var probSplit = entry[15].Split('|');
-                    var prob = new uint[5];
-                    for (int p = 0; p < probSplit.Length; p++)
-                        prob[p] = uint.Parse(probSplit[p]);
-
-                    tables.Entries.Add(new NestHoleDistributionEncounter()
-                    {
-                        EntryIndex = uint.Parse(entry[0]),
-                        Species = uint.Parse(entry[1]),
-                        AltForm = uint.Parse(entry[2]),
-                        Level = uint.Parse(entry[3]),
-                        DynamaxLevel = uint.Parse(entry[4]),
-                        Ability = uint.Parse(entry[11]),
-                        IsGigantamax = bool.Parse(entry[12]),
-                        Probabilities = prob,
-                        Gender = uint.Parse(entry[16]),
-                        FlawlessIVs = uint.Parse(entry[17]),
-                        ShinyLock = uint.Parse(entry[18]),
-                        Nature = uint.Parse(entry[21]),
-                        MinRank = uint.Parse(entry[37]),
-                        MaxRank = uint.Parse(entry[38])
-                    });
-                }
-                TradeExtensions.SerializeInfo(tables, $"{Directory.GetCurrentDirectory()}//{jsonName}");
-                File.Delete(file);
-            }
-        }
-
-        public static ulong eventHash = 1721953670860364124u;
-        public static ulong[,] denHashes = {
+        private static readonly ulong eventHash = 1721953670860364124u;
+        private static readonly ulong[,] denHashes = {
         { 1675062357515959378u, 13439833545771248589u },
         { 1676893044376552243u, 13440787921864346512u },
         { 1676899641446321509u, 4973137107049022145u },
@@ -350,7 +339,7 @@ namespace SysBot.Pokemon
         { 1676899641446321509u, 13439823650166594690u },
         { 1676055216516044686u, 13441642242399277234u },
         { 1676055216516044686u, 13441642242399277234u },
-        { 13438843985306047914u, 1679871621376808167u },
+        { 1679871621376808167u, 13438843985306047914u },
         { 1676048619446275420u, 13438843985306047914u },
         { 1676055216516044686u, 4973136007537393934u },
         { 1676895243399808665u, 13440791220399231145u },

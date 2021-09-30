@@ -134,6 +134,16 @@
         Special
     }
 
+    public enum StatusCondition
+    {
+        NoCondition,
+        Paralyzed,
+        Asleep,
+        Frozen,
+        Burned,
+        Poisoned,
+    }
+
     public enum MoveTarget
     {
         AllAdjacentOpponents,
@@ -149,5 +159,34 @@
         All,
         Opponent,
         RandomOpponent,
+    }
+
+    public enum DmaxMoves
+    {
+        MaxStrike,
+        MaxKnuckle,
+        MaxAirstream,
+        MaxOoze,
+        MaxQuake,
+        MaxRockfall,
+        MaxFlutterby,
+        MaxPhantasm,
+        MaxSteelspike,
+        MaxFlare,
+        MaxGeyser,
+        MaxOvergrowth,
+        MaxLightning,
+        MaxMindstorm,
+        MaxHailstorm,
+        MaxWyrmwind,
+        MaxDarkness,
+        MaxStarfall,
+        MaxGuard,
+    }
+
+    public enum LairBotModes
+    {
+        OffsetLog,
+        LairBot,
     }
 }

@@ -10,10 +10,12 @@ namespace SysBot.Pokemon
     public sealed class LairBotUtil
     {
         public static CancellationTokenSource EmbedSource = new();
-        public static List<LairSpecies> NoteRequest = new();
+        public static bool DiscordQueueOverride;
         public static bool EmbedsInitialized;
         public static (PK8?, bool) EmbedMon;
-        public static readonly MoveInfoRoot? Moves = LoadMoves();
+        public static int TerrainDur = -1;
+        public static MoveInfo.MoveInfoRoot MoveRoot = new();
+
         // Copied over from PKHeX due to accessibility
         internal static readonly ushort[] Pouch_Regular_SWSH =
 {
@@ -53,29 +55,64 @@ namespace SysBot.Pokemon
             1592, 1604, 1606
         };
 
+        public static double[] TypeDamageMultiplier(int[] types, int moveType)
+        {
+            double[] effectiveness = { -1, -1 };
+            for (int i = 0; i < types.Length; i++)
+            {
+                effectiveness[i] = moveType switch
+                {
+                    0 => new double[] { 1.0, 1.0, 1.0, 1.0, 1.0, 0.5, 1.0, 0.0, 0.5, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 }[types[i]],
+                    1 => new double[] { 2.0, 1.0, 0.5, 0.5, 1.0, 2.0, 0.5, 0.0, 2.0, 1.0, 1.0, 1.0, 1.0, 0.5, 2.0, 1.0, 2.0, 0.5 }[types[i]],
+                    2 => new double[] { 1.0, 2.0, 1.0, 1.0, 1.0, 0.5, 2.0, 1.0, 0.5, 1.0, 1.0, 2.0, 0.5, 1.0, 1.0, 1.0, 1.0, 1.0 }[types[i]],
+                    3 => new double[] { 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 0.5, 0.0, 1.0, 1.0, 2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0 }[types[i]],
+                    4 => new double[] { 1.0, 1.0, 0.0, 2.0, 1.0, 2.0, 0.5, 1.0, 2.0, 2.0, 1.0, 0.5, 2.0, 1.0, 1.0, 1.0, 1.0, 1.0 }[types[i]],
+                    5 => new double[] { 1.0, 0.5, 2.0, 1.0, 0.5, 1.0, 2.0, 1.0, 0.5, 2.0, 1.0, 1.0, 1.0, 1.0, 2.0, 1.0, 1.0, 1.0 }[types[i]],
+                    6 => new double[] { 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 2.0, 1.0, 2.0, 1.0, 1.0, 2.0, 0.5 }[types[i]],
+                    7 => new double[] { 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 1.0, 1.0, 0.5, 1.0 }[types[i]],
+                    8 => new double[] { 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 0.5, 1.0, 2.0, 1.0, 1.0, 2.0 }[types[i]],
+                    9 => new double[] { 1.0, 1.0, 1.0, 1.0, 1.0, 0.5, 2.0, 1.0, 2.0, 0.5, 0.5, 2.0, 1.0, 1.0, 2.0, 0.5, 1.0, 1.0 }[types[i]],
+                    10 => new double[] { 1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 1.0, 1.0, 1.0, 2.0, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 1.0, 1.0 }[types[i]],
+                    11 => new double[] { 1.0, 1.0, 0.5, 0.5, 2.0, 2.0, 0.5, 1.0, 0.5, 0.5, 2.0, 0.5, 1.0, 1.0, 1.0, 0.5, 1.0, 1.0 }[types[i]],
+                    12 => new double[] { 1.0, 1.0, 2.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 0.5, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0 }[types[i]],
+                    13 => new double[] { 1.0, 2.0, 1.0, 2.0, 1.0, 1.0, 1.0, 1.0, 0.5, 1.0, 1.0, 1.0, 1.0, 0.5, 1.0, 1.0, 0.0, 1.0 }[types[i]],
+                    14 => new double[] { 1.0, 1.0, 2.0, 1.0, 2.0, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 2.0, 1.0, 1.0, 0.5, 2.0, 1.0, 1.0 }[types[i]],
+                    15 => new double[] { 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.5, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 1.0, 0.0 }[types[i]],
+                    16 => new double[] { 1.0, 0.5, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 1.0, 1.0, 0.5, 0.5 }[types[i]],
+                    17 => new double[] { 1.0, 2.0, 1.0, 0.5, 1.0, 1.0, 1.0, 1.0, 0.5, 0.5, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 1.0 }[types[i]],
+                    _ => 1.0,
+                };
+            }
+            return effectiveness;
+        }
+
         public class MoveInfo
         {
+            public class MoveInfoRoot
+            {
+                public HashSet<MoveInfo> Moves { get; private set; } = new();
+            }
+
             public int MoveID { get; set; }
             public string Name { get; set; } = string.Empty;
             public MoveType Type { get; set; }
             public MoveCategory Category { get; set; }
             public int Power { get; set; }
+            public int Accuracy { get; set; }
             public int Priority { get; set; }
             public int EffectSequence { get; set; }
             public int Recoil { get; set; }
             public int PowerGmax { get; set; }
+            public bool Contact { get; set; }
             public bool Charge { get; set; }
             public bool Recharge { get; set; }
+            public bool Sound { get; set; }
             public bool Gravity { get; set; }
+            public bool Defrost { get; set; }
             public MoveTarget Target { get; set; }
         }
 
-        public class MoveInfoRoot
-        {
-            public HashSet<MoveInfo> Moves { get; set; } = new();
-        }
-
-        public static int CalculateSpeed(PK8 pk) => ((pk.IV_SPE + (2 * pk.PersonalInfo.SPE) + (pk.EV_SPE / 4)) * pk.CurrentLevel / 100) + 5; // Taken from PKHeX
+        public static int CalculateEffectiveStat(int statIV, int statEV, int statBase, int level) => ((statIV + (2 * statBase) + (statEV / 4)) * level / 100) + 5; // Taken from PKHeX
 
         public static int PriorityIndex(PK8 pk)
         {
@@ -91,37 +128,150 @@ namespace SysBot.Pokemon
             return selectIndex;
         }
 
-        public static bool TypeImmunity(PK8 pk, PK8 lairPk, int move)
+        public static double[] WeightedDamage(PK8[] party, PK8 pk, PK8 lairPk, bool dmax)
         {
-            bool[] immune = new bool[2];
-            bool drySkin = Moves?.Moves.FirstOrDefault(x => x.MoveID == pk.Moves[move] && x.Type == MoveType.Water) != default && (lairPk.Ability == (int)Ability.DrySkin || lairPk.Ability == (int)Ability.WaterAbsorb || lairPk.Ability == (int)Ability.StormDrain);
-            bool voltAbsorb = Moves?.Moves.FirstOrDefault(x => x.MoveID == pk.Moves[move] && x.Type == MoveType.Electric) != default && lairPk.Ability == (int)Ability.VoltAbsorb;
-            if (drySkin || voltAbsorb)
-                return true;
+            if (TerrainDur >= 0)
+                --TerrainDur;
 
-            int[] types = new int[] { lairPk.PersonalInfo.Type1, lairPk.PersonalInfo.Type2 };
-            for (int i = 0; i < 2; i++)
+            int[] movePP = new int[] { pk.Move1_PP, pk.Move2_PP, pk.Move3_PP, pk.Move4_PP };
+            double[] dmgCalc = new double[4];
+            int[] types = { lairPk.PersonalInfo.Type1, lairPk.PersonalInfo.Type2 };
+            var encAbility = lairPk.Ability;
+            var ourAbility = pk.Ability;
+
+            for (int i = 0; i < pk.Moves.Length; i++)
             {
-                immune[i] = (types[i]) switch
+                double typeMultiplier = -1.0;
+                var move = MoveRoot.Moves.FirstOrDefault(x => x.MoveID == pk.Moves[i]);
+                var power = Convert.ToDouble(move.Power);
+                bool waterImmune = move.Type == MoveType.Water && (lairPk.Ability == (int)Ability.DrySkin || lairPk.Ability == (int)Ability.WaterAbsorb || lairPk.Ability == (int)Ability.StormDrain || party.Any(x => x.Ability == (int)Ability.StormDrain));
+                bool electricImmune = move.Type == MoveType.Electric && (lairPk.Ability == (int)Ability.VoltAbsorb || lairPk.Ability == (int)Ability.LightningRod || lairPk.Ability == (int)Ability.MotorDrive || party.Any(x => x.Ability == (int)Ability.LightningRod));
+                bool groundImmune = move.MoveID != (int)Move.ThousandArrows && move.Type == MoveType.Ground && (lairPk.Ability == (int)Ability.Levitate || types[0] == (int)MoveType.Flying || types[1] == (int)MoveType.Flying);
+                bool fireImmune = move.Type == MoveType.Fire && lairPk.Ability == (int)Ability.FlashFire;
+                bool grassImmune = move.Type == MoveType.Grass && lairPk.Ability == (int)Ability.SapSipper;
+                bool ignoreAbility = pk.Ability == (int)Ability.Turboblaze || pk.Ability == (int)Ability.Teravolt || pk.Ability == (int)Ability.MoldBreaker;
+
+                var typeMulti = TypeDamageMultiplier(types, (int)move.Type);
+                if (typeMulti[0] == 0.0 || typeMulti[1] == 0.0)
+                    typeMultiplier = 0.0;
+                else if (typeMulti[0] == 0.5 && typeMulti[1] == 0.5 && types[0] != types[1])
+                    typeMultiplier = 0.25;
+                else if (typeMulti[0] == 0.5 || typeMulti[1] == 0.5)
+                    typeMultiplier = 0.5;
+                else if (typeMulti[0] == 1.0 && typeMulti[1] == 1.0)
+                    typeMultiplier = 1.0;
+                else if (typeMulti[0] == 2.0 && typeMulti[1] == 2.0 && types[0] != types[1])
+                    typeMultiplier = 4.0;
+                else if (typeMulti[0] == 2.0 || typeMulti[1] == 2.0)
+                    typeMultiplier = 2.0;
+
+                if ((!ignoreAbility && (waterImmune || electricImmune || fireImmune || grassImmune || groundImmune)) || move.Category == MoveCategory.Status || (move.MoveID == (int)Move.DreamEater && lairPk.Status_Condition != (int)StatusCondition.Asleep))
+                    typeMultiplier = -1.0;
+
+                double target = move.Target switch
                 {
-                    0 => Moves?.Moves.FirstOrDefault(x => x.MoveID == pk.Moves[move] && x.Type == MoveType.Ghost) != default,
-                    2 => Moves?.Moves.FirstOrDefault(x => x.MoveID == pk.Moves[move] && x.Type == MoveType.Ground) != default || lairPk.Ability == (int)Ability.Levitate,
-                    4 => Moves?.Moves.FirstOrDefault(x => x.MoveID == pk.Moves[move] && x.Type == MoveType.Electric) != default,
-                    7 => Moves?.Moves.FirstOrDefault(x => x.MoveID == pk.Moves[move] && (x.Type == MoveType.Normal || x.Type == MoveType.Fighting)) != default,
-                    8 => Moves?.Moves.FirstOrDefault(x => x.MoveID == pk.Moves[move] && x.Type == MoveType.Poison) != default && pk.Ability != (int)Ability.Corrosion,
-                    16 => Moves?.Moves.FirstOrDefault(x => x.MoveID == pk.Moves[move] && x.Type == MoveType.Psychic) != default,
-                    17 => Moves?.Moves.FirstOrDefault(x => x.MoveID == pk.Moves[move] && x.Type == MoveType.Dragon) != default,
-                    _ => false,
+                    MoveTarget.All or MoveTarget.AllAdjacentOpponents => 0.75,
+                    _ => 1.0,
                 };
+
+                double stab = ourAbility == (int)Ability.Adaptability && (pk.PersonalInfo.Type1 == (int)move.Type || pk.PersonalInfo.Type2 == (int)move.Type) ? 2.0 : pk.PersonalInfo.Type1 == (int)move.Type || pk.PersonalInfo.Type2 == (int)move.Type ? 1.5 : 1.0;
+                double multiplier = movePP[i] == 0 || (move.MoveID == (int)Move.SteelRoller && TerrainDur == -1) ? -100.0 : 1.0;
+                multiplier *= encAbility switch // Target ability influence
+                {
+                    (int)Ability.Fluffy => move.Type == MoveType.Fire && !move.Contact ? 2.0 : 0.5,
+                    (int)Ability.DrySkin => move.Type == MoveType.Fire ? 1.25 : move.Type == MoveType.Water ? -1.25 : 1.0,
+                    (int)Ability.ThickFat => move.Type == MoveType.Fire || move.Type == MoveType.Ice ? 0.5 : 1.0,
+                    (int)Ability.Heatproof => move.Type == MoveType.Fire ? 0.5 : 1.0,
+                    (int)Ability.PrismArmor => typeMultiplier >= 2.0 ? 0.75 : 1.0,
+                    (int)Ability.PunkRock => move.Sound ? 0.5 : 1.0,
+                    _ => 1.0,
+                };
+
+                multiplier *= ourAbility switch // Our ability influence
+                {
+                    (int)Ability.TintedLens => typeMultiplier < 1.0 ? 2.0 : 1.0,
+                    (int)Ability.IronFist => move.Name.Contains("Punch") || move.Name.Contains("Hammer") || move.MoveID == (int)Move.MeteorMash || move.MoveID == (int)Move.SkyUppercut ? 1.2 : 1.0,
+                    (int)Ability.StrongJaw => move.Name.Contains("Fang") || move.MoveID == (int)Move.Bite || move.MoveID == (int)Move.Crunch || move.MoveID == (int)Move.JawLock ? 1.5 : 1.0,
+                    (int)Ability.Adaptability => (int)move.Type == pk.PersonalInfo.Type1 || (int)move.Type == pk.PersonalInfo.Type2 ? 1.75 : 1.0,
+                    (int)Ability.PunkRock => move.Sound ? 1.3 : 1.0,
+                    (int)Ability.Normalize or (int)Ability.Refrigerate or (int)Ability.Aerilate or (int)Ability.Galvanize or (int)Ability.Pixilate => move.Type == MoveType.Normal ? 1.2 : 1.0,
+                    _ => 1.0,
+                };
+
+                multiplier *= pk.HeldItem switch // Held item influence
+                {
+                    268 => typeMultiplier >= 2 ? 1.2 : 1.0, // Expert Belt
+                    270 => 1.3, // Life Orb
+                    _ => 1.0,
+                };
+
+                multiplier *= move.Type switch
+                {
+                    MoveType.Fairy => (ourAbility == (int)Ability.FairyAura || encAbility == (int)Ability.FairyAura) && (ourAbility == (int)Ability.AuraBreak || encAbility == (int)Ability.AuraBreak) ? 0.75 : ourAbility == (int)Ability.FairyAura || encAbility == (int)Ability.FairyAura ? 1.33 : 1.0,
+                    MoveType.Dark => (ourAbility == (int)Ability.FairyAura || encAbility == (int)Ability.FairyAura) && (ourAbility == (int)Ability.AuraBreak || encAbility == (int)Ability.AuraBreak) ? 0.75 : ourAbility == (int)Ability.DarkAura || encAbility == (int)Ability.DarkAura ? 1.33 : 1.0,
+                    _ => 1.0,
+                };
+
+                multiplier *= target * 0.925 * typeMultiplier * stab * (dmax ? 1.0 : move.Accuracy / 100.0);
+                bool physical = move.Category == MoveCategory.Physical;
+                bool bodyPress = move.MoveID == (int)Move.BodyPress;
+                bool foulPlay = move.MoveID == (int)Move.FoulPlay;
+                bool psy = move.MoveID == (int)Move.Psyshock || move.MoveID == (int)Move.Psystrike;
+                double effectiveAttack = physical switch
+                {
+                    true => CalculateEffectiveStat(bodyPress ? pk.IV_DEF : foulPlay ? lairPk.IV_ATK : pk.IV_ATK, bodyPress ? pk.EV_DEF : foulPlay ? lairPk.EV_ATK : pk.EV_ATK, bodyPress ? pk.PersonalInfo.DEF : foulPlay ? lairPk.PersonalInfo.ATK : pk.PersonalInfo.ATK, pk.CurrentLevel),
+                    false => CalculateEffectiveStat(pk.IV_SPA, pk.EV_SPA, pk.PersonalInfo.SPA, pk.CurrentLevel),
+                };
+
+                double effectiveDefense = physical switch
+                {
+                    true => CalculateEffectiveStat(lairPk.IV_DEF, lairPk.EV_DEF, lairPk.PersonalInfo.DEF, lairPk.CurrentLevel),
+                    false => CalculateEffectiveStat(psy ? lairPk.IV_DEF : lairPk.IV_SPD, psy ? lairPk.EV_DEF : lairPk.EV_SPD, psy ? lairPk.PersonalInfo.DEF : lairPk.PersonalInfo.SPD, lairPk.CurrentLevel),
+                };
+
+                power *= move.MoveID switch
+                {
+                    (int)Move.Acrobatics => pk.HeldItem == 0 && !dmax ? 2.0 : 1.0,
+                    (int)Move.Hex => lairPk.Status_Condition != (int)StatusCondition.NoCondition && !dmax ? 2.0 : 1.0,
+                    (int)Move.Venoshock => lairPk.Status_Condition == (int)StatusCondition.Poisoned && !dmax ? 2.0 : 1.0,
+                    (int)Move.DreamEater => lairPk.Status_Condition == (int)StatusCondition.Asleep && !dmax ? 1.5 : 1.0,
+                    _ => dmax ? 2.0 : 1.0,
+                };
+
+                double status = pk.Status_Condition switch // Add extra weight based on niche circumstances
+                {
+                    (int)StatusCondition.Burned => move.Category == MoveCategory.Physical && ourAbility != (int)Ability.Guts ? 0.5 : 1.0,
+                    (int)StatusCondition.Frozen => move.Defrost ? 10.0 : 1.0,
+                    (int)StatusCondition.Asleep => move.MoveID == (int)Move.Snore || move.MoveID == (int)Move.SleepTalk ? 10.0 : 1.0,
+                    _ => 1.0,
+                };
+
+                power *= status * (!dmax && (move.Charge || move.Recharge) ? 0.5 : 1.0);
+                double terrain = 1.0;
+                if (dmax || TerrainDur > 0)
+                {
+                    terrain = move.Type switch
+                    {
+                        MoveType.Fire or MoveType.Water => 1.5,
+                        MoveType.Grass or MoveType.Electric or MoveType.Psychic => 1.3,
+                        _ => 1.0,
+                    };
+
+                    if (terrain > 1.0 && TerrainDur < 0)
+                        TerrainDur = 5;
+                }
+
+                power *= terrain;
+                dmgCalc[i] = ((((2 * pk.CurrentLevel / 5) + 2) * power * (effectiveAttack / effectiveDefense) / 50) + 2) * multiplier;
             }
-            return immune[0] || immune[1];
+            return dmgCalc;
         }
 
-        public static MoveInfoRoot? LoadMoves()
+        public static MoveInfo.MoveInfoRoot LoadMoves()
         {
             using Stream stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("SysBot.Pokemon.BotLair.MoveInfo.json");
             using TextReader reader = new StreamReader(stream);
-            var root = TradeExtensions.GetRoot<MoveInfoRoot>("", reader);
+            var root = TradeExtensions.GetRoot<MoveInfo.MoveInfoRoot>("", reader);
             reader.Close();
             return root;
         }

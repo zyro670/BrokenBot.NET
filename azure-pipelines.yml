@@ -6,6 +6,8 @@
 trigger:
 - KoiTest
 
+pr: none
+
 pool:
   name: Azure Pipelines
   vmImage: 'windows-2022'
