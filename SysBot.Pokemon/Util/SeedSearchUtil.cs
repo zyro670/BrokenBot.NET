@@ -157,12 +157,12 @@ namespace SysBot.Pokemon
                     if (!charMatch)
                         continue;
 
-                    rng = GetAbility(rng, raidInfo.Den.IsEvent ? raidInfo.RaidDistributionEncounter.Ability : (uint)raidInfo.RaidEncounter.Ability, out uint abilityT);
+                    rng = GetAbility(rng, raidInfo.Den.IsEvent ? (uint)raidInfo.RaidDistributionEncounter.Ability : (uint)raidInfo.RaidEncounter.Ability, out uint abilityT);
                     bool abilityMatch = raidInfo.Ability == AbilityType.Any ? abilityT != (uint)raidInfo.Ability : abilityT == (uint)raidInfo.Ability;
                     if (!abilityMatch)
                         continue;
 
-                    rng = GetGender(rng, raidInfo.Ratio, raidInfo.Den.IsEvent ? raidInfo.RaidDistributionEncounter.Gender : (uint)raidInfo.RaidEncounter.Gender, out uint genderT);
+                    rng = GetGender(rng, raidInfo.Ratio, raidInfo.Den.IsEvent ? (uint)raidInfo.RaidDistributionEncounter.Gender : (uint)raidInfo.RaidEncounter.Gender, out uint genderT);
                     bool genderMatch = raidInfo.Gender == GenderType.Any ? genderT != (uint)raidInfo.Gender : genderT == (uint)raidInfo.Gender;
                     if (!genderMatch)
                         continue;

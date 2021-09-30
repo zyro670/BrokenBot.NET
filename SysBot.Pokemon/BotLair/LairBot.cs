@@ -3,7 +3,6 @@ using PKHeX.Core;
 using SysBot.Base;
 using System.Linq;
 using System.Threading;
-using System.Diagnostics;
 using System.Globalization;
 using System.Threading.Tasks;
 using System.Collections.Generic;
@@ -20,16 +19,49 @@ namespace SysBot.Pokemon
         private readonly PokeTradeHub<PK8> Hub;
         private readonly LairSettings Settings;
         private readonly IDumper DumpSetting;
-        private readonly int[] DesiredIVs;
+        private readonly int[] DesiredMinIVs;
+        private readonly int[] DesiredMaxIVs;
         private byte[] OtherItemsPouch = { 0 };
         private byte[] BallPouch = { 0 };
         private ulong MainNsoBase;
+        private ulong LairMiscScreenCalc;
         private bool StopBot;
-        private bool Upgrade;
-        private int encounterCount;
-        private int catchCount = -1;
-        private int resetCount;
-        private int lairCount;
+        private bool Lost;
+        private int LegendFound = 0;
+        private int HackyNoteCheck = -1;
+        private int Caught;
+        private int OldMoveIndex = 0;
+        private int LairEncounterCount;
+        private int CatchCount = -1;
+        private int ResetCount;
+        private readonly LairCount AdventureCounts = new();
+        private readonly KeepPathTotals KeepPathCounts = new();
+        private readonly LairOffsetValues OffsetValues;
+        private PK8 LairBoss = new();
+        private PK8 PlayerPk = new();
+
+        sealed private class LairCount
+        {
+            public double AdventureCount { get; set; }
+            public double WinCount { get; set; }
+        }
+
+        sealed private class KeepPathTotals
+        {
+            public int KeepPathAdventures { get; set; }
+            public int KeepPathWins { get; set; }
+        }
+
+        sealed private class LairOffsetValues
+        {
+            public ushort LairLobby { get; set; }
+            public ushort LairAdventurePath { get; set; }
+            public ushort LairDmax { get; set; }
+            public ushort LairBattleMenu { get; set; }
+            public ushort LairMovesMenu { get; set; }
+            public ushort LairCatchScreen { get; set; }
+            public ushort LairRewardsScreen { get; set; }
+        }
 
         public LairBot(PokeBotState cfg, PokeTradeHub<PK8> hub) : base(cfg)
         {
@@ -37,31 +69,47 @@ namespace SysBot.Pokemon
             Counts = Hub.Counts;
             Settings = hub.Config.Lair;
             DumpSetting = Hub.Config.Folder;
-            DesiredIVs = StopConditionSettings.InitializeTargetIVs(Hub);
+            OffsetValues = ValueParse();
+            StopConditionSettings.InitializeTargetIVs(Hub, out DesiredMinIVs, out DesiredMaxIVs);
         }
 
         public override async Task MainLoop(CancellationToken token)
         {
             Log("Identifying trainer data of the host console.");
             await IdentifyTrainer(token).ConfigureAwait(false);
-            Log("It's adventure time! Starting main LairBot loop.");
             Config.IterateNextRoutine();
-            MainNsoBase = await SwitchConnection.GetMainNsoBaseAsync(token).ConfigureAwait(false);
-            _ = Task.Run(async () => await CancellationMonitor(token).ConfigureAwait(false));
-            await DoLairBot(token).ConfigureAwait(false);
+            if (Settings.EnableOHKO)
+                _ = Task.Run(async () => await CancellationMonitor(token).ConfigureAwait(false));
+
+            var task = Settings.LairBotMode switch
+            {
+                LairBotModes.OffsetLog => DoOffsetLog(token),
+                _ => DoLairBot(token),
+            };
+            await task.ConfigureAwait(false);
+
             await DetachController(token).ConfigureAwait(false);
         }
-        
+
         private async Task DoLairBot(CancellationToken token)
         {
             int raidCount = 1;
-            int caught = 0;
+            if (LairBotUtil.MoveRoot.Moves.Count == 0)
+                LairBotUtil.MoveRoot = LairBotUtil.LoadMoves();
+
+            Log("It's adventure time! Starting main LairBot loop.");
             while (!token.IsCancellationRequested)
             {
-                bool lost = false;
-                Upgrade = false;
+                Lost = false;
+                OldMoveIndex = 0;
+                LairBotUtil.TerrainDur = -1;
+
                 if (raidCount == 1)
                 {
+                    MainNsoBase = await SwitchConnection.GetMainNsoBaseAsync(token).ConfigureAwait(false);
+                    LairMiscScreenCalc = MainNsoBase + LairMiscScreenOffset;
+                    Caught = 0;
+
                     while (!await IsOnOverworld(Hub.Config, token).ConfigureAwait(false))
                         await Click(A, 0_500, token).ConfigureAwait(false);
 
@@ -75,86 +123,87 @@ namespace SysBot.Pokemon
                     if (!await SettingsCheck(token).ConfigureAwait(false))
                         return;
 
-                    await SetHuntedPokemon(token).ConfigureAwait(false);
+                    var species = await SetHuntedPokemon(token).ConfigureAwait(false);
                     if (!await LairSeedInjector(token).ConfigureAwait(false))
                         return;
 
                     ulong seed = BitConverter.ToUInt64(await Connection.ReadBytesAsync(AdventureSeedOffset, 8, token).ConfigureAwait(false), 0);
                     Log($"Here is your current Lair Seed: {seed:X16}");
-                    await Click(A, 0_500, token).ConfigureAwait(false);
-                    while (true)
-                    {
-                        if (await LairStatusCheck(CurrentScreen_LairMenu, CurrentScreenLairOffset, token).ConfigureAwait(false))
-                            break;
-                        await Click(A, 0_600 + Settings.MashDelay, token).ConfigureAwait(false);
-                    }
 
-                    var huntedSpecies = BitConverter.ToUInt16(await Connection.ReadBytesAsync(LairSpeciesNote1, 2, token).ConfigureAwait(false), 0);
-                    Log($"Starting a Solo Adventure for {(huntedSpecies == 0 ? "a random Legendary" : (LairSpecies)huntedSpecies)}!");
-                    await Task.Delay(2_000).ConfigureAwait(false);
-                    await RentalRoutine(token).ConfigureAwait(false); // Select a rental.
+                    var winRate = AdventureCounts.AdventureCount > 0 ? $" {AdventureCounts.WinCount}/{AdventureCounts.AdventureCount} adventures won so far." : "";
+                    Log($"Starting a Solo Adventure for {(species == 0 ? "a random Legendary" : (Species)species)}!{winRate}");
+                    await RentalRoutine(token).ConfigureAwait(false); // Enter rental selection.
                 }
 
-                while (!await LairStatusCheck(AdventurePathBytes, CurrentScreenLairOffset, token).ConfigureAwait(false)) // Delay until in path select screen.
-                    await Task.Delay(0_500).ConfigureAwait(false);
+                while (!await LairStatusCheck(OffsetValues.LairAdventurePath, CurrentScreenLairOffset, token).ConfigureAwait(false)) // Delay until in path select screen.
+                    await Task.Delay(2_000).ConfigureAwait(false);
 
-                await Task.Delay(raidCount == 1 ? 8_000 : 2_500).ConfigureAwait(false); // Because map scroll is slow.
-                await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0x7900E81F), MainNsoBase + DamageOutputOffset, token).ConfigureAwait(false); // Enable dirty OHKO.
+                await Task.Delay(raidCount == 1 ? 11_000 : 6_000).ConfigureAwait(false); // Because map scroll is slow and random dialogue is annoying.
+
+                if (Settings.EnableOHKO) // Enable dirty OHKO.
+                    await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0x7900E81F), MainNsoBase + DamageOutputOffset, token).ConfigureAwait(false);
+
                 switch (Hub.Config.Lair.SelectPath) // Choose a path to take.
                 {
                     case SelectPath.GoLeft: await Click(A, 1_000, token).ConfigureAwait(false); break;
                     case SelectPath.GoRight: await Click(DRIGHT, 1_000, token).ConfigureAwait(false); break;
                 };
 
-                if (raidCount == 1 && !await LegendReset(token).ConfigureAwait(false))
-                    continue;
-
-                while (!await IsInBattle(token).ConfigureAwait(false)) // Wait until we're in battle. Also deals with NPCs.
+                while (!await IsInBattle(token).ConfigureAwait(false)) // Will also deal with possible Scientists and Backpackers.
+                {
                     await Click(A, 0_500, token).ConfigureAwait(false);
-
-                var lairPkm = await ReadUntilPresent(RaidPokemonOffset, 2_000, 0_200, token).ConfigureAwait(false);
-                if (lairPkm == null) // Shouldn't ever be null, but just in case.
-                {
-                    Log("No clue what just happened. Restarting game...");
-                    await CloseGame(Hub.Config, token).ConfigureAwait(false);
-                    await StartGame(Hub.Config, token).ConfigureAwait(false);
-                    continue;
-                }
-                encounterCount++;
-                Log($"Raid Battle {raidCount}. Encounter {encounterCount}: {SpeciesName.GetSpeciesNameGeneration(lairPkm.Species, 2, 8)}{TradeExtensions.FormOutput(lairPkm.Species, lairPkm.Form, out _)}.");
-
-                var ourPkm = await ReadUntilPresent(LairPartyP1Offset, 2_000, 0_200, token).ConfigureAwait(false);
-                //PK8?[] party = { await ReadUntilPresent(LairPartyP2Offset, 2_000, 0_200, token).ConfigureAwait(false), await ReadUntilPresent(LairPartyP3Offset, 2_000, 0_200, token).ConfigureAwait(false), await ReadUntilPresent(LairPartyP4Offset, 2_000, 0_200, token).ConfigureAwait(false) };
-                if (ourPkm != null)
-                    Log($"Sending out: {SpeciesName.GetSpeciesNameGeneration(ourPkm.Species, 2, 8)}{TradeExtensions.FormOutput(ourPkm.Species, ourPkm.Form, out _)}.");
-                else ourPkm = new();
-
-                await BattleRoutine(ourPkm, lairPkm, raidCount, token).ConfigureAwait(false);
-                while (!await LairStatusCheck(raidCount == 4 ? LegendCatchScreenBytes : LairCatchScreenBytes, CurrentScreenLairOffset, token).ConfigureAwait(false) && !lost)
-                {
-                    await Task.Delay(1_000).ConfigureAwait(false);
-                    lost = !await IsInBattle(token).ConfigureAwait(false) && (await LairStatusCheck(LairRewardsScreenBytes, CurrentScreenLairOffset2, token).ConfigureAwait(false) || await LairStatusCheck(LairDialogueBytes, CurrentScreenLairDialogue, token).ConfigureAwait(false));
+                    if (LairBoss.Species == 0)
+                        LairBoss = await ReadUntilPresentAbsolute(await ParsePointer("[[[[[[main+26365B8]+68]+78]+88]+D08]+950]+D0", token).ConfigureAwait(false), 0_500, 0_200, token).ConfigureAwait(false);
                 }
 
-                if (lost) // We've lost the battle, exit back to main loop.
+                if (raidCount == 1 && Settings.UseStopConditionsPathReset)
                 {
-                    lairCount++;
-                    Log($"Lost Adventure #{lairCount}.");
-                    if (caught > 0)
-                        await Results(caught, token).ConfigureAwait(false);
-                    caught = 0;
+                    if (!await LegendReset(token).ConfigureAwait(false))
+                        continue;
+                }
+
+                var lairPk = await ReadUntilPresent(RaidPokemonOffset, 2_000, 0_200, token).ConfigureAwait(false);
+                if (lairPk == null)
+                    lairPk = new();
+
+#pragma warning disable CS8601 // Possible null reference assignment.
+                var party = new PK8[3] { await ReadUntilPresent(LairPartyP2Offset, 0_500, 0_200, token).ConfigureAwait(false), await ReadUntilPresent(LairPartyP3Offset, 0_500, 0_200, token).ConfigureAwait(false), await ReadUntilPresent(LairPartyP4Offset, 0_500, 0_200, token).ConfigureAwait(false) };
+                PlayerPk = await ReadUntilPresent(LairPartyP1Offset, 0_500, 0_200, token).ConfigureAwait(false);
+#pragma warning restore CS8601 // Possible null reference assignment.
+
+                LairEncounterCount++;
+                Log($"Raid Battle {raidCount}. Encounter {LairEncounterCount}: {SpeciesName.GetSpeciesNameGeneration(lairPk.Species, 2, 8)}{TradeExtensions.FormOutput(lairPk.Species, lairPk.Form, out _)}.");
+                if (PlayerPk == null)
+                    PlayerPk = new();
+
+                Log($"Sending out: {SpeciesName.GetSpeciesNameGeneration(PlayerPk.Species, 2, 8)}{TradeExtensions.FormOutput(PlayerPk.Species, PlayerPk.Form, out _)}.");
+                await BattleRoutine(party, lairPk, token).ConfigureAwait(false);
+
+                if (raidCount == 4 || Lost)
+                {
+                    AdventureCounts.AdventureCount++;
+                    if (!Settings.InjectSeed && !Settings.EnableOHKO && !Settings.CatchLairPokémon && Settings.KeepPath)
+                        KeepPathCounts.KeepPathAdventures++;
+                }
+
+                if (Lost) // We've lost the battle, exit back to main loop.
+                {
+                    Log($"Lost Adventure {AdventureCounts.AdventureCount}.");
+                    if (Caught > 0)
+                        await Results(token).ConfigureAwait(false);
                     raidCount = 1;
                     continue;
                 }
 
-                caught = await CatchRoutine(raidCount, caught, token).ConfigureAwait(false);
-                Log($"{(raidCount == 4 || Settings.CatchLairPokémon || Upgrade ? "Caught" : "Defeated")} {SpeciesName.GetSpeciesNameGeneration(lairPkm.Species, 2, 8)}{TradeExtensions.FormOutput(lairPkm.Species, lairPkm.Form, out _)}.");
+                await CatchRoutine(raidCount, party, lairPk, token).ConfigureAwait(false);
                 if (raidCount == 4) // Final raid complete.
                 {
-                    lairCount++;
-                    Log($"Adventure #{lairCount} completed.");
-                    await Results(caught, token).ConfigureAwait(false);
-                    caught = 0;
+                    if (!Settings.InjectSeed && !Settings.EnableOHKO && !Settings.CatchLairPokémon && Settings.KeepPath)
+                        KeepPathCounts.KeepPathWins++;
+
+                    AdventureCounts.WinCount++;
+                    Log($"Adventure {AdventureCounts.AdventureCount} completed.");
+                    await Results(token).ConfigureAwait(false);
                     raidCount = 1;
                     continue;
                 }
@@ -164,183 +213,289 @@ namespace SysBot.Pokemon
 
         private async Task RentalRoutine(CancellationToken token)
         {
-            List<uint> RentalOfsList = new List<uint> { RentalMon1, RentalMon2, RentalMon3 };
+            uint[] RentalOfsList = { RentalMon1, RentalMon2, RentalMon3 };
+            PK8 lairPk = new() { Species = (int)Settings.LairSpecies };
             List<int> speedStat = new();
             List<PK8> pkList = new();
+            List<double> damage = new();
             int monIndex = -1;
-            int moveIndex = -1;
-            await Click(DDOWN, 0_250, token).ConfigureAwait(false);
-            await Click(A, 2_000, token).ConfigureAwait(false);
 
-            for (int i = 0; i < RentalOfsList.Count; i++)
+            await LairEntry(token).ConfigureAwait(false);
+            for (int i = 0; i < RentalOfsList.Length; i++)
             {
                 var pk = await ReadUntilPresent(RentalOfsList[i], 2_000, 0_200, token).ConfigureAwait(false);
                 if (pk == null)
                 {
                     Log("Entered the lobby too fast, correcting...");
-                    await CodePink(token).ConfigureAwait(false);
-                    return;
+                    while (!await IsOnOverworld(Hub.Config, token).ConfigureAwait(false))
+                        await Click(B, 0_500, token).ConfigureAwait(false);
+
+                    await LairEntry(token).ConfigureAwait(false);
+                    continue;
                 }
-                else
+
+                pkList.Add(pk);
+                int moveIndex = LairBotUtil.PriorityIndex(pk);
+                if (Settings.EnableOHKO)
                 {
-                    pkList.Add(pk);
-                    moveIndex = LairBotUtil.PriorityIndex(pk);
                     if (moveIndex != -1) // Add Ditto override because Imposter is fun?
                     {
                         monIndex = i;
                         break;
                     }
-                    else speedStat.Add(LairBotUtil.CalculateSpeed(pk));
+                    else speedStat.Add(LairBotUtil.CalculateEffectiveStat(pk.IV_SPE, pk.EV_SPE, pk.PersonalInfo.SPE, pk.CurrentLevel));
                 }
+                else damage.Add(LairBotUtil.WeightedDamage(new PK8[] { new() }, pk, lairPk, false).Max());
             }
+
+            if (!Settings.EnableOHKO)
+                monIndex = damage.IndexOf(damage.Max());
+
             var speedIndex = speedStat.Count > 0 ? speedStat.IndexOf(speedStat.Max()) : 0;
-            if (monIndex == -1)
-                Log($"Selecting {SpeciesName.GetSpeciesNameGeneration(pkList[speedIndex].Species, 2, 8)}{TradeExtensions.FormOutput(pkList[speedIndex].Species, pkList[speedIndex].Form, out _)}.");
-            else Log($"Selecting {SpeciesName.GetSpeciesNameGeneration(pkList[monIndex].Species, 2, 8)}{TradeExtensions.FormOutput(pkList[monIndex].Species, pkList[monIndex].Form, out _)} with {(Move)pkList[monIndex].Moves[moveIndex]}");
+            var selection = pkList[monIndex == -1 ? speedIndex : monIndex];
+            Log($"Selecting {SpeciesName.GetSpeciesNameGeneration(selection.Species, 2, 8)}{TradeExtensions.FormOutput(selection.Species, selection.Form, out _)}.");
             await MoveAndRentalClicks(monIndex == -1 ? speedIndex : monIndex, token).ConfigureAwait(false);
         }
 
-        private async Task CodePink(CancellationToken token)
-        {
-            await Click(B, 0_500, token).ConfigureAwait(false);
-            while (!await IsOnOverworld(Hub.Config, token).ConfigureAwait(false))
-                await Task.Delay(1_000).ConfigureAwait(false);
-            for (int p = 0; p < 15; p++)
+        private async Task<LairBotUtil.MoveInfo> SelectMove(PK8[] party, PK8 lairMon, bool stuck, int turn, bool dmax, bool dmaxEnded, CancellationToken token)
+        { // to-do: select certain status moves (healing/guard) based on health or condition, random otherwise if no good moves available
+            List<int> statusMoves = new();
+            for (int i = 0; i < PlayerPk.Moves.Length; i++)
             {
-                if (await LairStatusCheck(CurrentScreen_LairMenu, CurrentScreenLairOffset, token).ConfigureAwait(false))
-                    break;
-                await Click(A, 1_000, token).ConfigureAwait(false);
+                var move = LairBotUtil.MoveRoot.Moves.FirstOrDefault(x => x.MoveID == PlayerPk.Moves[i]);
+                if (move.Category == MoveCategory.Status)
+                    statusMoves.Add(i);
             }
-            await RentalRoutine(token).ConfigureAwait(false);
-        }
 
-        private async Task<int> SelectMove(PK8 pk, PK8 lairMon, bool stuck, int oldMove, CancellationToken token)
-        {
-            int selectIndex = -1;
-            var priorityMove = pk.Moves.ToList().IndexOf(pk.Moves.Intersect((IEnumerable<int>)Enum.GetValues(typeof(PriorityMoves))).FirstOrDefault());
-            bool priority = priorityMove != -1 && !LairBotUtil.TypeImmunity(pk, lairMon, priorityMove) && lairMon.Ability != (int)Ability.PsychicSurge && lairMon.Ability != (int)Ability.QueenlyMajesty && lairMon.Ability != (int)Ability.Dazzling;
-            for (int i = 0; i < pk.Moves.Length; i++) // Select either a priority move, or a move that deals damage (if in battle).
+            var dmgWeight = LairBotUtil.WeightedDamage(party, PlayerPk, lairMon, dmax).ToList();
+            var priorityMove = PlayerPk.Moves.ToList().IndexOf(PlayerPk.Moves.Intersect((IEnumerable<int>)Enum.GetValues(typeof(PriorityMoves))).FirstOrDefault());
+            bool priority = Settings.EnableOHKO && priorityMove != -1 && dmgWeight[priorityMove] > 0 && lairMon.Ability != (int)Ability.PsychicSurge && lairMon.Ability != (int)Ability.QueenlyMajesty && lairMon.Ability != (int)Ability.Dazzling;
+
+            var bestMove = dmgWeight.IndexOf(dmgWeight.Max());
+            bool movePass = false;
+            while (!movePass)
             {
-                if (await GetPPCount(priority ? priorityMove : i, token).ConfigureAwait(false) == 0)
+                var move = LairBotUtil.MoveRoot.Moves.FirstOrDefault(x => x.MoveID == PlayerPk.Moves[priority ? priorityMove : bestMove]);
+                bool recoil = move.Recoil >= 206 && move.EffectSequence >= 48;
+                if ((stuck && (OldMoveIndex == (priority ? priorityMove : bestMove))) || (Settings.EnableOHKO && (recoil || move.Charge)) || move.MoveID == (int)Move.Belch || move.MoveID == (int)Move.Counter)
                 {
+                    dmgWeight[priority ? priorityMove : bestMove] = 0.0;
+                    bestMove = dmgWeight.Max() < 0.0 ? statusMoves[new Random().Next(statusMoves.Count)] : dmgWeight.IndexOf(dmgWeight.Max());
                     priority = false;
+                    stuck = false;
                     continue;
                 }
-                else if ((stuck && oldMove == i) || (priorityMove == i && !priority))
-                    continue;
                 else if (priority)
-                    return priorityMove;
-
-                bool recoil = LairBotUtil.Moves?.Moves.FirstOrDefault(x => x.MoveID == pk.Moves[i] && x.Recoil >= 206 && x.EffectSequence >= 48) != default;
-                if (!LairBotUtil.TypeImmunity(pk, lairMon, i) && pk.Moves[i] != (int)Move.Belch && !recoil && LairBotUtil.Moves?.Moves.FirstOrDefault(x => x.MoveID == pk.Moves[i] && x.Power > 0 && !x.Charge) != default)
-                {
-                    //Log($"Gravity: {gravity}, ImmuneType: {immuneType}, ImmunePriority: {immunePriority}, PPCount: {PPCount}, Move: {(Move)pk.Moves[i]}"); // Debug logging
-                    selectIndex = i;
-                    break;
-                }
+                    bestMove = priorityMove;
+                movePass = true;
             }
-            return selectIndex == -1 ? new Random().Next(4) : selectIndex;
+
+            var finalMove = LairBotUtil.MoveRoot.Moves.FirstOrDefault(x => x.MoveID == PlayerPk.Moves[bestMove]);
+            int dmaxMove = finalMove.Category != MoveCategory.Status ? (int)finalMove.Type : 18;
+            Log($"Turn {turn}: Selecting {(dmax ? (DmaxMoves)dmaxMove : (Move)PlayerPk.Moves[bestMove])}.");
+            var index = bestMove - OldMoveIndex;
+            if (dmaxEnded)
+                index = bestMove;
+            else if (index < 0)
+                index = index + OldMoveIndex + 1;
+
+            await MoveAndRentalClicks(index, token).ConfigureAwait(false);
+            OldMoveIndex = bestMove;
+            return finalMove;
         }
 
-        private async Task BattleRoutine(PK8 playerPk, PK8 lairPkm, int raidCount, CancellationToken token)
+        private bool CheckIfUpgrade(PK8[] party, PK8 lairPk)
         {
-            if (playerPk.Species == 132 && playerPk.Ability == (int)Ability.Imposter)
-                playerPk = lairPkm;
-            else if (lairPkm.Species == 132 && lairPkm.Ability == (int)Ability.Imposter)
-                lairPkm = playerPk;
+            bool upgrade = false;
+            var dmgWeightPlayer = LairBotUtil.WeightedDamage(party, PlayerPk.Species == 132 ? LairBoss : PlayerPk, LairBoss, false);
+            var dmgWeightLair = LairBotUtil.WeightedDamage(new PK8[] { new() }, lairPk, LairBoss, false);
 
-            int move = -1;
-            var sw = new Stopwatch();
-            var ourSpeed = LairBotUtil.CalculateSpeed(playerPk);
-            bool noPriority = LairBotUtil.PriorityIndex(playerPk) == -1;
-            var lairPkmSpeed = LairBotUtil.CalculateSpeed(lairPkm);
-            bool lairPkmPriority = LairBotUtil.PriorityIndex(lairPkm) != -1;
-            if ((noPriority && (lairPkmSpeed > ourSpeed)) || (lairPkmPriority && noPriority))
-                Upgrade = true;
-
-            while (await IsInBattle(token).ConfigureAwait(false))
+            if (Settings.EnableOHKO)
             {
-                while (!await LairStatusCheck(LairMovesBytes, CurrentScreenLairOffset2, token).ConfigureAwait(false) && await IsInBattle(token).ConfigureAwait(false))
+                var ourSpeed = LairBotUtil.CalculateEffectiveStat(PlayerPk.IV_SPE, PlayerPk.EV_SPE, PlayerPk.PersonalInfo.SPE, PlayerPk.CurrentLevel);
+                bool noPriority = LairBotUtil.PriorityIndex(PlayerPk) == -1;
+                var lairPkSpeed = LairBotUtil.CalculateEffectiveStat(lairPk.IV_SPE, lairPk.EV_SPE, lairPk.PersonalInfo.SPE, lairPk.CurrentLevel);
+                bool lairPkPriority = LairBotUtil.PriorityIndex(lairPk) != -1;
+
+                var maxDmgMoveIndex = dmgWeightPlayer.ToList().IndexOf(dmgWeightPlayer.Max());
+                var move = LairBotUtil.MoveRoot.Moves.FirstOrDefault(x => x.MoveID == PlayerPk.Moves[maxDmgMoveIndex]);
+
+                if (move.Charge || move.MoveID == (int)Move.Belch || move.MoveID == (int)Move.Counter)
                 {
-                    if (await LairStatusCheck(raidCount == 4 ? LegendCatchScreenBytes : LairCatchScreenBytes, CurrentScreenLairOffset, token).ConfigureAwait(false))
-                        return;
-                    else await Click(A, 1_000, token).ConfigureAwait(false);
+                    dmgWeightPlayer[maxDmgMoveIndex] = 0.0;
+                    if (!dmgWeightPlayer.Any(x => x > 0.0))
+                        return false;
                 }
 
-                if (await LairStatusCheck(LairMovesBytes, CurrentScreenLairOffset2, token).ConfigureAwait(false))
+                if ((noPriority && (lairPkSpeed > ourSpeed)) || (lairPkPriority && noPriority))
+                    upgrade = true;
+            }
+            else if (dmgWeightLair.Max() > dmgWeightPlayer.Max())
+                upgrade = true;
+
+            if (upgrade && lairPk.Species != LairBoss.Species)
+                Log("Lair encounter is better than our current Pokémon. Going to catch it and swap our current Pokémon.");
+
+            return upgrade;
+        }
+
+        private async Task BattleRoutine(PK8[] party, PK8 lairPk, CancellationToken token)
+        {
+            int turn = 0;
+            int dmaxEnd = 0;
+            bool stuck = false;
+            bool fainted = false;
+            bool dmax = false;
+            bool canDmax = false;
+            LairBotUtil.MoveInfo move = new();
+
+            while (true)
+            {
+                while (!await LairStatusCheckMain(OffsetValues.LairMovesMenu, LairMiscScreenCalc, token).ConfigureAwait(false))
                 {
-                    bool stuck;
-                    if (sw.IsRunning && sw.ElapsedMilliseconds <= 4_000)
+                    if (await LairStatusCheckMain(OffsetValues.LairBattleMenu, LairMiscScreenCalc, token).ConfigureAwait(false))
                     {
-                        Log($"{(Move)playerPk.Moves[move]} cannot be executed, trying to select a different move.");
-                        stuck = true;
-                        sw.Reset();
+                        turn++;
+                        await Click(A, 1_000, token).ConfigureAwait(false);
+                        if (!await LairStatusCheckMain(OffsetValues.LairMovesMenu, LairMiscScreenCalc, token).ConfigureAwait(false) && !fainted)
+                        {
+                            Log($"Turn {turn}: Cheering on...");
+                            fainted = true;
+                            canDmax = false;
+                            dmaxEnd = 0;
+                        }
                     }
-                    else stuck = false;
+                    else
+                    {
+                        Lost = await LairStatusCheck(Caught > 0 ? OffsetValues.LairRewardsScreen : OffsetValues.LairLobby, CurrentScreenLairOffset, token).ConfigureAwait(false) || !await IsInBattle(token).ConfigureAwait(false);
+                        if (await LairStatusCheckMain(OffsetValues.LairCatchScreen, LairMiscScreenCalc, token).ConfigureAwait(false) || Lost)
+                            return;
 
-                    move = await SelectMove(playerPk, lairPkm, stuck, move, token).ConfigureAwait(false);
-                    Log($"Selecting {(Move)playerPk.Moves[move]}.");
-                    await MoveAndRentalClicks(move, token).ConfigureAwait(false);
-                    sw.Start();
+                        if (!Settings.EnableOHKO && !canDmax && await LairStatusCheckMain(OffsetValues.LairDmax, LairMiscScreenCalc, token).ConfigureAwait(false))
+                        {
+                            await Task.Delay(2_000, token).ConfigureAwait(false);
+                            if (await LairStatusCheckMain(OffsetValues.LairBattleMenu, LairMiscScreenCalc, token).ConfigureAwait(false))
+                                canDmax = true;
+                        }
+
+                        await Click(B, 0_300, token).ConfigureAwait(false);
+                    }
+                }
+
+                fainted = false;
+                if (stuck)
+                {
+                    Log($"{(dmax ? (DmaxMoves)move.Type : (Move)PlayerPk.Moves[OldMoveIndex])} cannot be executed, trying to select a different move.");
+                    for (int i = 0; i < 2; i++)
+                        await Click(B, 0_500, token).ConfigureAwait(false);
+                    await Click(A, 0_500, token).ConfigureAwait(false);
+                }
+                else
+                {
+                    var newPlayerPk = await ReadUntilPresent(LairPartyP1Offset, 2_000, 0_200, token).ConfigureAwait(false);
+                    var newLairPk = await ReadUntilPresent(RaidPokemonOffset, 2_000, 0_200, token).ConfigureAwait(false);
+                    if (newPlayerPk != null && newLairPk != null)
+                    {
+                        PlayerPk = newPlayerPk.Species == 132 ? newLairPk : newPlayerPk;
+                        lairPk = newLairPk.Species == 132 ? newPlayerPk : newLairPk;
+                        if (newPlayerPk.Species == 132)
+                        {
+                            PlayerPk.Move1_PP = await GetPPCount(0, token).ConfigureAwait(false);
+                            PlayerPk.Move2_PP = await GetPPCount(1, token).ConfigureAwait(false);
+                            PlayerPk.Move3_PP = await GetPPCount(2, token).ConfigureAwait(false);
+                            PlayerPk.Move4_PP = await GetPPCount(3, token).ConfigureAwait(false);
+                        }
+                    }
+                }
+
+                bool dmaxEnded = dmax && dmaxEnd == 0;
+                if (dmaxEnded)
+                    dmax = false;
+
+                if (!Settings.EnableOHKO && !dmax && canDmax)
+                {
+                    await Click(DLEFT, 0_400, token).ConfigureAwait(false);
+                    await Click(A, 1_000, token).ConfigureAwait(false);
+                    Log(PlayerPk.CanGigantamax ? "Gigantamaxing..." : "Dynamaxing...");
+                    dmax = true;
+                    canDmax = false;
+                    dmaxEnd = 3;
+                }
+
+                move = await SelectMove(party, lairPk, stuck, turn, dmax, dmaxEnded, token).ConfigureAwait(false);
+                await Click(B, 0_500, token).ConfigureAwait(false);
+                await Click(B, 0_500, token).ConfigureAwait(false);
+                await Click(A, 0_500, token).ConfigureAwait(false);
+
+                if (await LairStatusCheckMain(OffsetValues.LairMovesMenu, LairMiscScreenCalc, token).ConfigureAwait(false))
+                    stuck = true;
+                else
+                {
+                    stuck = false;
+                    if (dmax)
+                        dmaxEnd--;
                 }
             }
-            sw.Stop();
         }
 
-        private async Task<int> CatchRoutine(int raidCount, int caught, CancellationToken token)
+        private async Task CatchRoutine(int raidCount, PK8[] party, PK8 lairPk, CancellationToken token)
         {
-            await Task.Delay(1_000).ConfigureAwait(false);
-            if (Settings.CatchLairPokémon || Upgrade || raidCount == 4) // We want to catch the legendary regardless of settings for catching.
+            bool upgrade = false;
+            if (Settings.UpgradePokemon && raidCount != 4)
+                upgrade = CheckIfUpgrade(party, lairPk);
+
+            await Task.Delay(6_000).ConfigureAwait(false);
+            if (Settings.CatchLairPokémon || upgrade || raidCount == 4) // We want to catch the legendary regardless of settings for catching.
             {
-                await SelectCatchingBall(token).ConfigureAwait(false); // Select ball to catch with.
+                await SelectCatchingBall(upgrade, raidCount, token).ConfigureAwait(false); // Select ball to catch with.
                 Log($"Catching {(raidCount < 4 ? "encounter" : "legendary")}...");
+                await Task.Delay(raidCount == 4 ? 35_000 : 25_000).ConfigureAwait(false);
                 if (raidCount < 4)
                 {
-                    while (!await LairStatusCheck(LairMonSelectScreenBytes, CurrentScreenLairOffset, token).ConfigureAwait(false)) // Spam A until we're back in a menu.
-                        await Task.Delay(1_000).ConfigureAwait(false);
-                    
-                    if (!Upgrade)
+                    if (!upgrade)
                         await Click(DDOWN, 1_000, token).ConfigureAwait(false);
-                    else Log($"Lair encounter is better than our current Pokémon, switching...");
                     await Click(A, 1_000, token).ConfigureAwait(false);
                 }
-                catchCount--;
-                return ++caught;
+                CatchCount--;
+                Caught++;
             }
             else
             {
                 await Click(DDOWN, 1_000, token).ConfigureAwait(false);
                 await Click(A, 1_000, token).ConfigureAwait(false);
-                return 0;
             }
+
+            Log($"{(raidCount == 4 || Settings.CatchLairPokémon || upgrade ? "Caught" : "Defeated")} {SpeciesName.GetSpeciesNameGeneration(lairPk.Species, 2, 8)}{TradeExtensions.FormOutput(lairPk.Species, lairPk.Form, out _)}.");
         }
 
-        private async Task Results(int caught, CancellationToken token)
+        private async Task Results(CancellationToken token)
         {
             Counts.AddCompletedAdventures();
             int index = -1;
-            int legendSpecies = 0;
-            bool stopCond = false;
-            while (!await LairStatusCheck(LairRewardsScreenBytes, CurrentScreenLairOffset2, token).ConfigureAwait(false))
-                await Task.Delay(1_000).ConfigureAwait(false);
 
-            for (int i = 0; i < caught; i++)
+            while (!await LairStatusCheck(OffsetValues.LairRewardsScreen, CurrentScreenLairOffset, token).ConfigureAwait(false))
+                await Task.Delay(4_000).ConfigureAwait(false);
+
+            for (int i = 0; i < Caught; i++)
             {
                 var jumpAdj = i == 0 ? 0 : i == 1 ? 2 : i == 2 ? 10 : 12;
                 var pointer = $"[[[[[main+28F4060]+1B0]+68]+{58 + jumpAdj}]+58]";
                 var pk = await ReadUntilPresentAbsolute(await ParsePointer(pointer, token), 2_000, 0_200, token).ConfigureAwait(false);
+
                 if (pk != null)
                 {
                     if (pk.IsShiny)
-                        index = Settings.CatchLairPokémon ? i : ++index;
+                        index = Settings.CatchLairPokémon ? i : Caught - (Caught - i);
 
-                    var caughtLegend = (!Settings.CatchLairPokémon && pk.IsShiny) || (Settings.CatchLairPokémon && index == 3 && pk.IsShiny);
-                    var caughtRegular = Settings.CatchLairPokémon && pk.IsShiny && index != 3;
-                    legendSpecies = caughtLegend ? pk.Species : 0;
-                    if (caughtLegend && StopConditionSettings.EncounterFound(pk, DesiredIVs, NewSCSettings) && Settings.UseStopConditionsPathReset)
-                        stopCond = true;
+                    bool caughtLegend = !Lost && (Caught - 1 == index);
+                    if (caughtLegend)
+                    {
+                        HackyNoteCheck = -1;
+                        LegendFound = pk.Species;
+                    }
 
-                    if (stopCond || (caughtLegend && Settings.StopOnLegendary))
+                    bool caughtRegular = !caughtLegend && pk.IsShiny;
+                    if (caughtLegend && (Settings.UseStopConditionsPathReset && StopConditionSettings.EncounterFound(pk, DesiredMinIVs, DesiredMaxIVs, NewSCSettings) || Settings.StopOnLegendary))
                         StopBot = true;
 
                     TradeExtensions.EncounterLogs(pk);
@@ -348,26 +503,44 @@ namespace SysBot.Pokemon
                         DumpPokemon(DumpSetting.DumpFolder, "lairs", pk);
 
                     if (Settings.AlwaysOutputShowdown)
-                        Log($"Adventure #{lairCount}.{Environment.NewLine}{ShowdownParsing.GetShowdownText(pk)}{Environment.NewLine}");
+                        Log($"Adventure {AdventureCounts.AdventureCount}.{Environment.NewLine}{ShowdownParsing.GetShowdownText(pk)}{Environment.NewLine}");
 
                     if (LairBotUtil.EmbedsInitialized && Settings.ResultsEmbedChannels != string.Empty && (caughtLegend || caughtRegular))
                         LairBotUtil.EmbedMon = (pk, caughtLegend);
                     else
                     {
                         if (caughtLegend)
-                            EchoUtil.Echo($"{(!NewSCSettings.PingOnMatch.Equals(string.Empty) ? $"<@{NewSCSettings.PingOnMatch}>\n" : "")}Shiny Legendary found!\nEncounter #{encounterCount}. Adventure #{lairCount}.{Environment.NewLine}{ShowdownParsing.GetShowdownText(pk)}{Environment.NewLine}");
+                            EchoUtil.Echo($"{(!NewSCSettings.PingOnMatch.Equals(string.Empty) ? $"<@{NewSCSettings.PingOnMatch}>\n" : "")}Shiny Legendary found!\nEncounter {LairEncounterCount}. Adventure {AdventureCounts.AdventureCount}.{Environment.NewLine}{ShowdownParsing.GetShowdownText(pk)}{Environment.NewLine}");
                         else if (caughtRegular)
-                            EchoUtil.Echo($"{(!NewSCSettings.PingOnMatch.Equals(string.Empty) ? $"<@{NewSCSettings.PingOnMatch}>\n" : "")}Found a shiny, but it's not quite legendary...\nEncounter #{encounterCount}. Adventure #{lairCount}.{Environment.NewLine}{ShowdownParsing.GetShowdownText(pk)}{Environment.NewLine}");
+                            EchoUtil.Echo($"{(!NewSCSettings.PingOnMatch.Equals(string.Empty) ? $"<@{NewSCSettings.PingOnMatch}>\n" : "")}Found a shiny, but it's not quite legendary...\nEncounter {LairEncounterCount}. Adventure {AdventureCounts.AdventureCount}.{Environment.NewLine}{ShowdownParsing.GetShowdownText(pk)}{Environment.NewLine}");
                     }
                 }
             }
 
-            await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0x7900E808), MainNsoBase + DamageOutputOffset, token).ConfigureAwait(false);
-            if (Settings.LairBall != Ball.None && catchCount < 5 && catchCount != -1)
+            if (Settings.EnableOHKO)
+                await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0x7900E808), MainNsoBase + DamageOutputOffset, token).ConfigureAwait(false);
+
+            if (!Settings.InjectSeed && !Settings.EnableOHKO && Settings.KeepPath && !Settings.CatchLairPokémon && LegendFound == 0)
             {
-                Log("Restoring original ball pouch...");
-                await Connection.WriteBytesAsync(BallPouch, PokeBallOffset, token).ConfigureAwait(false);
-                catchCount = await GetPokeBallCount(token).ConfigureAwait(false);
+                double winRate = KeepPathCounts.KeepPathWins / KeepPathCounts.KeepPathAdventures;
+                if (KeepPathCounts.KeepPathAdventures < 5 || (KeepPathCounts.KeepPathAdventures >= 5 && winRate >= 0.5))
+                {
+                    Log($"{(Lost ? "" : "No shiny legendary found. ")}Resetting the game to keep the seed.");
+                    await GameRestart(token).ConfigureAwait(false);
+                    if (await GetDyniteCount(token).ConfigureAwait(false) < 10)
+                    {
+                        Log("Restoring Dynite Ore...");
+                        await SwitchConnection.WriteBytesAsync(OtherItemsPouch, OtherItemAddress, token).ConfigureAwait(false);
+                    }
+                }
+                else if (KeepPathCounts.KeepPathAdventures >= 5 && winRate < 0.5)
+                {
+                    KeepPathCounts.KeepPathWins = 0;
+                    KeepPathCounts.KeepPathAdventures = 0;
+                    await Click(B, 1_000, token).ConfigureAwait(false);
+                    Log("Our win ratio isn't looking too good... Rolling our path.");
+                }
+                return;
             }
 
             if (index == -1)
@@ -377,52 +550,33 @@ namespace SysBot.Pokemon
                 return;
             }
 
-            if (index > -1)
-            {              
-                for (int y = 0; y < index; y++)
-                    await Click(DDOWN, 0_250, token).ConfigureAwait(false);
+            for (int y = 0; y < index; y++)
+                await Click(DDOWN, 0_250, token).ConfigureAwait(false);
 
-                if (Hub.Config.StopConditions.CaptureVideoClip)
-                {
-                    await Click(A, 1_000, token).ConfigureAwait(false);
-                    await Click(DDOWN, 1_000, token).ConfigureAwait(false);
-                    await Click(A, 2_000, token).ConfigureAwait(false);
-                    await PressAndHold(CAPTURE, 2_000, 10_000, token).ConfigureAwait(false);
-                    await Click(B, 4_000, token).ConfigureAwait(false);
-                }
-
-                if (Settings.ResetLegendaryCaughtFlag && ((caught == 1 && index == 0) || (caught == 4 && index == 3)))
-                {
-                    Log("Resetting Legendary Flag!");
-                    await ResetLegendaryFlag(legendSpecies, token).ConfigureAwait(false);
-                }
-                else if (!Settings.ResetLegendaryCaughtFlag && !StopBot && ((caught == 1 && index == 0) || (caught == 4 && index == 3)))
-                    Settings.LairSpecies = LairSpecies.None;
+            if (Hub.Config.StopConditions.CaptureVideoClip)
+            {
+                await Click(A, 1_000, token).ConfigureAwait(false);
+                await Click(DDOWN, 1_000, token).ConfigureAwait(false);
+                await Click(A, 2_000, token).ConfigureAwait(false);
+                await PressAndHold(CAPTURE, 2_000, 10_000, token).ConfigureAwait(false);
+                await Click(B, 4_000, token).ConfigureAwait(false);
             }
         }
 
         private async Task<bool> LegendReset(CancellationToken token)
         {
-            if (!Settings.UseStopConditionsPathReset)
-                return true;
-
+            ResetCount++;
             var originalSetting = NewSCSettings.ShinyTarget;
             NewSCSettings.ShinyTarget = TargetShinyType.DisableOption;
             Log("Reading legendary Pokémon offset...");
-            PK8? pk = null;
-            while (pk == null)
-            {
-                await Click(A, 0_500, token).ConfigureAwait(false);
-                pk = await ReadUntilPresentAbsolute(await ParsePointer("[[[[[[main+26365B8]+68]+78]+88]+D08]+950]+D0", token).ConfigureAwait(false), 1_000, 0_200, token).ConfigureAwait(false);
-            }
+            TradeExtensions.EncounterLogs(LairBoss);
+            Log($"Reset {ResetCount} {Environment.NewLine}{ShowdownParsing.GetShowdownText(LairBoss)}{Environment.NewLine}");
 
-            resetCount++;
-            TradeExtensions.EncounterLogs(pk);
-            Log($"Reset #{resetCount} {Environment.NewLine}{ShowdownParsing.GetShowdownText(pk)}{Environment.NewLine}");
-            if (!StopConditionSettings.EncounterFound(pk, DesiredIVs, NewSCSettings))
+            if (!StopConditionSettings.EncounterFound(LairBoss, DesiredMinIVs, DesiredMaxIVs, NewSCSettings))
             {
                 Log("No match found, restarting the game...");
                 await GameRestart(token).ConfigureAwait(false);
+
                 if (await GetDyniteCount(token).ConfigureAwait(false) < 10)
                 {
                     Log("Restoring Dynite Ore...");
@@ -430,6 +584,7 @@ namespace SysBot.Pokemon
                 }
                 return false;
             }
+
             Log("Stats match conditions, now let's continue the adventure and check if it's shiny...");
             NewSCSettings.ShinyTarget = originalSetting;
             return true;
@@ -450,17 +605,18 @@ namespace SysBot.Pokemon
             return counts.PossibleCatches(Settings.LairBall);
         }
 
-        private async Task SelectCatchingBall(CancellationToken token)
+        private async Task SelectCatchingBall(bool upgrade, int raidCount, CancellationToken token)
         {
-            if (Settings.LairBall == Ball.None)
+            if (Settings.LairBall == Ball.None || (upgrade && (!Settings.CatchLairPokémon && Settings.LairBall == Ball.None || raidCount < 3 && Settings.KeepPath)))
             {
+                Log("Selecting the first available ball...");
                 for (int i = 0; i < 3; i++)
-                    await Click(A, 1_000, token).ConfigureAwait(false);
+                    await Click(A, 0_500, token).ConfigureAwait(false);
                 return;
             }
 
             Log($"Selecting {Settings.LairBall} Ball...");
-            await Click(A, 1_000, token).ConfigureAwait(false);
+            await Click(A, 0_500, token).ConfigureAwait(false);
             var index = EncounterCount.BallIndex((int)Settings.LairBall);
             var ofs = await ParsePointer("[[[[[[main+2951270]+1D8]+818]+2B0]+2E0]+200]", token).ConfigureAwait(false);
             while (true)
@@ -472,7 +628,7 @@ namespace SysBot.Pokemon
                     await Click(DLEFT, 0_050, token).ConfigureAwait(false);
                 else await Click(DRIGHT, 0_050, token).ConfigureAwait(false);
             }
-            await Click(A, 1_000, token).ConfigureAwait(false);
+            await Click(A, 0_500, token).ConfigureAwait(false);
         }
 
         private async Task ResetLegendaryFlag(int species, CancellationToken token)
@@ -480,8 +636,6 @@ namespace SysBot.Pokemon
             if (species == 0)
                 return;
 
-            while (!await LairStatusCheck(LairDialogueBytes, CurrentScreenLairDialogue, token).ConfigureAwait(false))
-                await Click(A, 0_400, token).ConfigureAwait(false);
             await Connection.WriteBytesAsync(new byte[1], GetFlagOffset(species), token).ConfigureAwait(false);
         }
 
@@ -493,8 +647,6 @@ namespace SysBot.Pokemon
             var index = Array.IndexOf(Enum.GetValues(typeof(LairSpeciesBlock)), Enum.Parse(typeof(LairSpeciesBlock), $"{(Species)species}"));
             return (uint)(ResetLegendFlagOffset + (index * 0x38));
         }
-
-        private async Task<uint> GetPPCount(int move, CancellationToken token) => BitConverter.ToUInt32(await Connection.ReadBytesAsync((uint)(LairMove1Offset + (move * 0xC)), 4, token).ConfigureAwait(false), 0);
 
         private async Task<bool> LairSeedInjector(CancellationToken token)
         {
@@ -513,54 +665,108 @@ namespace SysBot.Pokemon
             return true;
         }
 
-        private async Task SetHuntedPokemon(CancellationToken token)
+        private async Task<int> SetHuntedPokemon(CancellationToken token)
         {
-            byte[] note = await Connection.ReadBytesAsync(LairSpeciesNote1, 2, token).ConfigureAwait(false);
-            byte[] wanted = BitConverter.GetBytes((ushort)Settings.LairSpecies);
-            if (LairBotUtil.NoteRequest.Count > 0)
+            if (HackyNoteCheck == -1 || LairBotUtil.DiscordQueueOverride)
             {
-                for (int i = 0; i < LairBotUtil.NoteRequest.Count; i ++)
-                {
-                    var caughtFlag = await Connection.ReadBytesAsync(GetFlagOffset((int)LairBotUtil.NoteRequest[i]), 2, token).ConfigureAwait(false);
-                    if (caughtFlag[0] != 0)
-                    {
-                        Log($"{LairBotUtil.NoteRequest[i]} was already caught prior, skipping!");
-                        LairBotUtil.NoteRequest.Remove(LairBotUtil.NoteRequest[i]);
-                        --i;
-                        continue;
-                    }
-                    else await Connection.WriteBytesAsync(BitConverter.GetBytes((ushort)LairBotUtil.NoteRequest[i]), i == 0 ? LairSpeciesNote1 : i == 1 ? LairSpeciesNote2 : LairSpeciesNote3, token);
-                }
-                Log($"Lair Notes set to {string.Join(", ", LairBotUtil.NoteRequest)}!");
-                LairBotUtil.NoteRequest = new();
-                return;
+                for (int i = 0; i < 4; i++) // First note shifts due to yet unknown reasons, just clear possible slots, check which note to use on startup and after catching a legendary.
+                    await Connection.WriteBytesAsync(new byte[] { 0 }, i == 0 ? LairSpeciesNote1 : i == 1 ? LairSpeciesNote2 : i == 2 ? LairSpeciesNote3 : LairSpeciesNote4, token);
+
+                var control = BitConverter.GetBytes((ushort)LairSpecies.Moltres);
+                await Connection.WriteBytesAsync(control, LairSpeciesNote3, token).ConfigureAwait(false);
+                await Click(A, 0_250, token).ConfigureAwait(false);
+
+                var note1 = BitConverter.ToUInt16(await Connection.ReadBytesAsync(LairSpeciesNote1, 2, token).ConfigureAwait(false), 0);
+                for (int i = 0; i < 3; i++)
+                    await Click(B, 0_250, token).ConfigureAwait(false);
+
+                bool firstNoteIsFirst = note1 == (ushort)LairSpecies.Moltres;
+                await Connection.WriteBytesAsync(new byte[] { 0 }, firstNoteIsFirst ? LairSpeciesNote1 : LairSpeciesNote2, token).ConfigureAwait(false);
+                HackyNoteCheck = firstNoteIsFirst ? 1 : 2;
             }
-            else if (!note.SequenceEqual(wanted) && Settings.LairSpecies != LairSpecies.None)
+
+            if (LegendFound != 0)
             {
-                var caughtFlag = await Connection.ReadBytesAsync(GetFlagOffset((int)Settings.LairSpecies), 2, token).ConfigureAwait(false);
-                if (caughtFlag[0] != 0)
+                LegendFound = 0;
+                if (Settings.ResetLegendaryCaughtFlag)
+                    await ResetLegendaryFlag(LegendFound, token).ConfigureAwait(false);
+
+                if (Settings.LairSpeciesQueue[0] != LairSpecies.None)
                 {
-                    Log($"{Settings.LairSpecies} was already caught prior, ignoring the request.");
-                    Settings.LairSpecies = LairSpecies.None;
-                    return;
+                    Settings.LairSpeciesQueue[0] = Settings.LairSpeciesQueue[1];
+                    Settings.LairSpeciesQueue[1] = Settings.LairSpeciesQueue[2];
+                    Settings.LairSpeciesQueue[2] = LairSpecies.None;
                 }
-                await Connection.WriteBytesAsync(wanted, LairSpeciesNote1, token);
+            }
+
+            var note = BitConverter.ToUInt16(await Connection.ReadBytesAsync(HackyNoteCheck == 1 ? LairSpeciesNote1 : LairSpeciesNote2, 2, token).ConfigureAwait(false), 0);
+            if (LairBotUtil.DiscordQueueOverride || (Settings.LairSpeciesQueue[0] != LairSpecies.None && note == 0))
+            {
+                LairBotUtil.DiscordQueueOverride = false;
+                for (int i = 0; i < Settings.LairSpeciesQueue.Length; i++)
+                {
+                    var caughtFlag = await Connection.ReadBytesAsync(GetFlagOffset((int)Settings.LairSpeciesQueue[i]), 2, token).ConfigureAwait(false);
+                    if (caughtFlag[0] != 0)
+                        await ResetLegendaryFlag((int)Settings.LairSpeciesQueue[i], token).ConfigureAwait(false);
+
+                    if (HackyNoteCheck == 1)
+                        await Connection.WriteBytesAsync(BitConverter.GetBytes((ushort)Settings.LairSpeciesQueue[i]), i == 0 ? LairSpeciesNote1 : i == 1 ? LairSpeciesNote2 : LairSpeciesNote3, token);
+                    else await Connection.WriteBytesAsync(BitConverter.GetBytes((ushort)Settings.LairSpeciesQueue[i]), i == 0 ? LairSpeciesNote2 : i == 1 ? LairSpeciesNote3 : LairSpeciesNote4, token);
+                }
+
+                Log($"Lair Notes set to {string.Join(", ", Settings.LairSpeciesQueue)}!");
+                Settings.LairSpecies = LairSpecies.None;
+                return (int)Settings.LairSpeciesQueue[0];
+            }
+            else
+            {
+                if (Settings.LairSpecies == LairSpecies.None && note != 0)
+                    return note;
+                else if (Settings.LairSpecies == LairSpecies.None && note == 0)
+                    return 0;
+
+                byte[] wanted = BitConverter.GetBytes((ushort)Settings.LairSpecies);
+                int species = (int)Settings.LairSpecies;
+                var caughtFlag = await Connection.ReadBytesAsync(GetFlagOffset(species), 2, token).ConfigureAwait(false);
+                if (caughtFlag[0] != 0 && Settings.ResetLegendaryCaughtFlag)
+                    await ResetLegendaryFlag(species, token).ConfigureAwait(false);
+                else if (caughtFlag[0] != 0 && !Settings.ResetLegendaryCaughtFlag)
+                {
+                    Log($"{Settings.LairSpecies} was caught prior and \"ResetLegendaryCaughtFlag\" is disabled. Starting the hunt, but we won't be able to catch it.");
+                    return species;
+                }
+
+                await Connection.WriteBytesAsync(wanted, HackyNoteCheck == 1 ? LairSpeciesNote1 : LairSpeciesNote2, token);
+                Settings.LairSpecies = LairSpecies.None;
                 Log($"{Settings.LairSpecies} is ready to be hunted.");
+                return species;
             }
         }
 
         private async Task MoveAndRentalClicks(int clicks, CancellationToken token)
         {
             for (int i = 0; i < clicks; i++)
-                await Click(DDOWN, 0_250, token);
+                await Click(DDOWN, 0_300, token);
+
             await Click(A, 1_000, token).ConfigureAwait(false);
-            await Click(A, 0_500, token).ConfigureAwait(false);
+            await Click(A, 1_000, token).ConfigureAwait(false);
         }
 
         private async Task GameRestart(CancellationToken token)
         {
             await CloseGame(Hub.Config, token).ConfigureAwait(false);
             await StartGame(Hub.Config, token, false, true).ConfigureAwait(false);
+        }
+
+        private async Task LairEntry(CancellationToken token)
+        {
+            var ofsVal = BitConverter.ToUInt16(await Connection.ReadBytesAsync(CurrentScreenLairOffset, 2, token).ConfigureAwait(false), 0);
+            while (await LairStatusCheck(ofsVal, CurrentScreenLairOffset, token).ConfigureAwait(false))
+                await Click(A, 0_300, token).ConfigureAwait(false);
+
+            await Task.Delay(2_000).ConfigureAwait(false);
+            await Click(DDOWN, 0_250, token).ConfigureAwait(false);
+            await Click(A, 2_000, token).ConfigureAwait(false);
         }
 
         private async Task<bool> SettingsCheck(CancellationToken token)
@@ -574,15 +780,21 @@ namespace SysBot.Pokemon
             if (BallPouch.Length == 1 && Settings.LairBall != Ball.None)
             {
                 Log("Checking Poké Ball pouch...");
-                catchCount = await GetPokeBallCount(token).ConfigureAwait(false);
-                if (catchCount <= 4)
+                CatchCount = await GetPokeBallCount(token).ConfigureAwait(false);
+                if (CatchCount < 5)
                 {
                     Log($"Insufficient {Settings.LairBall} Ball count.");
                     return false;
                 }
             }
+            else if (Settings.LairBall != Ball.None && CatchCount < 5)
+            {
+                Log("Restoring original ball pouch...");
+                await Connection.WriteBytesAsync(BallPouch, PokeBallOffset, token).ConfigureAwait(false);
+                CatchCount = await GetPokeBallCount(token).ConfigureAwait(false);
+            }
 
-            if (OtherItemsPouch.Length == 1 && Settings.UseStopConditionsPathReset)
+            if (OtherItemsPouch.Length == 1 && (Settings.UseStopConditionsPathReset || Settings.KeepPath))
             {
                 Log("Checking Dynite Ore count...");
                 var dyniteCount = await GetDyniteCount(token).ConfigureAwait(false);
@@ -604,6 +816,61 @@ namespace SysBot.Pokemon
 
             await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0x7900E808), MainNsoBase + DamageOutputOffset, token).ConfigureAwait(false);
             source.Cancel();
+        }
+
+        private async Task DoOffsetLog(CancellationToken token)
+        {
+            MainNsoBase = await SwitchConnection.GetMainNsoBaseAsync(token).ConfigureAwait(false);
+            LairMiscScreenCalc = MainNsoBase + LairMiscScreenOffset;
+
+            if (Settings.EnableOHKO) // Enable dirty OHKO.
+                await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0x7900E81F), MainNsoBase + DamageOutputOffset, token).ConfigureAwait(false);
+
+            string instructions =
+                "\n\n1. LairLobbyValue (CurrentScreen): screen where you select \"Don't invite others\"." +
+                "\n2. LairAdventurePathValue (CurrentScreen): screen where you choose a path." +
+                "\n3. LairDmaxValue (MiscScreen): during the first battle, when your wristband glows." +
+                "\n4. LairBattleMenuValue (MiscScreen): main in-battle screen." +
+                "\n5. LairMovesMenuValue (MiscScreen): move selection screen." +
+                "\n6. LairCatchScreenValue (MiscScreen): screen where it says \"Catch\" and \"Don't catch\"." +
+                "\n7. LairRewardsScreenValue (CurrentScreen): screen at the end of an adventure where you can select which caught Pokémon to bring home.\n\n";
+
+            Log($"Starting main OffsetLog loop. Please progress through an adventure while paying close attention to value changes.{instructions}");
+            while (!token.IsCancellationRequested)
+            {
+                var valCur = BitConverter.ToUInt16(await Connection.ReadBytesAsync(CurrentScreenLairOffset, 2, token).ConfigureAwait(false), 0);
+                var valMisc = BitConverter.ToUInt16(await SwitchConnection.ReadBytesAbsoluteAsync(LairMiscScreenCalc, 2, token).ConfigureAwait(false), 0);
+                var hexCur = string.Format("0x{0:X8}", valCur);
+                var hexMisc = string.Format("0x{0:X8}", valMisc);
+                Log($"\nCurrentScreen offset value: {hexCur}\nMiscScreen offset value: {hexMisc}");
+                await Task.Delay(2_000).ConfigureAwait(false);
+            }
+
+            if (Settings.EnableOHKO)
+                await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0x7900E808), MainNsoBase + DamageOutputOffset, token).ConfigureAwait(false);
+        }
+
+        private async Task<int> GetPPCount(int move, CancellationToken token) => BitConverter.ToInt32(await Connection.ReadBytesAsync((uint)(LairMove1Offset + (move * 0xC)), 4, token).ConfigureAwait(false), 0);
+
+        private LairOffsetValues ValueParse()
+        {
+            ushort.TryParse(Settings.LairScreenValues.LairLobbyValue.Replace("0x", ""), NumberStyles.HexNumber, NumberFormatInfo.InvariantInfo, out ushort lobby);
+            ushort.TryParse(Settings.LairScreenValues.LairAdventurePathValue.Replace("0x", ""), NumberStyles.HexNumber, NumberFormatInfo.InvariantInfo, out ushort path);
+            ushort.TryParse(Settings.LairScreenValues.LairDmaxValue.Replace("0x", ""), NumberStyles.HexNumber, NumberFormatInfo.InvariantInfo, out ushort dmax);
+            ushort.TryParse(Settings.LairScreenValues.LairBattleMenuValue.Replace("0x", ""), NumberStyles.HexNumber, NumberFormatInfo.InvariantInfo, out ushort battle);
+            ushort.TryParse(Settings.LairScreenValues.LairMovesMenuValue.Replace("0x", ""), NumberStyles.HexNumber, NumberFormatInfo.InvariantInfo, out ushort moves);
+            ushort.TryParse(Settings.LairScreenValues.LairCatchScreenValue.Replace("0x", ""), NumberStyles.HexNumber, NumberFormatInfo.InvariantInfo, out ushort catchScreen);
+            ushort.TryParse(Settings.LairScreenValues.LairRewardsScreenValue.Replace("0x", ""), NumberStyles.HexNumber, NumberFormatInfo.InvariantInfo, out ushort rewards);
+            return new()
+            {
+                LairLobby = lobby,
+                LairAdventurePath = path,
+                LairDmax = dmax,
+                LairBattleMenu = battle,
+                LairMovesMenu = moves,
+                LairCatchScreen = catchScreen,
+                LairRewardsScreen = rewards,
+            };
         }
     }
 }

@@ -1,83 +1,40 @@
-﻿using PKHeX.Core;
-using PKHeX.Core.AutoMod;
-using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
+using System.Diagnostics;
+using System.Threading.Tasks;
 using System.Collections.Generic;
+using PKHeX.Core;
+using PKHeX.Core.AutoMod;
+using Newtonsoft.Json;
 
 namespace SysBot.Pokemon
 {
     public class TradeExtensions
     {
-        public PokeTradeHub<PK8> Hub;
+        public static Dictionary<ulong, List<DateTime>> UserCommandTimestamps = new();
+        private static readonly string InfoBackupPath = "TradeCord\\UserInfo_backup.json";
+        private static readonly string InfoPath = "TradeCord\\UserInfo.json";
+        public static Dictionary<ulong, DateTime> TradeCordCooldown = new();
+        public static HashSet<ulong> MuteList = new();
+        public static List<string> TradeCordPath = new();
+        public static DateTime EventVoteTimer = new();
+        private static TCUserInfoRoot UserInfo = new();
+        private static readonly object _sync = new();
+        private static readonly object _syncLog = new();
+        public static readonly Random Random = new();
+        private static DateTime ConfigTimer = DateTime.Now;
+        private static bool TCRWLockEnable;
+        public static bool TCInitialized;
+
         public static int XCoordStart = 0;
         public static int YCoordStart = 0;
-        public static List<string> TradeCordPath = new();
-        public static List<string> TradeCordCooldown = new();
-        public static byte[] Data = new byte[] { };
-        public static Random Random = new Random();
 
-        public TradeExtensions(PokeTradeHub<PK8> hub)
-        {
-            Hub = hub;
-        }
+        private static readonly int[] GalarFossils = { 880, 881, 882, 883 };
+        public static readonly int[] Pokeball = { 151, 722, 723, 724, 725, 726, 727, 728, 729, 730, 772, 773, 789, 790, 810, 811, 812, 813, 814, 815, 816, 817, 818, 891, 892 };
+        public static readonly int[] Amped = { 3, 4, 2, 8, 9, 19, 22, 11, 13, 14, 0, 6, 24 };
+        public static readonly int[] LowKey = { 1, 5, 7, 10, 12, 15, 16, 17, 18, 20, 21, 23 };
 
-        public static uint AlcremieDecoration { get => BitConverter.ToUInt32(Data, 0xE4); set => BitConverter.GetBytes(value).CopyTo(Data, 0xE4); }
-        public static int[] ValidEgg =
-                { 1, 4, 7, 10, 27, 29, 32, 37, 41, 43, 50, 52, 54, 58, 60, 63, 66, 72,
-                  77, 79, 81, 83, 90, 92, 95, 98, 102, 104, 108, 109, 111, 114, 115, 116,
-                  118, 120, 122, 123, 127, 128, 129, 131, 133, 137, 138, 140, 142, 147, 163,
-                  170, 172, 173, 174, 175, 177, 194, 206, 211, 213, 214, 215, 220, 222, 223,
-                  225, 227, 236, 238, 239, 240, 241, 246, 252, 255, 258, 263, 270, 273, 278,
-                  280, 290, 293, 298, 302, 303, 304, 309, 318, 320, 324, 328, 333, 337, 338,
-                  339, 341, 343, 345, 347, 349, 355, 359, 360, 361, 363, 369, 371, 374, 403,
-                  406, 415, 420, 422, 425, 427, 434, 436, 438, 439, 440, 442, 443, 446, 447,
-                  449, 451, 453, 458, 459, 479, 506, 509, 517, 519, 524, 527, 529, 531, 532,
-                  535, 538, 539, 543, 546, 548, 550, 551, 554, 556, 557, 559, 561, 562, 564,
-                  566, 568, 570, 572, 574, 577, 582, 587, 588, 590, 592, 595, 597, 599, 605,
-                  607, 610, 613, 615, 616, 618, 619, 621, 622, 624, 626, 627, 629, 631, 632,
-                  633, 636, 659, 661, 674, 677, 679, 682, 684, 686, 688, 690, 692, 694, 696,
-                  698, 701, 702, 703, 704, 707, 708, 710, 712, 714, 722, 725, 728, 736, 742,
-                  744, 746, 747, 749, 751, 753, 755, 757, 759, 761, 764, 765, 766, 767, 769,
-                  771, 776, 777, 778, 780, 781, 782, 810, 813, 816, 819, 821, 824, 827, 829,
-                  831, 833, 835, 837, 840, 843, 845, 846, 848, 850, 852, 854, 856, 859, 868,
-                  870, 871, 872, 874, 875, 876, 877, 878, 884, 885 };
-
-        public static int[] GenderDependent = { 3, 12, 19, 20, 25, 26, 41, 42, 44, 45, 64, 65, 84, 85, 97, 111, 112, 118, 119, 123, 129, 130, 133,
-                                                178, 185, 186, 194, 195, 202, 208, 212, 214, 215, 221, 224,
-                                                255, 256, 257, 272, 274, 275, 315, 350, 369,
-                                                403, 404, 405, 407, 415, 443, 444, 445, 449, 450, 453, 454, 459, 460, 461, 464, 465, 473,
-                                                521, 592, 593,
-                                                668 };
-
-        public static int[] Legends = { 144, 145, 146, 150, 151,
-                                        243, 244, 245, 249, 250, 251,
-                                        377, 378, 379, 380, 381, 382, 383, 384, 385,
-                                        480, 481, 482, 483, 484, 485, 486, 487, 488,
-                                        494, 638, 639, 640, 641, 642, 643, 644, 645, 646, 647, 649,
-                                        716, 717, 718, 719, 721,
-                                        772, 773, 785, 786, 787, 788, 789, 790, 791, 792, 793, 794, 795, 796, 797, 798, 799, 800, 801, 802, 803, 804, 805, 806, 807, 808, 809,
-                                        888, 889, 890, 891, 892, 893, 894, 895, 896, 897, 898 };
-
-        public static int[] ShinyLock = { (int)Species.Victini, (int)Species.Keldeo, (int)Species.Volcanion, (int)Species.Cosmog, (int)Species.Cosmoem, (int)Species.Magearna,
-                                          (int)Species.Marshadow, (int)Species.Zacian, (int)Species.Zamazenta, (int)Species.Eternatus, (int)Species.Kubfu, (int)Species.Urshifu,
-                                          (int)Species.Zarude, (int)Species.Glastrier, (int)Species.Spectrier, (int)Species.Calyrex };
-
-        public static int[] Foreign = { 150, 151, 243, 244, 245, 249, 250, 251, 252, 253, 254, 255, 256, 257, 258, 259, 260, 380, 381, 382, 383, 384, 385, 480, 481, 482, 483, 484, 485, 486, 487, 488, 494,
-                                        641, 642, 643, 644, 645, 646, 647, 649, 716, 717, 718, 719, 721, 722, 723, 724, 725, 726, 727, 728, 729, 730, 785, 786, 787, 788, 789, 790, 791, 792, 793, 794, 795,
-                                        796, 797, 798, 799, 800, 801, 802, 803, 804, 805, 806, 807, 808, 809 };
-
-        public static int[] TradeEvo = { (int)Species.Machoke, (int)Species.Haunter, (int)Species.Boldore, (int)Species.Gurdurr, (int)Species.Phantump, (int)Species.Gourgeist };
-        public static string[] PartnerPikachuHeadache = { "-Original", "-Partner", "-Hoenn", "-Sinnoh", "-Unova", "-Alola", "-Kalos", "-World" };
-        public static string[] LGPEBalls = { "Poke", "Premier", "Great", "Ultra", "Master" };
-        public static int[] CherishOnly = { 251, 385, 494, 649, 719, 721, 801, 802, 807, 893 };
-        public static int[] Pokeball = { 151, 722, 723, 724, 725, 726, 727, 728, 729, 730, 772, 773, 789, 790, 810, 811, 812, 813, 814, 815, 816, 817, 818, 891, 892 };
-        public static int[] GalarFossils = { 880, 881, 882, 883 };
-        public static int[] SilvallyMemory = { 0, 904, 905, 906, 907, 908, 909, 910, 911, 912, 913, 914, 915, 916, 917, 918, 919, 920 };
-        public static int[] GenesectDrives = { 0, 116, 117, 118, 119 };
-        public static int[] Amped = { 3, 4, 2, 8, 9, 19, 22, 11, 13, 14, 0, 6, 24 };
-        public static int[] LowKey = { 1, 5, 7, 10, 12, 15, 16, 17, 18, 20, 21, 23 };
         public static readonly string[] Characteristics =
         {
             "Takes plenty of siestas",
@@ -88,168 +45,246 @@ namespace SysBot.Pokemon
             "Somewhat vain",
         };
 
+        public class TC_CommandContext
+        {
+            public string Username { get; set; } = string.Empty;
+            public ulong ID { get; set; }
+            public string GifteeName { get; set; } = string.Empty;
+            public ulong GifteeID { get; set; }
+            public TCCommandContext Context { get; set; }
+        }
+
         public class TCRng
         {
-            private readonly int catchRng = Random.Next(101);
-            private int shinyRng = Random.Next(101);
-            private int eggShinyRng = Random.Next(101);
-            private readonly int eggRng = Random.Next(101);
-            private readonly int gmaxRng = Random.Next(101);
-            private int cherishRng = Random.Next(101);
-            private int speciesRng = 0;
-            private PK8 catchPKM = new();
-            private PK8 eggPKM = new();
-
-            public int CatchRNG { get => catchRng; }
-            public int ShinyRNG { get => shinyRng; set => shinyRng = value; }
-            public int EggRNG { get => eggRng; }
-            public int EggShinyRNG { get => eggShinyRng; set => eggShinyRng = value; }
-            public int GmaxRNG { get => gmaxRng; }
-            public int CherishRng { get => cherishRng; set => cherishRng = value; }
-            public int SpeciesRNG { get => speciesRng; set => speciesRng = value; }
-            public PK8 CatchPKM { get => catchPKM; set => catchPKM = value; }
-            public PK8 EggPKM { get => eggPKM; set => eggPKM = value; }
-        }
-
-        public class Daycare1
-        {
-            public bool Shiny { get; set; }
-            public int ID { get; set; }
-            public int Species { get; set; }
-            public string Form { get; set; } = "";
-            public int Ball { get; set; }
-        }
-
-        public class Daycare2
-        {
-            public bool Shiny { get; set; }
-            public int ID { get; set; }
-            public int Species { get; set; }
-            public string Form { get; set; } = "";
-            public int Ball { get; set; }
-        }
-
-        public class Catch
-        {
-            public bool Shiny { get; set; }
-            public int ID { get; set; }
-            public string Ball { get; set; } = "None";
-            public string Species { get; set; } = "None";
-            public string Form { get; set; } = "";
-            public bool Egg { get; set; }
-            public string Path { get; set; } = "";
-            public bool Traded { get; set; }
-        }
-
-        public class TCUserInfo
-        {
-            public ulong UserID { get; set; }
-            public int CatchCount { get; set; }
-            public Daycare1 Daycare1 { get; set; } = new();
-            public Daycare2 Daycare2 { get; set; } = new();
-            public string OTName { get; set; } = "";
-            public string OTGender { get; set; } = "";
-            public int TID { get; set; }
-            public int SID { get; set; }
-            public string Language { get; set; } = "";
-            public HashSet<int> Dex { get; set; } = new();
-            public int DexCompletionCount { get; set; }
-            public HashSet<int> Favorites { get; set; } = new();
-            public HashSet<Catch> Catches { get; set; } = new();
+            public int CatchRNG { get; set; }
+            public int ShinyRNG { get; set; }
+            public int EggRNG { get; set; }
+            public int EggShinyRNG { get; set; }
+            public int GmaxRNG { get; set; }
+            public int CherishRNG { get; set; }
+            public int SpeciesRNG { get; set; }
+            public int SpeciesBoostRNG { get; set; }
         }
 
         public class TCUserInfoRoot
         {
             public HashSet<TCUserInfo> Users { get; set; } = new();
+
+            public class TCUserInfo
+            {
+                public string Username { get; set; } = string.Empty;
+                public ulong UserID { get; set; }
+                public int CatchCount { get; set; }
+                public int SpeciesBoost { get; set; }
+                public int DexCompletionCount { get; set; }
+                public HashSet<int> Dex { get; set; } = new();
+                public List<DexPerks> ActivePerks { get; set; } = new();
+                public HashSet<int> Favorites { get; set; } = new();
+                public string OTName { get; set; } = "";
+                public string OTGender { get; set; } = "";
+                public int TID { get; set; }
+                public int SID { get; set; }
+                public string Language { get; set; } = "";
+                public Daycare1 Daycare1 { get; set; } = new();
+                public Daycare2 Daycare2 { get; set; } = new();
+                public HashSet<Catch> Catches { get; set; } = new();
+                public Buddy Buddy { get; set; } = new();
+            }
+
+            public class Catch
+            {
+                public bool Shiny { get; set; }
+                public int ID { get; set; }
+                public string Ball { get; set; } = "None";
+                public string Species { get; set; } = "None";
+                public string Form { get; set; } = "";
+                public bool Egg { get; set; }
+                public string Path { get; set; } = "";
+                public bool Traded { get; set; }
+            }
+
+            public class Daycare1
+            {
+                public bool Shiny { get; set; }
+                public int ID { get; set; }
+                public int Species { get; set; }
+                public string Form { get; set; } = "";
+                public int Ball { get; set; }
+            }
+
+            public class Daycare2
+            {
+                public bool Shiny { get; set; }
+                public int ID { get; set; }
+                public int Species { get; set; }
+                public string Form { get; set; } = "";
+                public int Ball { get; set; }
+            }
+
+            public class Buddy
+            {
+                public int ID { get; set; }
+                public Ability Ability { get; set; }
+                public int HatchSteps { get; set; }
+                public string Nickname { get; set; } = "";
+            }
         }
 
-        public static bool ShinyLockCheck(int species, string ball, bool form)
+        public static bool SelfBotScanner(ulong id, int cd)
         {
-            if (ShinyLock.Contains(species))
-                return true;
-            else if (form && (species == (int)Species.Zapdos || species == (int)Species.Moltres || species == (int)Species.Articuno))
-                return true;
-            else if (ball.Contains("Beast") && (species == (int)Species.Poipole || species == (int)Species.Naganadel))
-                return true;
-            else return false;
+            if (UserCommandTimestamps.TryGetValue(id, out List<DateTime> timeStamps))
+            {
+                int[] delta = new int[timeStamps.Count - 1];
+                bool[] comp = new bool[delta.Length - 1];
+
+                for (int i = 1; i < timeStamps.Count; i++)
+                    delta[i - 1] = (int)(timeStamps[i].Subtract(timeStamps[i - 1]).TotalSeconds - cd);
+
+                for (int i = 1; i < delta.Length; i++)
+                    comp[i - 1] = delta[i] == delta[i - 1] || delta[i] - delta[i - 1] == -2 || delta[i] - delta[i - 1] == -1 || delta[i] - delta[i - 1] == 0 || delta[i] - delta[i - 1] == 1 || delta[i] - delta[i - 1] == 2;
+
+                UserCommandTimestamps[id].Clear();
+                if (comp.Any(x => x == false))
+                    return false;
+                else return true;
+            }
+            return false;
         }
 
-        public static PKM RngRoutine(PKM pkm, IBattleTemplate template, Shiny shiny)
+        public static PK8 RngRoutine(PKM pkm, IBattleTemplate template, Shiny shiny)
         {
-            var troublesomeForms = pkm.Species == (int)Species.Giratina || pkm.Species == (int)Species.Silvally || pkm.Species == (int)Species.Genesect || pkm.Species == (int)Species.Articuno || pkm.Species == (int)Species.Zapdos || pkm.Species == (int)Species.Moltres;
-            pkm.Form = pkm.Species == (int)Species.Silvally || pkm.Species == (int)Species.Genesect || pkm.Species == (int)Species.Giratina ? Random.Next(pkm.PersonalInfo.FormCount) : pkm.Form;
             if (pkm.Species == (int)Species.Alcremie)
             {
-                Data = pkm.Data;
-                AlcremieDecoration = (uint)Random.Next(7);
-                pkm = PKMConverter.GetPKMfromBytes(Data) ?? pkm;
+                var data = pkm.Data;
+                var deco = (uint)Random.Next(7);
+                BitConverter.GetBytes(deco).CopyTo(data, 0xE4);
+                pkm = PKMConverter.GetPKMfromBytes(data) ?? pkm;
             }
-            else if (pkm.Form > 0 && troublesomeForms)
+
+            var laInit = new LegalityAnalysis(pkm);
+            var nature = pkm.Nature;
+            pkm.Nature = pkm.Species switch
             {
-                switch (pkm.Species)
-                {
-                    case 26: pkm.Met_Location = 162; pkm.Met_Level = 25; pkm.EggMetDate = null; pkm.Egg_Day = 0; pkm.Egg_Location = 0; pkm.Egg_Month = 0; pkm.Egg_Year = 0; pkm.EncounterType = 0; break;
-                    case 144: pkm.Met_Location = 208; pkm.SetIsShiny(false); break;
-                    case 145: pkm.Met_Location = 122; pkm.SetIsShiny(false); break;
-                    case 146: pkm.Met_Location = 164; pkm.SetIsShiny(false); break;
-                    case 487: pkm.HeldItem = 112; pkm.RefreshAbility(pkm.AbilityNumber); break;
-                    case 649: pkm.HeldItem = GenesectDrives[pkm.Form]; break;
-                    case 773: pkm.HeldItem = SilvallyMemory[pkm.Form]; break;
-                };
-            }
-            else if (pkm.Form == 0 && troublesomeForms)
-            {
-                switch (pkm.Species)
-                {
-                    case 144: pkm.Met_Location = 244; break;
-                    case 145: pkm.Met_Location = 244; break;
-                    case 146: pkm.Met_Location = 244; break;
-                };
-            }
+                (int)Species.Toxtricity => pkm.Form > 0 ? LowKey[Random.Next(LowKey.Length)] : Amped[Random.Next(Amped.Length)],
+                _ => Random.Next(25),
+            };
 
-            if (pkm.IsShiny && pkm.Met_Location == 244)
-                CommonEdits.SetShiny(pkm, Shiny.AlwaysStar);
+            var la = new LegalityAnalysis(pkm);
+            if (laInit.Valid && !la.Valid)
+                pkm.Nature = nature;
 
-            if (TradeEvo.Contains(pkm.Species))
-                pkm.HeldItem = 229;
-
-            pkm.Nature = pkm.Species == (int)Species.Toxtricity && pkm.Form > 0 ? LowKey[Random.Next(LowKey.Length)] : pkm.Species == (int)Species.Toxtricity && pkm.Form == 0 ? Amped[Random.Next(Amped.Length)] : pkm.FatefulEncounter ? pkm.Nature : Random.Next(25);
             pkm.StatNature = pkm.Nature;
-            pkm.ClearHyperTraining();
-            pkm.SetSuggestedMoves(false);
-            pkm.RelearnMoves = (int[])pkm.GetSuggestedRelearnMoves();
             pkm.Move1_PPUps = pkm.Move2_PPUps = pkm.Move3_PPUps = pkm.Move4_PPUps = 0;
             pkm.SetMaximumPPCurrent(pkm.Moves);
-            pkm.FixMoves();
-            if (!GalarFossils.Contains(pkm.Species) && !pkm.FatefulEncounter)
-                pkm.SetAbilityIndex(Legends.Contains(pkm.Species) ? 0 : pkm.Met_Location == 244 || pkm.Met_Location == 30001 ? 2 : Random.Next(3));
-
             pkm.ClearHyperTraining();
-            var la = new LegalityAnalysis(pkm);
+
             var enc = la.Info.EncounterMatch;
-            pkm.IVs = enc is EncounterStatic8N ? pkm.SetRandomIVs(5) : pkm.FatefulEncounter ? pkm.IVs : enc is EncounterSlot8 || enc is EncounterStatic8U ? pkm.SetRandomIVs(4) : pkm.SetRandomIVs(3);
-            if (enc is EncounterStatic8)
+            var evoChain = la.Info.EvoChainsAllGens[pkm.Format].FirstOrDefault(x => x.Species == pkm.Species);
+            pkm.CurrentLevel = enc.LevelMin < evoChain.MinLevel ? evoChain.MinLevel : enc.LevelMin;
+            while (!new LegalityAnalysis(pkm).Valid)
             {
-                while (!new LegalityAnalysis(pkm).Valid)
-                {
-                    if (!SimpleEdits.TryApplyHardcodedSeedWild8((PK8)pkm, enc, pkm.IVs, shiny))
+                pkm.CurrentLevel += 1;
+                if (pkm.CurrentLevel == 100 && !new LegalityAnalysis(pkm).Valid)
+                    return (PK8)pkm;
+            }
+
+            pkm.SetSuggestedMoves();
+            pkm.SetRelearnMoves(pkm.GetSuggestedRelearnMoves(enc));
+            if (pkm.Species == 647 && pkm.Form > 0 && !pkm.Moves.Contains(548))
+                pkm.Move1 = (int)Move.SecretSword;
+            pkm.HealPP();
+
+            var legends = (int[])Enum.GetValues(typeof(Legends));
+            if (!GalarFossils.Contains(pkm.Species) && !pkm.FatefulEncounter)
+            {
+                if (enc is EncounterSlot8 slot8)
+                    pkm.SetAbilityIndex(slot8.Ability == -1 ? Random.Next(3) : slot8.Ability == 0 ? Random.Next(2) : slot8.Ability == 1 ? 0 : slot8.Ability == 2 ? 1 : 2);
+                else if (enc is EncounterStatic8 static8)
+                    pkm.SetAbilityIndex(static8.Ability == -1 ? Random.Next(3) : static8.Ability == 0 ? Random.Next(2) : static8.Ability == 1 ? 0 : static8.Ability == 2 ? 1 : 2);
+                else if (enc is EncounterStatic8N static8N)
+                    pkm.SetAbilityIndex(static8N.Ability == -1 ? Random.Next(3) : static8N.Ability == 0 ? Random.Next(2) : static8N.Ability == 1 ? 0 : static8N.Ability == 2 ? 1 : 2);
+                else if (enc is EncounterStatic8NC static8NC)
+                    pkm.SetAbilityIndex(static8NC.Ability == -1 ? Random.Next(3) : static8NC.Ability == 0 ? Random.Next(2) : static8NC.Ability == 1 ? 0 : static8NC.Ability == 2 ? 1 : 2);
+                else if (enc is EncounterStatic8ND static8ND)
+                    pkm.SetAbilityIndex(static8ND.Ability == -1 ? Random.Next(3) : static8ND.Ability == 0 ? Random.Next(2) : static8ND.Ability == 1 ? 0 : static8ND.Ability == 2 ? 1 : 2);
+                else if (enc is EncounterStatic8U static8U)
+                    pkm.SetAbilityIndex(static8U.Ability == -1 ? Random.Next(3) : static8U.Ability == 0 ? Random.Next(2) : static8U.Ability == 1 ? 0 : static8U.Ability == 2 ? 1 : 2);
+            }
+
+            bool goMew = pkm.Species == (int)Species.Mew && enc.Version == GameVersion.GO && pkm.IsShiny;
+            bool goOther = (pkm.Species == (int)Species.Victini || pkm.Species == (int)Species.Jirachi || pkm.Species == (int)Species.Celebi || pkm.Species == (int)Species.Genesect) && enc.Version == GameVersion.GO;
+            if (enc is EncounterSlotGO slotGO && !goMew && !goOther)
+                pkm.SetRandomIVsGO(slotGO.Type.GetMinIV());
+            else if (enc is EncounterStatic8N static8N)
+                pkm.SetRandomIVs(static8N.FlawlessIVCount + 1);
+            else if (enc is IOverworldCorrelation8 oc)
+            {
+                var criteria = EncounterCriteria.GetCriteria(template);
+                bool owCorr = true;
+                List<int> IVs = new() { 0, 0, 0, 0, 0, 0 };
+                int i = 0;
+
+                while (i < 1_000)
+                {// Loosely adapted from ALM.
+                    if (enc is EncounterStatic8 static8)
                     {
-                        var criteria = EncounterCriteria.GetCriteria(template);
-                        Overworld8RNG.ApplyDetails(pkm, criteria, shiny, pkm.FlawlessIVCount);
+                        owCorr = static8.IsOverworldCorrelation;
+                        if (!owCorr)
+                        {
+                            pkm.SetRandomIVs(Random.Next(static8.FlawlessIVCount, 7));
+                            break;
+                        }
+
+                        var flawless = static8.FlawlessIVCount;
+                        while (IVs.FindAll(x => x == 31).Count < flawless)
+                            IVs[Random.Next(IVs.Count)] = 31;
+
+                        pkm.IVs = new int[] { IVs[0], IVs[1], IVs[2], IVs[3], IVs[4], IVs[5] };
+                        var available = xoroshiro8_wild.GetWildSeedFromIV8(new[] { flawless }, pkm.IVs, out uint seed);
+                        if (owCorr)
+                            APILegality.FindWildPIDIV8((PK8)pkm, shiny, available, seed);
+                    }
+                    else if (enc is EncounterSlot8 slot8)
+                    {
+                        var flawless = Random.Next(4);
+                        while (IVs.FindAll(x => x == 31).Count < flawless)
+                            IVs[Random.Next(IVs.Count)] = 31;
+
+                        pkm.IVs = new int[] { IVs[0], IVs[1], IVs[2], IVs[3], IVs[4], IVs[5] };
+                        var available = xoroshiro8_wild.GetWildSeedFromIV8(new[] { 0, 2, 3 }, pkm.IVs, out uint seed);
+                        var req = oc.GetRequirement(pkm);
+                        if (req == OverworldCorrelation8Requirement.MustHave)
+                            APILegality.FindWildPIDIV8((PK8)pkm, shiny, available, seed);
+                        else if (req == OverworldCorrelation8Requirement.MustNotHave)
+                        {
+                            pkm.SetRandomIVs(Random.Next(4));
+                            break;
+                        }
+                    }
+
+                    i++;
+                    if (owCorr && oc.IsOverworldCorrelationCorrect(pkm))
+                        break;
+                    else
+                    {
+                        IVs = new() { 0, 0, 0, 0, 0, 0 };
+                        continue;
                     }
                 }
             }
+            else if (enc.Version != GameVersion.GO && enc.Generation >= 6)
+                pkm.SetRandomIVs(4);
 
-            if (pkm.Species == (int)Species.Melmetal && !pkm.FatefulEncounter)
-                pkm.Met_Level = 15;
-
-            if (!LegalEdits.ValidBall(pkm) || pkm.Species == (int)Species.Mew)
+            var test = BallApplicator.GetLegalBalls(pkm);
+            BallApplicator.ApplyBallLegalRandom(pkm);
+            if (pkm.Ball == 16)
                 BallApplicator.ApplyBallLegalRandom(pkm);
+
             pkm = TrashBytes(pkm);
-            return pkm;
+            return (PK8)pkm;
         }
 
-        public static PKM EggRngRoutine(TCUserInfo info, string trainerInfo, int evo1, int evo2, bool star, bool square)
+        public static PKM EggRngRoutine(TCUserInfoRoot.TCUserInfo info, string trainerInfo, int evo1, int evo2, bool star, bool square)
         {
             var pkm1 = PKMConverter.GetPKMfromBytes(File.ReadAllBytes(info.Catches.FirstOrDefault(x => x.ID == info.Daycare1.ID).Path));
             var pkm2 = PKMConverter.GetPKMfromBytes(File.ReadAllBytes(info.Catches.FirstOrDefault(x => x.ID == info.Daycare2.ID).Path));
@@ -258,9 +293,10 @@ namespace SysBot.Pokemon
 
             var ballRng = $"\nBall: {(Ball)Random.Next(2, 27)}";
             var ballRngDC = Random.Next(1, 3);
-            bool specificEgg = (evo1 == evo2 && ValidEgg.Contains(evo1)) || ((evo1 == 132 || evo2 == 132) && (ValidEgg.Contains(evo1) || ValidEgg.Contains(evo2))) || ((evo1 == 29 || evo1 == 32) && (evo2 == 29 || evo2 == 32));
+            var enumVals = (int[])Enum.GetValues(typeof(ValidEgg));
+            bool specificEgg = (evo1 == evo2 && Enum.IsDefined(typeof(ValidEgg), evo1)) || ((evo1 == 132 || evo2 == 132) && (Enum.IsDefined(typeof(ValidEgg), evo1) || Enum.IsDefined(typeof(ValidEgg), evo2))) || ((evo1 == 29 || evo1 == 32) && (evo2 == 29 || evo2 == 32));
             var dittoLoc = DittoSlot(evo1, evo2);
-            var speciesRng = specificEgg ? SpeciesName.GetSpeciesNameGeneration(dittoLoc == 1 ? evo2 : evo1, 2, 8) : SpeciesName.GetSpeciesNameGeneration(ValidEgg[Random.Next(ValidEgg.Length)], 2, 8);
+            var speciesRng = specificEgg ? SpeciesName.GetSpeciesNameGeneration(dittoLoc == 1 ? evo2 : evo1, 2, 8) : SpeciesName.GetSpeciesNameGeneration(enumVals[Random.Next(enumVals.Length)], 2, 8);
             var speciesRngID = SpeciesName.GetSpeciesID(speciesRng);
             FormOutput(speciesRngID, 0, out string[] forms);
 
@@ -273,6 +309,9 @@ namespace SysBot.Pokemon
                 "Nidoran" => _ = specificEgg && dittoLoc == 1 ? (evo2 == 32 ? "-M" : "-F") : specificEgg && dittoLoc == 2 ? (evo1 == 32 ? "-M" : "-F") : (Random.Next(2) == 0 ? "-M" : "-F"),
                 "Meowth" => _ = FormOutput(speciesRngID, specificEgg && (pkm1.Species == 863 || pkm2.Species == 863) ? 2 : specificEgg && dittoLoc == 1 ? pkm2.Form : specificEgg && dittoLoc == 2 ? pkm1.Form : Random.Next(forms.Length), out _),
                 "Yamask" => FormOutput(speciesRngID, specificEgg && (pkm1.Species == 867 || pkm2.Species == 867) ? 1 : specificEgg && dittoLoc == 1 ? pkm2.Form : specificEgg && dittoLoc == 2 ? pkm1.Form : Random.Next(forms.Length), out _),
+                "Zigzagoon" => _ = FormOutput(speciesRngID, specificEgg && (pkm1.Species == 862 || pkm2.Species == 862) ? 1 : specificEgg && dittoLoc == 1 ? pkm2.Form : specificEgg && dittoLoc == 2 ? pkm1.Form : Random.Next(forms.Length), out _),
+                "Farfetch’d" => _ = FormOutput(speciesRngID, specificEgg && (pkm1.Species == 865 || pkm2.Species == 865) ? 1 : specificEgg && dittoLoc == 1 ? pkm2.Form : specificEgg && dittoLoc == 2 ? pkm1.Form : Random.Next(forms.Length), out _),
+                "Corsola" => _ = FormOutput(speciesRngID, specificEgg && (pkm1.Species == 864 || pkm2.Species == 864) ? 1 : specificEgg && dittoLoc == 1 ? pkm2.Form : specificEgg && dittoLoc == 2 ? pkm1.Form : Random.Next(forms.Length), out _),
                 "Sinistea" or "Milcery" => "",
                 _ => FormOutput(speciesRngID, specificEgg && pkm1.Form == pkm2.Form ? pkm1.Form : specificEgg && dittoLoc == 1 ? pkm2.Form : specificEgg && dittoLoc == 2 ? pkm1.Form : Random.Next(forms.Length), out _),
             };
@@ -295,6 +334,7 @@ namespace SysBot.Pokemon
                 pkm.Ball = info.Daycare2.Ball;
 
             EggTrade((PK8)pkm);
+            pkm.CurrentFriendship = pkm.PersonalInfo.HatchCycles;
             pkm.SetAbilityIndex(Random.Next(3));
             pkm.Nature = Random.Next(25);
             pkm.StatNature = pkm.Nature;
@@ -311,34 +351,23 @@ namespace SysBot.Pokemon
             return pkm;
         }
 
-        public bool IsItemMule(PK8 pk8)
+        public static void DittoTrade(PKM pkm)
         {
-            if (Hub.Config.Trade.ItemMuleSpecies == Species.None || Hub.Config.Trade.DittoTrade && pk8.Species == 132 || Hub.Config.Trade.EggTrade && pk8.Nickname == "Egg")
-                return true;
-            return !(pk8.Species != SpeciesName.GetSpeciesID(Hub.Config.Trade.ItemMuleSpecies.ToString()) || pk8.IsShiny);
+            var dittoStats = new string[] { "atk", "spe", "spa" };
+            var nickname = pkm.Nickname.ToLower();
+            pkm.StatNature = pkm.Nature;
+            pkm.Met_Location = 162;
+            pkm.Ball = 21;
+            pkm.IVs = new int[] { 31, nickname.Contains(dittoStats[0]) ? 0 : 31, 31, nickname.Contains(dittoStats[1]) ? 0 : 31, nickname.Contains(dittoStats[2]) ? 0 : 31, 31 };
+            pkm.ClearHyperTraining();
+            _ = TrashBytes(pkm, new LegalityAnalysis(pkm));
         }
 
-        public static void DittoTrade(PKM pk8)
+        public static void EggTrade(PK8 pk)
         {
-            var dittoStats = new string[] { "ATK", "SPE", "SPA" };
-            pk8.StatNature = pk8.Nature;
-            pk8.SetAbility(7);
-            pk8.SetAbilityIndex(1);
-            pk8.Met_Level = 60;
-            pk8.Move1 = 144;
-            pk8.Move1_PP = 0;
-            pk8.Met_Location = 154;
-            pk8.Ball = 21;
-            pk8.IVs = new int[] { 31, pk8.Nickname.Contains(dittoStats[0]) ? 0 : 31, 31, pk8.Nickname.Contains(dittoStats[1]) ? 0 : 31, pk8.Nickname.Contains(dittoStats[2]) ? 0 : 31, 31 };
-            pk8.SetSuggestedHyperTrainingData();
-            _ = TrashBytes(pk8);
-        }
-
-        public static void EggTrade(PK8 pkm)
-        {
-            pkm = (PK8)TrashBytes(pkm);
-            pkm.IsNicknamed = true;
-            pkm.Nickname = pkm.Language switch
+            pk = (PK8)TrashBytes(pk);
+            pk.IsNicknamed = true;
+            pk.Nickname = pk.Language switch
             {
                 1 => "タマゴ",
                 3 => "Œuf",
@@ -350,41 +379,41 @@ namespace SysBot.Pokemon
                 _ => "Egg",
             };
 
-            pkm.IsEgg = true;
-            pkm.Egg_Location = 60002;
-            pkm.MetDate = DateTime.Parse("2020/10/20");
-            pkm.EggMetDate = pkm.MetDate;
-            pkm.HeldItem = 0;
-            pkm.CurrentLevel = 1;
-            pkm.EXP = 0;
-            pkm.DynamaxLevel = 0;
-            pkm.Met_Level = 1;
-            pkm.Met_Location = 30002;
-            pkm.CurrentHandler = 0;
-            pkm.OT_Friendship = 1;
-            pkm.HT_Name = "";
-            pkm.HT_Friendship = 0;
-            pkm.HT_Language = 0;
-            pkm.HT_Gender = 0;
-            pkm.HT_Memory = 0;
-            pkm.HT_Feeling = 0;
-            pkm.HT_Intensity = 0;
-            pkm.StatNature = pkm.Nature;
-            pkm.EVs = new int[] { 0, 0, 0, 0, 0, 0 };
-            pkm.Markings = new int[] { 0, 0, 0, 0, 0, 0, 0, 0 };
-            pkm.ClearRecordFlags();
-            pkm.ClearRelearnMoves();
-            pkm.Moves = new int[] { 0, 0, 0, 0 };
-            var la = new LegalityAnalysis(pkm);
-            pkm.SetRelearnMoves(MoveSetApplicator.GetSuggestedRelearnMoves(la));
-            pkm.Moves = pkm.RelearnMoves;
-            pkm.Move1_PPUps = pkm.Move2_PPUps = pkm.Move3_PPUps = pkm.Move4_PPUps = 0;
-            pkm.SetMaximumPPCurrent(pkm.Moves);
-            pkm.SetSuggestedHyperTrainingData();
-            pkm.SetSuggestedRibbons(la.EncounterMatch);
+            pk.IsEgg = true;
+            pk.Egg_Location = 60002;
+            pk.MetDate = DateTime.Parse("2020/10/20");
+            pk.EggMetDate = pk.MetDate;
+            pk.HeldItem = 0;
+            pk.CurrentLevel = 1;
+            pk.EXP = 0;
+            pk.DynamaxLevel = 0;
+            pk.Met_Level = 1;
+            pk.Met_Location = 30002;
+            pk.CurrentHandler = 0;
+            pk.OT_Friendship = 1;
+            pk.HT_Name = "";
+            pk.HT_Friendship = 0;
+            pk.HT_Language = 0;
+            pk.HT_Gender = 0;
+            pk.HT_Memory = 0;
+            pk.HT_Feeling = 0;
+            pk.HT_Intensity = 0;
+            pk.StatNature = pk.Nature;
+            pk.EVs = new int[] { 0, 0, 0, 0, 0, 0 };
+            pk.Markings = new int[] { 0, 0, 0, 0, 0, 0, 0, 0 };
+            pk.ClearRecordFlags();
+            pk.ClearRelearnMoves();
+            pk.Moves = new int[] { 0, 0, 0, 0 };
+            var la = new LegalityAnalysis(pk);
+            pk.RelearnMoves = MoveBreed.GetExpectedMoves(pk.RelearnMoves, la.EncounterMatch);
+            pk.Moves = pk.RelearnMoves;
+            pk.Move1_PPUps = pk.Move2_PPUps = pk.Move3_PPUps = pk.Move4_PPUps = 0;
+            pk.SetMaximumPPCurrent(pk.Moves);
+            pk.SetSuggestedHyperTrainingData();
+            pk.SetSuggestedRibbons(la.EncounterMatch);
         }
 
-        public static List<string> SpliceAtWord(string entry, int start, int length)
+        private static List<string> SpliceAtWord(string entry, int start, int length)
         {
             int counter = 0;
             var temp = entry.Contains(",") ? entry.Split(',').Skip(start) : entry.Split('\n').Skip(start);
@@ -406,15 +435,38 @@ namespace SysBot.Pokemon
             return list;
         }
 
+        public static List<string> ListUtilPrep(string entry)
+        {
+            var index = 0;
+            List<string> pageContent = new();
+            var emptyList = "No results found.";
+            var round = Math.Round((decimal)entry.Length / 1024, MidpointRounding.AwayFromZero);
+            if (entry.Length > 1024)
+            {
+                for (int i = 0; i <= round; i++)
+                {
+                    var splice = SpliceAtWord(entry, index, 1024);
+                    index += splice.Count;
+                    if (splice.Count == 0)
+                        break;
+
+                    pageContent.Add(string.Join(entry.Contains(",") ? ", " : "\n", splice));
+                }
+            }
+            else pageContent.Add(entry == "" ? emptyList : entry);
+            return pageContent;
+        }
+
         public static string FormOutput(int species, int form, out string[] formString)
         {
             var strings = GameInfo.GetStrings(LanguageID.English.GetLanguage2CharName());
             formString = FormConverter.GetFormList(species, strings.Types, strings.forms, GameInfo.GenderSymbolASCII, 8);
-            _ = formString.Length == form && form != 0 ? form -= 1 : form;
+            formString[0] = "";
 
-            if (formString[form] == "Normal" || formString[form].Contains("-") && species != (int)Species.Zygarde || formString[form] == "")
-                return "";
-            else return "-" + formString[form];
+            if (form >= formString.Length)
+                form = formString.Length - 1;
+
+            return formString[form].Contains("-") ? formString[form] : formString[form] == "" ? "" : $"-{formString[form]}";
         }
 
         private static int DittoSlot(int species1, int species2)
@@ -426,35 +478,70 @@ namespace SysBot.Pokemon
             else return 0;
         }
 
-        public static void EncounterLogs(PK8 pk)
+        public static void EncounterLogs(PK8 pk, string filepath = "")
         {
-            if (!File.Exists("EncounterLog.txt"))
+            if (filepath == "")
+                filepath = "EncounterLogPretty.txt";
+
+            if (!File.Exists(filepath))
             {
-                var blank = "Total: 0 Pokémon, 0 Eggs, 0 Shiny\n--------------------------------------\n";
-                File.Create("EncounterLog.txt").Close();
-                File.WriteAllText("EncounterLog.txt", blank);
+                var blank = "Totals: 0 Pokémon, 0 Eggs, 0 ★, 0 ■, 0 🎀\n_________________________________________________\n";
+                File.WriteAllText(filepath, blank);
             }
 
-            var content = File.ReadAllText("EncounterLog.txt").Split('\n').ToList();
-            var form = FormOutput(pk.Species, pk.Form, out _);
-            var speciesName = SpeciesName.GetSpeciesNameGeneration(pk.Species, pk.Language, 8) + (pk.Species == (int)Species.Sinistea ? "" : form);
-            var index = content.FindIndex(2, x => x.Contains(speciesName));
-            var split = index != -1 ? content[index].Split('_') : new string[] { };
-            var splitTotal = content[0].Split(',');
+            lock (_syncLog)
+            {
+                var content = File.ReadAllText(filepath).Split('\n').ToList();
+                var splitTotal = content[0].Split(',');
+                content.RemoveRange(0, 3);
 
-            if (index == -1 && !speciesName.Contains("Sinistea"))
-                content.Add($"{speciesName}_1_★{(pk.IsShiny ? 1 : 0)}");
-            else if (index == -1 && speciesName.Contains("Sinistea"))
-                content.Add($"{speciesName}_1_{(pk.Form > 0 ? 1 : 0)}_★{(pk.IsShiny ? 1 : 0)}");
-            else if (index != -1 && !speciesName.Contains("Sinistea"))
-                content[index] = $"{split[0]}_{int.Parse(split[1]) + 1}_{(pk.IsShiny ? "★" + (int.Parse(split[2].Replace("★", "")) + 1).ToString() : split[2])}";
-            else if (index != -1 && speciesName.Contains("Sinistea"))
-                content[index] = $"{split[0]}_{int.Parse(split[1]) + 1}_{(pk.Form > 0 ? (int.Parse(split[2]) + 1).ToString() : split[2])}_{(pk.IsShiny ? "★" + (int.Parse(split[3].Replace("★", "")) + 1).ToString() : split[3])}";
+                int pokeTotal = int.Parse(splitTotal[0].Split(' ')[1]) + 1;
+                int eggTotal = int.Parse(splitTotal[1].Split(' ')[1]) + (pk.IsEgg ? 1 : 0);
+                int starTotal = int.Parse(splitTotal[2].Split(' ')[1]) + (pk.IsShiny && pk.ShinyXor > 0 ? 1 : 0);
+                int squareTotal = int.Parse(splitTotal[3].Split(' ')[1]) + (pk.IsShiny && pk.ShinyXor == 0 ? 1 : 0);
+                int markTotal = int.Parse(splitTotal[4].Split(' ')[1]) + (pk.HasMark() ? 1 : 0);
 
-            content[0] = "Total: " + $"{int.Parse(splitTotal[0].Split(':')[1].Replace(" Pokémon", "")) + 1} Pokémon, " +
-                (pk.IsEgg ? $"{int.Parse(splitTotal[1].Replace(" Eggs", "")) + 1} Eggs, " : splitTotal[1].Trim() + ", ") +
-                (pk.IsShiny ? $"{int.Parse(splitTotal[2].Replace(" Shiny", "")) + 1} Shiny, " : splitTotal[2].Trim());
-            File.WriteAllText("EncounterLog.txt", string.Join("\n", content));
+                var form = FormOutput(pk.Species, pk.Form, out _);
+                var speciesName = $"{SpeciesName.GetSpeciesNameGeneration(pk.Species, pk.Language, 8)}{form}".Replace(" ", "");
+                var index = content.FindIndex(x => x.Split(':')[0].Equals(speciesName));
+
+                if (index == -1)
+                    content.Add($"{speciesName}: 1, {(pk.IsShiny && pk.ShinyXor > 0 ? 1 : 0)}★, {(pk.IsShiny && pk.ShinyXor == 0 ? 1 : 0)}■, {(pk.HasMark() ? 1 : 0)}🎀, {GetPercent(pokeTotal, 1)}%");
+
+                var length = index == -1 ? 1 : 0;
+                for (int i = 0; i < content.Count - length; i++)
+                {
+                    var sanitized = GetSanitizedEncounterLineArray(content[i]);
+                    if (i == index)
+                    {
+                        int speciesTotal = int.Parse(sanitized[1]) + 1;
+                        int stTotal = int.Parse(sanitized[2]) + (pk.IsShiny && pk.ShinyXor > 0 ? 1 : 0);
+                        int sqTotal = int.Parse(sanitized[3]) + (pk.IsShiny && pk.ShinyXor == 0 ? 1 : 0);
+                        int mTotal = int.Parse(sanitized[4]) + (pk.HasMark() ? 1 : 0);
+                        content[i] = $"{speciesName}: {speciesTotal}, {stTotal}★, {sqTotal}■, {mTotal}🎀, {GetPercent(pokeTotal, speciesTotal)}%";
+                    }
+                    else content[i] = $"{sanitized[0]} {sanitized[1]}, {sanitized[2]}★, {sanitized[3]}■, {sanitized[4]}🎀, {GetPercent(pokeTotal, int.Parse(sanitized[1]))}%";
+                }
+
+                content.Sort();
+                string totalsString =
+                    $"Totals: {pokeTotal} Pokémon, " +
+                    $"{eggTotal} Eggs ({GetPercent(pokeTotal, eggTotal)}%), " +
+                    $"{starTotal} ★ ({GetPercent(pokeTotal, starTotal)}%), " +
+                    $"{squareTotal} ■ ({GetPercent(pokeTotal, squareTotal)}%), " +
+                    $"{markTotal} 🎀 ({GetPercent(pokeTotal, markTotal)}%)" +
+                    "\n_________________________________________________\n";
+                content.Insert(0, totalsString);
+                File.WriteAllText(filepath, string.Join("\n", content));
+            }
+        }
+
+        private static string GetPercent(int total, int subtotal) => (100.0 * ((double)subtotal / total)).ToString("N2");
+
+        private static string[] GetSanitizedEncounterLineArray(string content)
+        {
+            var replace = new Dictionary<string, string> { { ",", "" }, { "★", "" }, { "■", "" }, { "🎀", "" }, { "%", "" } };
+            return replace.Aggregate(content, (old, cleaned) => old.Replace(cleaned.Key, cleaned.Value)).Split(' ');
         }
 
         public static PKM TrashBytes(PKM pkm, LegalityAnalysis? la = null)
@@ -463,17 +550,27 @@ namespace SysBot.Pokemon
             pkm.IsNicknamed = true;
             if (pkm.Version != (int)GameVersion.GO && !pkm.FatefulEncounter)
                 pkm.MetDate = DateTime.Parse("2020/10/20");
-            if (la != null)
-                pkm.SetDefaultNickname(la);
-            else pkm.ClearNickname();
+            pkm.SetDefaultNickname(la ?? new LegalityAnalysis(pkm));
             return pkm;
         }
 
-        public static string DexFlavor(int species)
+        public static string DexFlavor(int species, int form, bool gmax)
         {
             var resourcePath = "SysBot.Pokemon.Helpers.DexFlavor.txt";
             using StreamReader reader = new(System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream(resourcePath));
-            return reader.ReadToEnd().Split('\n')[species];
+
+            if (Enum.IsDefined(typeof(Foreign), species) && form > 0)
+                form = 0;
+
+            if (!gmax)
+            {
+                if (form > 0)
+                    return reader.ReadToEnd().Split('_')[1].Split('\n')[species].Split('|')[form - 1];
+                else return reader.ReadToEnd().Split('\n')[species];
+            }
+
+            string[] str = reader.ReadToEnd().Split('_')[1].Split('\n')[species].Split('|');
+            return str[^1];
         }
 
         public static PK8 CherishHandler(MysteryGift mg, ITrainerInfo info)
@@ -484,81 +581,225 @@ namespace SysBot.Pokemon
                 mgPkm.SetHandlerandMemory(info);
             else return new();
 
+            mgPkm.CurrentLevel = mg.LevelMin;
+            if (mg.HeldItem != 0 && ItemRestrictions.IsHeldItemAllowed(mg.HeldItem, 8))
+                mgPkm.HeldItem = mg.HeldItem;
+
             var la = new LegalityAnalysis(mgPkm);
             if (!la.Valid)
             {
                 mgPkm.SetRandomIVs(6);
-                return (PK8)AutoLegalityWrapper.GetLegal(info, new ShowdownSet(ShowdownParsing.GetShowdownText(mgPkm)), out _);
+                var showdown = ShowdownParsing.GetShowdownText(mgPkm);
+                return (PK8)AutoLegalityWrapper.GetLegal(info, new ShowdownSet(showdown), out _);
             }
             else return (PK8)mgPkm;
         }
 
-        private static void AddNewUser(TCUserInfoRoot root, ulong id, string file)
+        public static T GetRoot<T>(string file, TextReader? textReader = null) where T : new()
         {
-            root.Users.Add(new TCUserInfo { UserID = id });
-            SerializeInfo(root, file);
-        }
-
-        public static T? GetRoot<T>(string file, TextReader? textReader = null)
-        {
-            JsonSerializer serializer = new();
             if (textReader == null)
             {
-                using TextReader reader = File.OpenText(file);
-                T? root = (T?)serializer.Deserialize(reader, typeof(T));
-                reader.Close();
-                return root;
+                if (!File.Exists(file))
+                {
+                    Directory.CreateDirectory(file.Split('\\')[0]);
+                    File.Create(file).Close();
+                }
+
+                T? root;
+                string tmp = $"{file}_tmp";
+                while (true)
+                {
+                    try
+                    {
+                        if (File.Exists(tmp))
+                        {
+                            var size = new FileInfo(tmp).Length;
+                            if (size < 1)
+                                File.Copy(file, tmp, true);
+                        }
+                        else File.Copy(file, tmp);
+
+                        using StreamReader sr = File.OpenText(file);
+                        using JsonReader reader = new JsonTextReader(sr);
+                        JsonSerializer serializer = new();
+                        root = (T?)serializer.Deserialize(reader, typeof(T));
+
+                        if (File.Exists(InfoBackupPath))
+                            File.Delete(tmp);
+                        return root ?? new();
+                    }
+                    catch
+                    {
+                        Environment.Exit(0);
+                    }
+                }
             }
             else
             {
+                JsonSerializer serializer = new();
                 T? root = (T?)serializer.Deserialize(textReader, typeof(T));
-                return root;
+                return root ?? new();
             }
         }
 
-        public static TCUserInfo GetUserInfo(ulong id, string file)
+        public static TradeCordHelper.Results ProcessTradeCord(TC_CommandContext ctx, string[] input, bool update, TradeCordSettings settings)
         {
-            var root = GetRoot<TCUserInfoRoot>(file);
-            var user = root?.Users.FirstOrDefault(x => x.UserID == id);
-            if (root == null)
+            if (!TCInitialized)
             {
-                root = new();
-                AddNewUser(root, id, file);
-            }
-            else if (user == null)
-                AddNewUser(root, id, file);
-
-            return user ?? root.Users.FirstOrDefault(x => x.UserID == id);
-        }
-
-        public static void UpdateUserInfo(TCUserInfo info, string file)
-        {
-            using TextReader reader = File.OpenText(file);
-            reader.Close();
-            var root = GetRoot<TCUserInfoRoot>(file);
-            if (info != null)
-            {
-                if (root == null)
+                var current = Process.GetCurrentProcess();
+                var all = Process.GetProcessesByName(current.ProcessName);
+                if (all.Length < 2)
                 {
-                    root = new();
-                    root.Users.Add(info);
+                    TCInitialized = true;
+                    UserInfo = GetRoot<TCUserInfoRoot>(InfoPath);
                 }
                 else
                 {
-                    var user = root.Users.FirstOrDefault(x => x.UserID == info.UserID);
-                    root.Users.Remove(user);
-                    root.Users.Add(info);
+                    Base.LogUtil.LogText("Another TradeCord instance is already running! Killing the process.");
+                    Environment.Exit(0);
                 }
-                SerializeInfo(root, file);
+            }
+
+            lock (_sync)
+            {
+                try
+                {
+                    var user = GetUserInfo(ctx, false);
+                    var traded = user.Catches.ToList().FindAll(x => x.Traded);
+                    var tradeSignal = TradeCordPath.FirstOrDefault(x => x.Contains(user.UserID.ToString()));
+                    if (traded.Count != 0 && tradeSignal == default)
+                    {
+                        foreach (var trade in traded)
+                        {
+                            if (!File.Exists(trade.Path))
+                                user.Catches.Remove(trade);
+                            else trade.Traded = false;
+                        }
+                        UpdateUserInfo(user);
+                    }
+
+                    TCUserInfoRoot.TCUserInfo giftee = new();
+                    if (ctx.Context == TCCommandContext.Gift)
+                        giftee = GetUserInfo(ctx, true);
+
+                    var helper = new TradeCordHelper(settings);
+                    var task = ctx.Context switch
+                    {
+                        TCCommandContext.Catch => helper.CatchHandler(user),
+                        TCCommandContext.Trade => helper.TradeHandler(user, input[0]),
+                        TCCommandContext.List => helper.ListHandler(user, input[0]),
+                        TCCommandContext.Info => helper.InfoHandler(user, input[0]),
+                        TCCommandContext.MassRelease => helper.MassReleaseHandler(user, input[0]),
+                        TCCommandContext.Release => helper.ReleaseHandler(user, input[0]),
+                        TCCommandContext.DaycareInfo => helper.DaycareInfoHandler(user),
+                        TCCommandContext.Daycare => helper.DaycareHandler(user, input[0], input[1]),
+                        TCCommandContext.Gift => helper.GiftHandler(user, giftee, input[0]),
+                        TCCommandContext.TrainerInfoSet => helper.TrainerInfoSetHandler(user, input),
+                        TCCommandContext.TrainerInfo => helper.TrainerInfoHandler(user),
+                        TCCommandContext.FavoritesInfo => helper.FavoritesInfoHandler(user),
+                        TCCommandContext.Favorites => helper.FavoritesHandler(user, input[0]),
+                        TCCommandContext.Dex => helper.DexHandler(user, input[0]),
+                        TCCommandContext.Perks => helper.PerkHandler(user, input[0]),
+                        TCCommandContext.Boost => helper.SpeciesBoostHandler(user, input[0]),
+                        TCCommandContext.Buddy => helper.BuddyHandler(user, input[0]),
+                        TCCommandContext.Nickname => helper.NicknameHandler(user, input[0]),
+                        _ => throw new NotImplementedException(),
+                    };
+                    var result = Task.Run(() => task).Result;
+
+                    if (update && result.Success)
+                    {
+                        UpdateUserInfo(result.User);
+                        if (ctx.Context == TCCommandContext.Gift)
+                            UpdateUserInfo(result.Giftee);
+                    }
+
+                    var delta = (DateTime.Now - ConfigTimer).TotalSeconds;
+                    if (delta >= settings.ConfigUpdateInterval)
+                    {
+                        SerializeInfo();
+                        ConfigTimer = DateTime.Now;
+                    }
+                    return result;
+                }
+                catch (Exception ex)
+                {
+                    Base.LogUtil.LogText($"Something went wrong during {ctx.Context} execution for {ctx.Username}.\nMessage: {ex.Message}\nStack: {ex.StackTrace}\nInner: {ex.InnerException}");
+                    return new TradeCordHelper.Results();
+                }
             }
         }
 
-        public static void SerializeInfo(object? root, string filePath)
+        private static TCUserInfoRoot.TCUserInfo GetUserInfo(TC_CommandContext ctx, bool gift)
         {
-            JsonSerializer serializer = new();
-            using StreamWriter writer = File.CreateText(filePath);
-            serializer.Formatting = Formatting.Indented;
-            serializer.Serialize(writer, root);
+            TCUserInfoRoot.TCUserInfo user;
+            user = UserInfo.Users.FirstOrDefault(x => x.UserID == (gift ? ctx.GifteeID : ctx.ID));
+
+            if (user == null)
+                user = new TCUserInfoRoot.TCUserInfo { UserID = gift ? ctx.GifteeID : ctx.ID, Username = gift ? ctx.GifteeName : ctx.Username };
+
+            if (user.Username == string.Empty || user.Username != ctx.Username)
+                user.Username = gift ? ctx.GifteeName : ctx.Username;
+
+            return user;
+        }
+
+        public static void UpdateUserInfo(TCUserInfoRoot.TCUserInfo user)
+        {
+            UserInfo.Users.RemoveWhere(x => x.UserID == user.UserID);
+            UserInfo.Users.Add(user);
+        }
+
+        public static void SerializeInfo()
+        {
+            TCRWLockEnable = true;
+            var fileSize = new FileInfo(InfoPath).Length;
+            if (File.Exists(InfoPath) && fileSize > 2)
+                File.Copy(InfoPath, InfoBackupPath, true);
+
+            while (true)
+            {
+                try
+                {
+                    var json = JsonConvert.SerializeObject(UserInfo, new JsonSerializerSettings
+                    {
+                        Formatting = Formatting.Indented,
+                        DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate,
+                        NullValueHandling = NullValueHandling.Ignore
+                    });
+
+                    File.WriteAllText(InfoPath, json);
+                    if (TestJsonIntegrity())
+                        break;
+                }
+                catch
+                {
+                    Task.Delay(0_100);
+                }
+            }
+            TCRWLockEnable = false;
+        }
+
+        private static bool TestJsonIntegrity()
+        {
+            try
+            {
+                using StreamReader sr = File.OpenText(InfoPath);
+                using (JsonReader reader = new JsonTextReader(sr))
+                {
+                    JsonSerializer serializer = new();
+                    TCUserInfoRoot? root = (TCUserInfoRoot?)serializer.Deserialize(reader, typeof(TCUserInfoRoot));
+                    if (root == null)
+                        return false;
+                    else if (UserInfo.Users.Count > 0 && root.Users.Count == 0)
+                        return false;
+                }
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         public static void TradeStatusUpdate(string id, bool cancelled = false)
@@ -583,6 +824,74 @@ namespace SysBot.Pokemon
                 for (int i = 0; i < entries.Count; i++)
                     TradeCordPath.Remove(entries[i]);
             }
+        }
+
+        public static string PokeImg(PKM pkm, bool canGmax, bool fullSize)
+        {
+            var alcremieDeco = (uint)(pkm.Species == (int)Species.Alcremie ? pkm.Data[0xE4] : 0);
+            bool md = false;
+            bool fd = false;
+            string[] baseLink;
+            if (fullSize)
+                baseLink = "https://projectpokemon.org/images/sprites-models/homeimg/poke_capture_0001_000_mf_n_00000000_f_n.png".Split('_');
+            else baseLink = "https://raw.githubusercontent.com/BakaKaito/HomeImages/main/homeimg/128x128/poke_capture_0001_000_mf_n_00000000_f_n.png".Split('_');
+
+            if (Enum.IsDefined(typeof(GenderDependent), pkm.Species) && !canGmax && pkm.Form == 0)
+            {
+                if (pkm.Gender == 0)
+                    md = true;
+                else fd = true;
+            }
+
+            baseLink[2] = pkm.Species < 10 ? $"000{pkm.Species}" : pkm.Species < 100 && pkm.Species > 9 ? $"00{pkm.Species}" : $"0{pkm.Species}";
+            baseLink[3] = pkm.Form < 10 ? $"00{pkm.Form}" : $"0{pkm.Form}";
+            baseLink[4] = pkm.PersonalInfo.OnlyFemale ? "fo" : pkm.PersonalInfo.OnlyMale ? "mo" : pkm.PersonalInfo.Genderless ? "uk" : fd ? "fd" : md ? "md" : "mf";
+            baseLink[5] = canGmax ? "g" : "n";
+            baseLink[6] = "0000000" + (pkm.Species == (int)Species.Alcremie ? alcremieDeco : 0);
+            baseLink[8] = pkm.IsShiny ? "r.png" : "n.png";
+            return string.Join("_", baseLink);
+        }
+
+        public static TCRng RandomInit()
+        {
+            var enumVals = (int[])Enum.GetValues(typeof(Gen8Dex));
+            return new TCRng()
+            {
+                CatchRNG = Random.Next(101),
+                ShinyRNG = Random.Next(101),
+                EggRNG = Random.Next(101),
+                EggShinyRNG = Random.Next(101),
+                GmaxRNG = Random.Next(101),
+                CherishRNG = Random.Next(101),
+                SpeciesRNG = enumVals[Random.Next(enumVals.Length)],
+                SpeciesBoostRNG = Random.Next(101),
+            };
+        }
+
+        public static bool DeleteUserData(ulong id)
+        {
+            while (TCRWLockEnable)
+                Task.Delay(0_100);
+
+            TCRWLockEnable = true;
+            var user = UserInfo.Users.FirstOrDefault(x => x.UserID == id);
+            if (user == default)
+            {
+                TCRWLockEnable = false;
+                return false;
+            }
+            else UserInfo.Users.Remove(user);
+
+            var path = $"TradeCord\\{id}";
+            var pathBackup = $"TradeCord\\Backup\\{id}";
+            if (Directory.Exists(path))
+                Directory.Delete(path, true);
+
+            if (Directory.Exists(pathBackup))
+                Directory.Delete(pathBackup, true);
+
+            TCRWLockEnable = false;
+            return true;
         }
     }
 }

@@ -55,7 +55,7 @@ namespace SysBot.Pokemon.Discord
                 // If you or another service needs to do anything with messages
                 // (eg. checking Reactions, checking the content of edited/deleted messages),
                 // you must set the MessageCacheSize. You may adjust the number as needed.
-                MessageCacheSize = 50,
+                MessageCacheSize = 100,
             });
 
             _commands = new CommandService(new CommandServiceConfig
@@ -168,6 +168,7 @@ namespace SysBot.Pokemon.Discord
             // Subscribe a handler to see if a message invokes a command.
             _client.Ready += LoadLoggingAndEcho;
             _client.MessageReceived += HandleMessageAsync;
+            _client.ReactionAdded += ExtraCommandUtil.HandleReactionAsync;
         }
 
         private async Task HandleMessageAsync(SocketMessage arg)

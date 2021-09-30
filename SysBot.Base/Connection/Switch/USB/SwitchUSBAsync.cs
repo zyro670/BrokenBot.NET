@@ -120,5 +120,14 @@ namespace SysBot.Base
 
             }, token);
         }
+
+        public Task<byte[]> Screengrab(CancellationToken token)
+        {
+            return Task.Run(() =>
+            {
+                Send(SwitchCommand.Screengrab(false));
+                return Read();
+            }, token);
+        }
     }
 }

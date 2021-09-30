@@ -7,7 +7,7 @@ namespace SysBot.Pokemon
     {
         private int Master, Poke, Beast, Dive, Dream, Dusk, Fast, Friend, Great, Heal, Heavy, Level, Love, Lure, Luxury, Moon, Nest, Net, Premier, Quick, Repeat, Timer, Ultra, Sport, Safari;
 
-        internal static readonly ushort[] Pouch_Ball_SWSH =
+        private static readonly ushort[] Pouch_Ball_SWSH =
         {
             001, 002, 003, 004, 005, 006, 007, 008, 009, 010, 011, 012, 013, 014, 015, 016,
             492, 493, 494, 495, 496, 497, 498, 499, 500,

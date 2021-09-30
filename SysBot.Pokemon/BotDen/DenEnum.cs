@@ -53,6 +53,7 @@
     {
         Skip,
         SeedSearch,
+        Inject,
     }
 
     public enum TimeReset

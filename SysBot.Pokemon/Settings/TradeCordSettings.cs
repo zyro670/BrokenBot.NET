@@ -11,8 +11,23 @@ namespace SysBot.Pokemon
         [Category(FeatureToggle), Description("Enter Channel ID(s) where TradeCord should be active, or leave blank.")]
         public string TradeCordChannels { get; set; } = string.Empty;
 
+        [Category(FeatureToggle), Description("Choose whether to use full-size Home images from ProjectPokémon or downsized ones.")]
+        public bool UseFullSizeImages { get; set; } = true;
+
+        [Category(FeatureToggle), Description("Choose whether to use larger Poké Balls, or smaller ones.")]
+        public bool UseLargerPokeBalls { get; set; } = true;
+
         [Category(FeatureToggle), Description("Enter the amount of time in seconds until a user can catch again.")]
-        public double TradeCordCooldown { get; set; } = 60;
+        public int TradeCordCooldown { get; set; } = 60;
+
+        [Category(FeatureToggle), Description("Enter the amount of time in minutes until users can invoke the vote command again.")]
+        public int TradeCordEventCooldown { get; set; } = 60;
+
+        [Category(FeatureToggle), Description("Enter the amount of time in minutes a user-invoked event will last.")]
+        public int TradeCordEventDuration { get; set; } = 30;
+
+        [Category(FeatureToggle), Description("Enter how frequently (in seconds) \"UserInfo.json\" should be updated.")]
+        public int ConfigUpdateInterval { get; set; } = 60;
 
         [Category(FeatureToggle), Description("Enter the likelihood of a successful catch. Default: 90.")]
         public int CatchRate { get; set; } = 90;
@@ -64,5 +79,6 @@ namespace SysBot.Pokemon
         Fairy,
         Legends,
         EventPoke,
+        PikaClones,
     }
 }
