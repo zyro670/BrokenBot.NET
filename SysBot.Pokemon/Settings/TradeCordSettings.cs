@@ -7,9 +7,6 @@ namespace SysBot.Pokemon
         private const string FeatureToggle = nameof(FeatureToggle);
         public override string ToString() => "TradeCord Settings";
 
-        [Category(FeatureToggle), Description("Enter Channel ID(s) where TradeCord should be active, or leave blank.")]
-        public string TradeCordChannels { get; set; } = string.Empty;
-
         [Category(FeatureToggle), Description("If enabled, every time the program is started up, inactive users will be deleted (no commands used for at least a month).")]
         public bool ClearInactive { get; set; } = false;
 
@@ -28,26 +25,29 @@ namespace SysBot.Pokemon
         [Category(FeatureToggle), Description("Enter the amount of time in minutes a user-invoked event will last.")]
         public int TradeCordEventDuration { get; set; } = 30;
 
-        [Category(FeatureToggle), Description("Enter the likelihood of a successful catch. Default: 90.")]
+        [Category(FeatureToggle), Description("Enter the likelihood of a successful catch. Default: 90")]
         public int CatchRate { get; set; } = 90;
 
-        [Category(FeatureToggle), Description("Enter the likelihood of obtaining an egg. Default: 30.")]
+        [Category(FeatureToggle), Description("Enter the likelihood of obtaining an egg. Default: 30")]
         public int EggRate { get; set; } = 30;
 
-        [Category(FeatureToggle), Description("Enter the likelihood of finding an item. Default: 20.")]
+        [Category(FeatureToggle), Description("Enter the likelihood of finding an item. Default: 20")]
         public int ItemRate { get; set; } = 20;
 
-        [Category(FeatureToggle), Description("Enter the likelihood of a Cherish Ball event, if a compatible Pokémon was rolled. Default: 15.")]
+        [Category(FeatureToggle), Description("Enter the likelihood of a Cherish Ball event, if a compatible Pokémon was rolled. Default: 15")]
         public int CherishRate { get; set; } = 15;
 
-        [Category(FeatureToggle), Description("Enter the likelihood of Gigantamax forms, if a compatible Pokémon was rolled. Default: 40.")]
+        [Category(FeatureToggle), Description("Enter the likelihood of Gigantamax forms, if a compatible Pokémon was rolled. Default: 40")]
         public int GmaxRate { get; set; } = 40;
 
-        [Category(FeatureToggle), Description("Enter the likelihood of a star shiny catch or \"hatch\". Default: 5.")]
+        [Category(FeatureToggle), Description("Enter the likelihood of a star shiny catch or \"hatch\". Default: 5")]
         public int StarShinyRate { get; set; } = 5;
 
         [Category(FeatureToggle), Description("Enter the likelihood of a square shiny catch or \"hatch\". Default: 2")]
         public int SquareShinyRate { get; set; } = 2;
+
+        [Category(FeatureToggle), Description("Enter the likelihood of Mythical and Legendary spawns. Default: 20")]
+        public int LegendaryRate { get; set; } = 20;
 
         [Category(FeatureToggle), Description("Set to \"true\" if you want to do a TradeCord event.")]
         public bool EnableEvent { get; set; } = false;
@@ -85,5 +85,7 @@ namespace SysBot.Pokemon
         ClickbaitArticle = 21,
         Babies = 22,
         Halloween = 23,
+        CottonCandy = 24,
+        PokePets = 25,
     }
 }

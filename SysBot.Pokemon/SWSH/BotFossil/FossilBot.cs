@@ -114,6 +114,7 @@ namespace SysBot.Pokemon
                     DumpPokemon(DumpSetting.DumpFolder, "fossil", pk);
 
                 Settings.AddCompletedFossils();
+                TradeExtensions<PK8>.EncounterLogs(pk, "EncounterLogPretty_Fossil.txt");
 
                 if (!StopConditionSettings.EncounterFound(pk, DesiredMinIVs, DesiredMaxIVs, Hub.Config.StopConditions, null))
                     continue;

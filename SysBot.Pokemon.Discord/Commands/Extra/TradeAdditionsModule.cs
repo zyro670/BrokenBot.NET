@@ -4,16 +4,21 @@ using Discord.Commands;
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace SysBot.Pokemon.Discord
 {
     [Summary("Generates and queues various silly trade additions")]
-    public class TradeAdditionsModule : ModuleBase<SocketCommandContext>
+    public class TradeAdditionsModule<T> : ModuleBase<SocketCommandContext> where T : PKM, new()
     {
-        private static TradeQueueInfo<PK8> Info => SysCordInstance.Self.Hub.Queues.Info;
-        private readonly PokeTradeHub<PK8> Hub = SysCordInstance.Self.Hub;
-        private readonly ExtraCommandUtil Util = new();
+        private static TradeQueueInfo<T> Info => SysCord<T>.Runner.Hub.Queues.Info;
+        private readonly PokeTradeHub<T> Hub = SysCord<T>.Runner.Hub;
+        private readonly ExtraCommandUtil<T> Util = new();
+        private readonly LairBotSettings LairSettings = SysCord<T>.Runner.Hub.Config.Lair;
+        private readonly RollingRaidSettings RollingRaidSettings = SysCord<T>.Runner.Hub.Config.RollingRaid;
+        private readonly object _lock = new();
 
         [Command("giveawayqueue")]
         [Alias("gaq")]
@@ -65,32 +70,26 @@ namespace SysBot.Pokemon.Discord
         [RequireQueueRole(nameof(DiscordManager.RolesGiveaway))]
         public async Task GiveawayAsync([Summary("Giveaway Code")] int code, [Remainder] string content)
         {
-            var pk = new PK8();
+            T pk;
             content = ReusableActions.StripCodeBlock(content);
-            pk.Nickname = content;
             var pool = Info.Hub.Ledy.Pool;
-
             if (pool.Count == 0)
             {
                 await ReplyAsync("Giveaway pool is empty.").ConfigureAwait(false);
                 return;
             }
-            else if (pk.Nickname.ToLower() == "random") // Request a random giveaway prize.
+            else if (content.ToLower() == "random") // Request a random giveaway prize.
                 pk = Info.Hub.Ledy.Pool.GetRandomSurprise();
+            else if (Info.Hub.Ledy.Distribution.TryGetValue(content, out LedyRequest<T> val))
+                pk = val.RequestInfo;
             else
             {
-                var trade = Info.Hub.Ledy.GetLedyTrade(pk);
-                if (trade != null)
-                    pk = trade.Receive;
-                else
-                {
-                    await ReplyAsync($"Requested Pokémon not available, use \"{Info.Hub.Config.Discord.CommandPrefix}giveawaypool\" for a full list of available giveaways!").ConfigureAwait(false);
-                    return;
-                }
+                await ReplyAsync($"Requested Pokémon not available, use \"{Info.Hub.Config.Discord.CommandPrefix}giveawaypool\" for a full list of available giveaways!").ConfigureAwait(false);
+                return;
             }
 
             var sig = Context.User.GetFavor();
-            await Context.AddToQueueAsync(code, Context.User.Username, sig, pk, PokeRoutineType.LinkTrade, PokeTradeType.Giveaway, Context.User).ConfigureAwait(false);
+            await QueueHelper<T>.AddToQueueAsync(Context, code, Context.User.Username, sig, pk, PokeRoutineType.LinkTrade, PokeTradeType.Specific).ConfigureAwait(false);
         }
 
         [Command("fixOT")]
@@ -101,7 +100,7 @@ namespace SysBot.Pokemon.Discord
         {
             var code = Info.GetRandomTradeCode();
             var sig = Context.User.GetFavor();
-            await Context.AddToQueueAsync(code, Context.User.Username, sig, new PK8(), PokeRoutineType.FixOT, PokeTradeType.FixOT).ConfigureAwait(false);
+            await QueueHelper<T>.AddToQueueAsync(Context, code, Context.User.Username, sig, new T(), PokeRoutineType.FixOT, PokeTradeType.FixOT).ConfigureAwait(false);
         }
 
         [Command("fixOT")]
@@ -111,7 +110,7 @@ namespace SysBot.Pokemon.Discord
         public async Task FixAdOT([Summary("Trade Code")] int code)
         {
             var sig = Context.User.GetFavor();
-            await Context.AddToQueueAsync(code, Context.User.Username, sig, new PK8(), PokeRoutineType.FixOT, PokeTradeType.FixOT).ConfigureAwait(false);
+            await QueueHelper<T>.AddToQueueAsync(Context, code, Context.User.Username, sig, new T(), PokeRoutineType.FixOT, PokeTradeType.FixOT).ConfigureAwait(false);
         }
 
         [Command("fixOTList")]
@@ -147,12 +146,12 @@ namespace SysBot.Pokemon.Discord
         [RequireQueueRole(nameof(DiscordManager.RolesSupportTrade))]
         public async Task ItemTrade([Summary("Trade Code")] int code, [Remainder] string item)
         {
-            Species species = Info.Hub.Config.Trade.ItemTradeSpecies == Species.None ? Species.Delibird : Info.Hub.Config.Trade.ItemTradeSpecies;
+            Species species = Info.Hub.Config.Trade.ItemTradeSpecies == Species.None ? Species.Diglett : Info.Hub.Config.Trade.ItemTradeSpecies;
             var set = new ShowdownSet($"{SpeciesName.GetSpeciesNameGeneration((int)species, 2, 8)} @ {item.Trim()}");
             var template = AutoLegalityWrapper.GetTemplate(set);
-            var sav = AutoLegalityWrapper.GetTrainerInfo(8);
+            var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
             var pkm = sav.GetLegal(template, out var result);
-            pkm = PKMConverter.ConvertToType(pkm, typeof(PK8), out _) ?? pkm;
+            pkm = PKMConverter.ConvertToType(pkm, typeof(T), out _) ?? pkm;
             if (pkm.HeldItem == 0 && !Info.Hub.Config.Trade.Memes)
             {
                 await ReplyAsync($"{Context.User.Username}, the item you entered wasn't recognized.").ConfigureAwait(false);
@@ -160,19 +159,20 @@ namespace SysBot.Pokemon.Discord
             }
 
             var la = new LegalityAnalysis(pkm);
-            if (Info.Hub.Config.Trade.Memes && await TrollAsync(Context, pkm is not PK8 || !la.Valid, template, true).ConfigureAwait(false))
+            if (Info.Hub.Config.Trade.Memes && await TrollAsync(Context, pkm is not T || !la.Valid, pkm, true).ConfigureAwait(false))
                 return;
-            else if (pkm is not PK8 || !la.Valid)
+            
+            if (pkm is not T pk || !la.Valid)
             {
                 var reason = result == "Timeout" ? "That set took too long to generate." : "I wasn't able to create something from that.";
                 var imsg = $"Oops! {reason} Here's my best attempt for that {species}!";
                 await Context.Channel.SendPKMAsync(pkm, imsg).ConfigureAwait(false);
                 return;
             }
+            pk.ResetPartyStats();
 
-            pkm.ResetPartyStats();
             var sig = Context.User.GetFavor();
-            await Context.AddToQueueAsync(code, Context.User.Username, sig, (PK8)pkm, PokeRoutineType.LinkTrade, PokeTradeType.SupportTrade).ConfigureAwait(false);
+            await QueueHelper<T>.AddToQueueAsync(Context, code, Context.User.Username, sig, pk, PokeRoutineType.LinkTrade, PokeTradeType.SupportTrade).ConfigureAwait(false);
         }
 
         [Command("dittoTrade")]
@@ -192,19 +192,19 @@ namespace SysBot.Pokemon.Discord
         public async Task DittoTrade([Summary("Trade Code")] int code, [Summary("A combination of \"ATK/SPA/SPE\" or \"6IV\"")] string keyword, [Summary("Language")] string language, [Summary("Nature")] string nature)
         {
             keyword = keyword.ToLower().Trim();
-            language = language.Trim().Substring(0, 1).ToUpper() + language.Trim()[1..].ToLower();
-            nature = nature.Trim().Substring(0, 1).ToUpper() + nature.Trim()[1..].ToLower();
+            language = language.Trim()[..1].ToUpper() + language.Trim()[1..].ToLower();
+            nature = nature.Trim()[..1].ToUpper() + nature.Trim()[1..].ToLower();
             var set = new ShowdownSet($"{keyword}(Ditto)\nLanguage: {language}\nNature: {nature}");
             var template = AutoLegalityWrapper.GetTemplate(set);
-            var sav = AutoLegalityWrapper.GetTrainerInfo(8);
+            var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
             var pkm = sav.GetLegal(template, out var result);
-            pkm = PKMConverter.ConvertToType(pkm, typeof(PK8), out _) ?? pkm;
-            TradeExtensions.DittoTrade(pkm);
+            TradeExtensions<T>.DittoTrade((T)pkm);
 
             var la = new LegalityAnalysis(pkm);
-            if (Info.Hub.Config.Trade.Memes && await TrollAsync(Context, pkm is not PK8 || !la.Valid, template).ConfigureAwait(false))
+            if (Info.Hub.Config.Trade.Memes && await TrollAsync(Context, pkm is not T || !la.Valid, pkm).ConfigureAwait(false))
                 return;
-            else if (pkm is not PK8 || !la.Valid)
+            
+            if (pkm is not T pk || !la.Valid)
             {
                 var reason = result == "Timeout" ? "That set took too long to generate." : "I wasn't able to create something from that.";
                 var imsg = $"Oops! {reason} Here's my best attempt for that Ditto!";
@@ -212,61 +212,9 @@ namespace SysBot.Pokemon.Discord
                 return;
             }
 
-            pkm.ResetPartyStats();
+            pk.ResetPartyStats();
             var sig = Context.User.GetFavor();
-            await Context.AddToQueueAsync(code, Context.User.Username, sig, (PK8)pkm, PokeRoutineType.LinkTrade, PokeTradeType.SupportTrade).ConfigureAwait(false);
-        }
-
-        [Command("screenOff")]
-        [Alias("off")]
-        [Summary("Turn off the console screen for specified bot(s).")]
-        [RequireOwner]
-        public async Task ScreenOff([Remainder] string addressesCommaSeparated)
-        {
-            var address = addressesCommaSeparated.Replace(" ", "").Split(',');
-            var source = new System.Threading.CancellationTokenSource();
-            var token = source.Token;
-
-            foreach (var adr in address)
-            {
-                var bot = SysCordInstance.Runner.GetBot(adr);
-                if (bot == null)
-                {
-                    await ReplyAsync($"No bot found with the specified address ({adr}).").ConfigureAwait(false);
-                    return;
-                }
-
-                var c = bot.Bot.Connection;
-                bool crlf = bot.Bot.Config.Connection.UseCRLF;
-                await c.SendAsync(Base.SwitchCommand.ScreenOff(crlf), token).ConfigureAwait(false);
-                await ReplyAsync($"Turned screen off for {bot.Bot.Connection.Label}.").ConfigureAwait(false);
-            }
-        }
-
-        [Command("screenOn")]
-        [Alias("on")]
-        [Summary("Turn on the console screen for specified bot(s).")]
-        [RequireOwner]
-        public async Task ScreenOn([Remainder] string addressesCommaSeparated)
-        {
-            var address = addressesCommaSeparated.Replace(" ", "").Split(',');
-            var source = new System.Threading.CancellationTokenSource();
-            var token = source.Token;
-
-            foreach (var adr in address)
-            {
-                var bot = SysCordInstance.Runner.GetBot(adr);
-                if (bot == null)
-                {
-                    await ReplyAsync($"No bot found with the specified address ({adr}).").ConfigureAwait(false);
-                    return;
-                }
-
-                var c = bot.Bot.Connection;
-                bool crlf = bot.Bot.Config.Connection.UseCRLF;
-                await c.SendAsync(Base.SwitchCommand.ScreenOn(crlf), token).ConfigureAwait(false);
-                await ReplyAsync($"Turned screen on for {bot.Bot.Connection.Label}.").ConfigureAwait(false);
-            }
+            await QueueHelper<T>.AddToQueueAsync(Context, code, Context.User.Username, sig, pk, PokeRoutineType.LinkTrade, PokeTradeType.SupportTrade).ConfigureAwait(false);
         }
 
         [Command("peek")]
@@ -274,10 +222,10 @@ namespace SysBot.Pokemon.Discord
         [RequireOwner]
         public async Task Peek(string address)
         {
-            var source = new System.Threading.CancellationTokenSource();
+            var source = new CancellationTokenSource();
             var token = source.Token;
 
-            var bot = SysCordInstance.Runner.GetBot(address);
+            var bot = SysCord<T>.Runner.GetBot(address);
             if (bot == null)
             {
                 await ReplyAsync($"No bot found with the specified address ({address}).").ConfigureAwait(false);
@@ -292,20 +240,226 @@ namespace SysBot.Pokemon.Discord
                 return;
             }
             MemoryStream ms = new(bytes);
-            await Context.Channel.SendFileAsync(ms, "cap.png");
+
+            var img = "cap.jpg";
+            var embed = new EmbedBuilder{ ImageUrl = $"attachment://{img}", Color = Color.Purple }.WithFooter(new EmbedFooterBuilder { Text = $"Captured image from bot at address {address}." });
+            await Context.Channel.SendFileAsync(ms, img, "", false, embed : embed.Build());
         }
 
-        public static async Task<bool> TrollAsync(SocketCommandContext context, bool invalid, IBattleTemplate set, bool itemTrade = false)
+        [Command("hunt")]
+        [Alias("h")]
+        [Summary("Sets all three Scientist Notes. Enter all three species without spaces or symbols in their names; species separated by spaces.")]
+        [RequireSudo]
+        public async Task Hunt([Summary("Sets the Lair Pokémon Species in bulk.")] string species1, string species2, string species3)
+        {
+            string[] input = new string[] { species1, species2, species3 };
+            for (int i = 0; i < input.Length; i++)
+            {
+                var parse = TradeExtensions<T>.EnumParse<LairSpecies>(input[i]);
+                if (parse == default)
+                {
+                    await ReplyAsync($"{input[i]} is not a valid Lair Species.").ConfigureAwait(false);
+                    return;
+                }
+
+                LairSettings.LairSpeciesQueue[i] = parse;
+                if (i == 2)
+                {
+                    LairBotUtil.DiscordQueueOverride = true;
+                    var msg = $"{Context.User.Mention} Lair Species have been set to {string.Join(", ", LairSettings.LairSpeciesQueue)}.";
+                    await ReplyAsync(msg).ConfigureAwait(false);
+                }
+            }
+        }
+
+        [Command("catchlairmons")]
+        [Alias("clm", "catchlair")]
+        [Summary("Toggle to catch lair encounters (Legendary will always be caught).")]
+        [RequireSudo]
+        public async Task ToggleCatchLairMons()
+        {
+            LairSettings.CatchLairPokémon ^= true;
+            var msg = LairSettings.CatchLairPokémon ? "Catching Lair Pokémon!" : "Not Catching Lair Pokémon!";
+            await ReplyAsync(msg).ConfigureAwait(false);
+        }
+
+        [Command("resetlegendflag")]
+        [Alias("rlf", "resetlegend", "legendreset")]
+        [Summary("Toggle the Legendary Caught Flag reset.")]
+        [RequireSudo]
+        public async Task ToggleResetLegendaryCaughtFlag()
+        {
+            LairSettings.ResetLegendaryCaughtFlag ^= true;
+            var msg = LairSettings.ResetLegendaryCaughtFlag ? "Legendary Caught Flag Enabled!" : "Legendary Caught Flag Disabled!";
+            await ReplyAsync(msg).ConfigureAwait(false);
+        }
+
+        [Command("setLairBall")]
+        [Alias("slb", "setBall")]
+        [Summary("Set the ball for catching Lair Pokémon.")]
+        [RequireSudo]
+        public async Task SetLairBall([Summary("Sets the ball for catching Lair Pokémon.")] string ball)
+        {
+            var parse = TradeExtensions<T>.EnumParse<LairBall>(ball);
+            if (parse == default)
+            {
+                await ReplyAsync("Not a valid ball. Correct format is, for example, \"$slb Love\".").ConfigureAwait(false);
+                return;
+            }
+
+            LairSettings.LairBall = parse;
+            var msg = $"Now catching in {parse} Ball!";
+            await ReplyAsync(msg).ConfigureAwait(false);
+        }
+
+        [Command("lairEmbed")]
+        [Alias("le")]
+        [Summary("Initialize posting of Lair shiny result embeds to specified Discord channels.")]
+        [RequireSudo]
+        public async Task InitializeEmbeds()
+        {
+            if (LairSettings.ResultsEmbedChannels == string.Empty)
+            {
+                await ReplyAsync("No channels to post embeds in.").ConfigureAwait(false);
+                return;
+            }
+
+            List<ulong> channels = new();
+            foreach (var channel in LairSettings.ResultsEmbedChannels.Split(',', ' '))
+            {
+                if (ulong.TryParse(channel, out ulong result) && !channels.Contains(result))
+                    channels.Add(result);
+            }
+
+            if (channels.Count == 0)
+            {
+                await ReplyAsync("No valid channels found.").ConfigureAwait(false);
+                return;
+            }
+
+            await ReplyAsync(!LairBotUtil.EmbedsInitialized ? "Lair Embed task started!" : "Lair Embed task stopped!").ConfigureAwait(false);
+            if (LairBotUtil.EmbedsInitialized)
+                LairBotUtil.EmbedSource.Cancel();
+            else _ = Task.Run(async () => await LairEmbedLoop(channels));
+            LairBotUtil.EmbedsInitialized ^= true;
+        }
+
+        private async Task LairEmbedLoop(List<ulong> channels)
+        {
+            var ping = SysCord<T>.Runner.Hub.Config.StopConditions.MatchFoundEchoMention;
+            while (!LairBotUtil.EmbedSource.IsCancellationRequested)
+            {
+                if (LairBotUtil.EmbedMon.Item1 != null)
+                {
+                    var url = TradeExtensions<T>.PokeImg(LairBotUtil.EmbedMon.Item1, LairBotUtil.EmbedMon.Item1.CanGigantamax, false);
+                    var ballStr = $"{(Ball)LairBotUtil.EmbedMon.Item1.Ball}".ToLower();
+                    var ballUrl = $"https://serebii.net/itemdex/sprites/pgl/{ballStr}ball.png";
+                    var author = new EmbedAuthorBuilder { IconUrl = ballUrl, Name = LairBotUtil.EmbedMon.Item2 ? "Legendary Caught!" : "Result found, but not quite Legendary!" };
+                    var embed = new EmbedBuilder { Color = Color.Blue, ThumbnailUrl = url }.WithAuthor(author).WithDescription(ShowdownParsing.GetShowdownText(LairBotUtil.EmbedMon.Item1));
+
+                    var userStr = ping.Replace("<@", "").Replace(">", "");
+                    if (ulong.TryParse(userStr, out ulong usr))
+                    {
+                        var user = await Context.Client.Rest.GetUserAsync(usr).ConfigureAwait(false);
+                        embed.WithFooter(x => { x.Text = $"Requested by: {user}"; });
+                    }
+
+                    foreach (var guild in Context.Client.Guilds)
+                    {
+                        foreach (var channel in channels)
+                        {
+                            if (guild.Channels.FirstOrDefault(x => x.Id == channel) != default)
+                                await guild.GetTextChannel(channel).SendMessageAsync(ping, embed: embed.Build()).ConfigureAwait(false);
+                        }
+                    }
+                    LairBotUtil.EmbedMon.Item1 = null;
+                }
+                else await Task.Delay(1_000).ConfigureAwait(false);
+            }
+            LairBotUtil.EmbedSource = new();
+        }
+
+        [Command("raidEmbed")]
+        [Alias("re")]
+        [Summary("Initialize posting of RollingRaidBot embeds to specified Discord channels.")]
+        [RequireSudo]
+        public async Task InitializeRaidEmbeds()
+        {
+            if (RollingRaidSettings.RollingRaidEmbedChannels == string.Empty)
+            {
+                await ReplyAsync("No channels to post embeds in.").ConfigureAwait(false);
+                return;
+            }
+
+            List<ulong> channels = new();
+            foreach (var channel in RollingRaidSettings.RollingRaidEmbedChannels.Split(',', ' '))
+            {
+                if (ulong.TryParse(channel, out ulong result) && !channels.Contains(result))
+                    channels.Add(result);
+            }
+
+            if (channels.Count == 0)
+            {
+                await ReplyAsync("No valid channels found.").ConfigureAwait(false);
+                return;
+            }
+
+            await ReplyAsync(!RollingRaidBot.RollingRaidEmbedsInitialized ? "RollingRaid Embed task started!" : "RollingRaid Embed task stopped!").ConfigureAwait(false);
+            if (RollingRaidBot.RollingRaidEmbedsInitialized)
+                RollingRaidBot.RaidEmbedSource.Cancel();
+            else _ = Task.Run(async () => await RollingRaidEmbedLoop(channels, RollingRaidBot.RaidEmbedSource.Token));
+            RollingRaidBot.RollingRaidEmbedsInitialized ^= true;
+        }
+
+        private async Task RollingRaidEmbedLoop(List<ulong> channels, CancellationToken token)
+        {
+            var fn = "raid.jpg";
+            while (!RollingRaidBot.RaidEmbedSource.IsCancellationRequested)
+            {
+                if (!RollingRaidBot.EmbedInfo.HasValue || RollingRaidBot.EmbedInfo.Value.Item1 == null || RollingRaidBot.EmbedInfo.Value.Item4 == null)
+                    await Task.Delay(0_500, token).ConfigureAwait(false);
+                else
+                {
+                    lock (_lock)
+                    {
+                        var val = RollingRaidBot.EmbedInfo.Value;
+                        var url = TradeExtensions<T>.PokeImg(val.Item1, val.Item1.CanGigantamax, false);
+                        var embed = new EmbedBuilder { Color = Color.Blue, ThumbnailUrl = url }.WithDescription(val.Item2);
+                        embed.Title = val.Item3;
+                        embed.ImageUrl = $"attachment://{fn}";
+                        File.WriteAllBytes(fn, val.Item4);
+                        FileStream stream = new(fn, FileMode.Open);
+                        RollingRaidBot.EmbedInfo = null;
+
+                        foreach (var guild in Context.Client.Guilds)
+                        {
+                            foreach (var channel in channels)
+                            {
+                                IMessageChannel ch = (IMessageChannel)guild.Channels.FirstOrDefault(x => x.Id == channel);
+                                if (ch != default)
+                                    ch.SendFileAsync(stream, fn, "", false, embed: embed.Build()).Wait(5_000, token);
+                            }
+                        }
+                        stream.Dispose();
+                        File.Delete("raid.jpg");
+                    }
+                }
+            }
+            RollingRaidBot.RollingRaidEmbedsInitialized = false;
+            RollingRaidBot.RaidEmbedSource = new();
+        }
+
+        public static async Task<bool> TrollAsync(SocketCommandContext context, bool invalid, PKM pkm, bool itemTrade = false)
         {
             var rng = new Random();
-            bool noItem = set.HeldItem == 0 && itemTrade;
+            bool noItem = pkm.HeldItem == 0 && itemTrade;
             var path = Info.Hub.Config.Trade.MemeFileNames.Split(',');
             if (Info.Hub.Config.Trade.MemeFileNames == "" || path.Length == 0)
                 path = new string[] { "https://i.imgur.com/qaCwr09.png" }; //If memes enabled but none provided, use a default one.
 
-            if (invalid || !ItemRestrictions.IsHeldItemAllowed(set.HeldItem, 8) || noItem || (set.Nickname.ToLower() == "egg" && !Breeding.CanHatchAsEgg(set.Species)))
+            if (invalid || !ItemRestrictions.IsHeldItemAllowed(pkm) || noItem || (pkm.Nickname.ToLower() == "egg" && !Breeding.CanHatchAsEgg(pkm.Species)))
             {
-                var msg = $"{(noItem ? $"{context.User.Username}, the item you entered wasn't recognized." : $"Oops! I wasn't able to create that {GameInfo.Strings.Species[set.Species]}.")} Here's a meme instead!\n";
+                var msg = $"{(noItem ? $"{context.User.Username}, the item you entered wasn't recognized." : $"Oops! I wasn't able to create that {GameInfo.Strings.Species[pkm.Species]}.")} Here's a meme instead!\n";
                 await context.Channel.SendMessageAsync($"{(invalid || noItem ? msg : "")}{path[rng.Next(path.Length)]}").ConfigureAwait(false);
                 return true;
             }

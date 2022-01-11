@@ -4,14 +4,15 @@ using System.Reflection;
 using System.Collections.Generic;
 using FlatbuffersResource;
 using Google.FlatBuffers;
+using System.Linq;
 
 namespace SysBot.Pokemon
 {
     // Thanks to Zaksabeast for the FlatBuffers tutorial and den hashes, Lusamine for the wonderful IV spreads by flawless IVs, and Kurt for pkNX's easily serializable text dumps.
     public class DenUtil
     {
-        private static readonly string SwordTable = "SysBot.Pokemon.BotDen.FlatbuffersResource.swordEnc.bin";
-        private static readonly string ShieldTable = "SysBot.Pokemon.BotDen.FlatbuffersResource.shieldEnc.bin";
+        private static readonly string SwordTable = "SysBot.Pokemon.SWSH.BotDen.FlatbuffersResource.swordEnc.bin";
+        private static readonly string ShieldTable = "SysBot.Pokemon.SWSH.BotDen.FlatbuffersResource.shieldEnc.bin";
 
         public class RaidData
         {
@@ -109,66 +110,66 @@ namespace SysBot.Pokemon
                 raidInfo.RaidEncounter = GetSpawn(raidInfo, out EncounterNest8Table tableEnc);
                 raidInfo.RaidEncounterTable = tableEnc;
             }
-
             return raidInfo;
         }
 
-        public static string IVSpreadByStar(string ivSpread, RaidData raidInfo, ulong seed)
+        public static string IVSpreadByStar(string ivSpread, RaidData raidInfo, uint[] targetIVs, ulong seed, bool raid = false)
         {
             var splitIV = ivSpread.Split('\n');
             List<string> speciesList = new();
+            int length = raidInfo.Den.IsEvent ? raidInfo.RaidDistributionEncounterTable.EntriesLength : raidInfo.RaidEncounterTable.EntriesLength;
+            int prob = 1;
 
 #pragma warning disable CS8629 // Nullable value type may be null.
-            for (int i = 0; i < (raidInfo.Den.IsEvent ? raidInfo.RaidDistributionEncounterTable.EntriesLength : raidInfo.RaidEncounterTable.EntriesLength); i++)
+            for (int i = 0; i < length; i++)
             {
-                List<uint> probList = new();
-                for (int a = 0; a < 5; a++)
-                {
-                    var prob = raidInfo.Den.IsEvent ? raidInfo.RaidDistributionEncounterTable.Entries(i).Value.Probabilities(a) : raidInfo.RaidEncounterTable.Entries(i).Value.Probabilities(a);
-                    probList.Add(prob);
-                }
-
+                var isEvent = raidInfo.Den.IsEvent;
+                var speciesID = (int)(isEvent ? raidInfo.RaidDistributionEncounterTable.Entries(i).Value.Species : raidInfo.RaidEncounterTable.Entries(i).Value.Species);
+                var probList = isEvent ? raidInfo.RaidDistributionEncounterTable.Entries(i).Value.GetProbabilitiesArray().ToList() : raidInfo.RaidEncounterTable.Entries(i).Value.GetProbabilitiesArray().ToList();
+                var flawless = (uint)(isEvent ? raidInfo.RaidDistributionEncounterTable.Entries(i).Value.FlawlessIVs : raidInfo.RaidEncounterTable.Entries(i).Value.FlawlessIVs);
                 var firstIndex = probList.FindIndex(0, 5, x => x != 0) + 1;
                 var lastIndex = probList.FindLastIndex(4, 4, x => x != 0) + 1;
-                var star = $"{((firstIndex == lastIndex) || (firstIndex > lastIndex) ? firstIndex + "★" : firstIndex + "-" + lastIndex + "★")}";
-                bool baby = raidInfo.Settings.BabyDen && firstIndex <= 3;
-                if (raidInfo.Settings.BabyDen)
-                {
-                    if (firstIndex > 3)
-                        continue;
-                }
-                else if (firstIndex < 3)
+                prob += (int)probList[raidInfo.Den.Stars];
+
+                if (raid && prob < raidInfo.Den.RandRoll)
+                    continue;
+                else if (raidInfo.Settings.ResultDisplay == DisplayMode.Baby && firstIndex > 3)
+                    continue;
+                else if (raidInfo.Settings.ResultDisplay == DisplayMode.Adult && firstIndex < 3)
                     continue;
 
+                var star = $"{((firstIndex == lastIndex) || (firstIndex > lastIndex) ? firstIndex + "★" : firstIndex + "-" + lastIndex + "★")}";
                 var rng = new Xoroshiro128Plus(seed);
-                var gmax = raidInfo.Den.IsEvent ? raidInfo.RaidDistributionEncounterTable.Entries(i).Value.IsGigantamax : raidInfo.RaidEncounterTable.Entries(i).Value.IsGigantamax;
-                var speciesID = (int)(raidInfo.Den.IsEvent ? raidInfo.RaidDistributionEncounterTable.Entries(i).Value.Species : raidInfo.RaidEncounterTable.Entries(i).Value.Species);
-                var form = (int)(raidInfo.Den.IsEvent ? raidInfo.RaidDistributionEncounterTable.Entries(i).Value.AltForm : raidInfo.RaidEncounterTable.Entries(i).Value.AltForm);
+                var gmax = isEvent ? raidInfo.RaidDistributionEncounterTable.Entries(i).Value.IsGigantamax : raidInfo.RaidEncounterTable.Entries(i).Value.IsGigantamax;
+                var form = (int)(isEvent ? raidInfo.RaidDistributionEncounterTable.Entries(i).Value.AltForm : raidInfo.RaidEncounterTable.Entries(i).Value.AltForm);
                 var speciesName = SpeciesName.GetSpeciesNameGeneration(speciesID, 2, 8);
-                var pkm = AutoLegalityWrapper.GetTrainerInfo(8).GetLegal(AutoLegalityWrapper.GetTemplate(new ShowdownSet($"{speciesName}{TradeCordHelperUtil.FormOutput(speciesID, form, out _)}")), out _);
-                var personal = pkm.PersonalInfo;
-                var IVs = raidInfo.Den.IsEvent ? (uint)raidInfo.RaidDistributionEncounterTable.Entries(i).Value.FlawlessIVs : (uint)raidInfo.RaidEncounterTable.Entries(i).Value.FlawlessIVs;
+                var formStr = TradeExtensions<PK8>.FormOutput(speciesID, form, out _);
 
                 uint EC = (uint)rng.NextInt(0xFFFFFFFF);
                 uint SIDTID = (uint)rng.NextInt(0xFFFFFFFF);
                 uint PID = (uint)rng.NextInt(0xFFFFFFFF);
                 uint shinytype = SeedSearchUtil.GetShinyType(PID, SIDTID);
 
-                rng = SeedSearchUtil.GetIVs(rng, raidInfo.IVs, IVs, out uint[,] allIVs, out _);
-                var characteristic = SeedSearchUtil.GetCharacteristic(EC, allIVs, IVs - 1, out _);
+                rng = SeedSearchUtil.GetIVs(rng, targetIVs, flawless, out uint[,] allIVs, out _);
+                var characteristic = SeedSearchUtil.GetCharacteristic(EC, allIVs, flawless - 1, out _);
 
-                var ability = raidInfo.Den.IsEvent ? (uint)raidInfo.RaidDistributionEncounterTable.Entries(i).Value.Ability : (uint)raidInfo.RaidEncounterTable.Entries(i).Value.Ability;
+                var ability = (uint)(isEvent ? raidInfo.RaidDistributionEncounterTable.Entries(i).Value.Ability : raidInfo.RaidEncounterTable.Entries(i).Value.Ability);
                 rng = SeedSearchUtil.GetAbility(rng, ability, out uint abilityT);
 
-                var ratio = personal.OnlyFemale ? 254 : personal.OnlyMale ? 0 : personal.Genderless ? 255 : personal.Gender;
-                var gender = raidInfo.Den.IsEvent ? (uint)raidInfo.RaidDistributionEncounterTable.Entries(i).Value.Gender : (uint)raidInfo.RaidEncounterTable.Entries(i).Value.Gender;              
+                var pkm = AutoLegalityWrapper.GetTrainerInfo<PK8>().GetLegal(AutoLegalityWrapper.GetTemplate(new ShowdownSet($"{speciesName}{formStr}")), out _);
+                pkm.SetAbilityIndex((int)abilityT);
+
+                var ratio = pkm.PersonalInfo.OnlyFemale ? 254 : pkm.PersonalInfo.OnlyMale ? 0 : pkm.PersonalInfo.Genderless ? 255 : pkm.PersonalInfo.Gender;
+                var gender = (uint)(isEvent ? raidInfo.RaidDistributionEncounterTable.Entries(i).Value.Gender : raidInfo.RaidEncounterTable.Entries(i).Value.Gender);
                 rng = SeedSearchUtil.GetGender(rng, (GenderRatio)ratio, gender, out uint genderT);
 
                 SeedSearchUtil.GetNature(rng, (uint)speciesID, (uint)form, out uint natureT);
 
-                pkm.SetAbilityIndex((int)abilityT);
-                speciesList.Add(star + " - " + speciesName + (gmax ? "-Gmax" : "") + " - " + splitIV[IVs - 1] + "\n" +
-                (GenderType)genderT + " - " + (Nature)natureT + " - " + (abilityT != 2 ? abilityT + 1 : "H") + ": " + (Ability)pkm.Ability + " - " + (ShinyType)shinytype + " - " + TradeExtensions.Characteristics[characteristic]);
+                speciesList.Add(star + " - " + speciesName + formStr + (gmax ? "-Gmax" : "") + " - " + splitIV[flawless - 1] + "\n" +
+                (GenderType)genderT + " - " + (Nature)natureT + " - " + (abilityT != 2 ? abilityT + 1 : "H") + ": " + (Ability)pkm.Ability + " - " + (ShinyType)shinytype + " - " + TradeExtensions<PK8>.Characteristics[characteristic]);
+
+                if (raid)
+                    break;
             }
 #pragma warning restore CS8629 // Nullable value type may be null.
             speciesList.Sort();

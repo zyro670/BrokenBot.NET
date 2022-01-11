@@ -325,5 +325,134 @@ namespace SysBot.Pokemon
             var data = new[] { (byte)((textSpeedByte[0] & 0xFC) | (int)speed) };
             await Connection.WriteBytesAsync(data, TextSpeedOffset, token).ConfigureAwait(false);
         }
+
+        public async Task ToggleAirplane(int delay, CancellationToken token)
+        {
+            await PressAndHold(HOME, 2_000, 1_000, token).ConfigureAwait(false);
+            for (int i = 0; i < 4; i++)
+                await Click(DDOWN, i == 3 ? delay : 0_150, token).ConfigureAwait(false);
+            await Click(A, 2_000, token).ConfigureAwait(false);
+            await Click(A, 0_500, token).ConfigureAwait(false);
+        }
+
+        public async Task<bool> SpinTrade(uint offset, byte[] comparison, int waitms, int waitInterval, bool match, CancellationToken token)
+        {
+            // Revival of Red's SpinTrade
+            if (!await GetCoordinatesForSpin(token).ConfigureAwait(false))
+                return await ReadUntilChanged(offset, comparison, waitms, waitInterval, match, token).ConfigureAwait(false);
+
+            var sw = new System.Diagnostics.Stopwatch();
+            sw.Start();
+
+            do
+            {
+                var result = await Connection.ReadBytesAsync(offset, comparison.Length, token).ConfigureAwait(false);
+                if (match == result.SequenceEqual(comparison))
+                {
+                    await SetStick(SwitchStick.LEFT, 0, 0, 0_100, token).ConfigureAwait(false);
+                    await Task.Delay(waitInterval, token).ConfigureAwait(false);
+                    return true;
+                }
+
+                if (sw.ElapsedMilliseconds < waitms - 4_000) // Give it ample time to finish the pirouette end animation before correcting position
+                {
+                    await SetStick(SwitchStick.LEFT, -3_500, 0, 0, token).ConfigureAwait(false); // ←
+                    await SetStick(SwitchStick.LEFT, 0, -3_500, 0, token).ConfigureAwait(false); // ↓
+                    await SetStick(SwitchStick.LEFT, 3_500, 0, 0, token).ConfigureAwait(false); // →
+                    await SetStick(SwitchStick.LEFT, 0, 3_500, 0, token).ConfigureAwait(false); // ↑
+                }
+                else await SetStick(SwitchStick.LEFT, 0, 0, 0_100, token).ConfigureAwait(false);
+            } while (sw.ElapsedMilliseconds < waitms);
+
+            await Task.Delay(waitInterval, token).ConfigureAwait(false);
+            await SpinCorrection(token).ConfigureAwait(false);
+            return false;
+        }
+
+        public async Task SpinCorrection(CancellationToken token)
+        {
+            await SwitchConnection.WriteBytesAbsoluteAsync(TradeExtensions<PK8>.XCoords, TradeExtensions<PK8>.CoordinatesOffset, token).ConfigureAwait(false);
+            await SwitchConnection.WriteBytesAbsoluteAsync(TradeExtensions<PK8>.YCoords, TradeExtensions<PK8>.CoordinatesOffset + 0x4, token).ConfigureAwait(false);
+            await SwitchConnection.WriteBytesAbsoluteAsync(TradeExtensions<PK8>.ZCoords, TradeExtensions<PK8>.CoordinatesOffset + 0x8, token).ConfigureAwait(false);
+        }
+
+        private async Task<bool> GetCoordinatesForSpin(CancellationToken token)
+        {
+            if (TradeExtensions<PK8>.CoordinatesSet)
+                return true;
+            else if (!TradeExtensions<PK8>.CoordinatesSet && TradeExtensions<PK8>.CoordinatesOffset != 0)
+                return false;
+
+            TradeExtensions<PK8>.CoordinatesOffset = await ParsePointer("[[[[[[main+26365B8]+88]+1F8]+E0]+10]+E0]+60", token).ConfigureAwait(false); // Thank you for the pointer, Zyro <3
+            TradeExtensions<PK8>.XCoords = await SwitchConnection.ReadBytesAbsoluteAsync(TradeExtensions<PK8>.CoordinatesOffset, 4, token).ConfigureAwait(false);
+            TradeExtensions<PK8>.YCoords = await SwitchConnection.ReadBytesAbsoluteAsync(TradeExtensions<PK8>.CoordinatesOffset + 0x4, 4, token).ConfigureAwait(false);
+            TradeExtensions<PK8>.ZCoords = await SwitchConnection.ReadBytesAbsoluteAsync(TradeExtensions<PK8>.CoordinatesOffset + 0x8, 4, token).ConfigureAwait(false);
+            if (TradeExtensions<PK8>.XCoords.Length == 1 || TradeExtensions<PK8>.YCoords.Length == 1 || TradeExtensions<PK8>.ZCoords.Length == 1)
+                return false;
+
+            TradeExtensions<PK8>.CoordinatesSet = true;
+            return true;
+        }
+
+        public async Task SaveGame(PokeTradeHubConfig config, CancellationToken token)
+        {
+            await Click(B, 0_200, token).ConfigureAwait(false);
+            Log("Saving the game...");
+            await Click(X, 2_000, token).ConfigureAwait(false);
+            await Click(R, 0_250, token).ConfigureAwait(false);
+            while (!await IsOnOverworld(config, token).ConfigureAwait(false))
+                await Click(A, 0_500, token).ConfigureAwait(false);
+            Log("Game saved!");
+        }
+
+        public async Task<bool> LairStatusCheck(ushort val, uint ofs, CancellationToken token) => BitConverter.GetBytes(val).SequenceEqual(await Connection.ReadBytesAsync(ofs, 2, token).ConfigureAwait(false));
+        public async Task<bool> LairStatusCheck(uint val, uint ofs, CancellationToken token) => BitConverter.GetBytes(val).SequenceEqual(await Connection.ReadBytesAsync(ofs, 4, token).ConfigureAwait(false));
+        public async Task<bool> LairStatusCheckMain(ushort val, ulong ofs, CancellationToken token) => BitConverter.GetBytes(val).SequenceEqual(await SwitchConnection.ReadBytesAbsoluteAsync(ofs, 2, token).ConfigureAwait(false));
+
+        public async Task<ulong> ParsePointer(string pointer, CancellationToken token) //Code from LiveHex
+        {
+            var ptr = pointer;
+            uint finadd = 0;
+            if (!ptr.EndsWith("]"))
+                finadd = Util.GetHexValue(ptr.Split('+').Last());
+            var jumps = ptr.Replace("main", "").Replace("[", "").Replace("]", "").Split(new[] { "+" }, StringSplitOptions.RemoveEmptyEntries);
+            if (jumps.Length == 0)
+            {
+                Log("Invalid Pointer");
+                return 0;
+            }
+
+            var initaddress = Util.GetHexValue(jumps[0].Trim());
+            ulong address = BitConverter.ToUInt64(await SwitchConnection.ReadBytesMainAsync(initaddress, 0x8, token).ConfigureAwait(false), 0);
+            foreach (var j in jumps)
+            {
+                var val = Util.GetHexValue(j.Trim());
+                if (val == initaddress)
+                    continue;
+                if (val == finadd)
+                {
+                    address += val;
+                    break;
+                }
+                address = BitConverter.ToUInt64(await SwitchConnection.ReadBytesAbsoluteAsync(address + val, 0x8, token).ConfigureAwait(false), 0);
+            }
+            return address;
+        }
+
+        public async Task<PK8?> ReadUntilPresentAbsolute(ulong offset, int waitms, int waitInterval, CancellationToken token, int size = BoxFormatSlotSize) // Need to eliminate duplicate code, currently a hack
+        {
+            int msWaited = 0;
+            while (msWaited < waitms)
+            {
+                var data = await SwitchConnection.ReadBytesAbsoluteAsync(offset, size, token).ConfigureAwait(false);
+                var pk = new PK8(data);
+                if (pk.Species != 0 && pk.ChecksumValid)
+                    return pk;
+
+                await Task.Delay(waitInterval, token).ConfigureAwait(false);
+                msWaited += waitInterval;
+            }
+            return null;
+        }
     }
 }

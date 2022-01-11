@@ -65,6 +65,9 @@
 
         /// <summary> Resets Swords Of Justice via the camp method. </summary>
         SoJCamp = 6007,
+
+        /// <summary> Resets Swords Of Justice via the camp method. </summary>
+        RollingRaid = 6008,
     }
 
     public static class PokeRoutineTypeExtensions

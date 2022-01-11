@@ -70,7 +70,7 @@ namespace SysBot.Pokemon
             {
                 Hub.Queues.ClearAll();
                 UsersInQueue.Clear();
-                TradeCordHelper.TradeCordTrades.Clear();
+                TradeCordHelper<T>.TradeCordTrades.Clear();
             }
         }
 
@@ -104,8 +104,6 @@ namespace SysBot.Pokemon
             {
                 if (detail.Trade.IsProcessing && !canRemoveWhileProcessing)
                     continue;
-                if (detail.Trade.Type == PokeTradeType.TradeCord)
-                	TradeExtensions.TradeCordPath.Remove(TradeExtensions.TradeCordPath.FirstOrDefault(x => x.Contains(detail.UserID.ToString())));
                 Remove(detail);
             }
 
@@ -186,6 +184,16 @@ namespace SysBot.Pokemon
         {
             lock (_sync)
                 return UsersInQueue.Count(func);
+        }
+
+        private void ClearTCTrade(IEnumerable<TradeEntry<T>> details)
+        {
+            var detail = details.FirstOrDefault(x => x.Type == PokeRoutineType.TradeCord);
+            if (detail == default)
+                return;
+
+            if (TradeCordHelper<T>.TradeCordTrades.TryGetValue(detail.UserID, out _))
+                TradeCordHelper<T>.TradeCordTrades.Remove(detail.UserID);
         }
     }
 }

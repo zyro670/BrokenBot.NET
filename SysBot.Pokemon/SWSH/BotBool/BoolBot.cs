@@ -8,22 +8,17 @@ using static SysBot.Pokemon.PokeDataOffsets;
 
 namespace SysBot.Pokemon
 {
-    public class BoolBot : PokeRoutineExecutor
+    public sealed class BoolBot : EncounterBot
     {
-        private readonly PokeTradeHub<PK8> Hub;
         private readonly BoolSettings Settings;
 
-        public BoolBot(PokeBotState cfg, PokeTradeHub<PK8> hub) : base(cfg)
+        public BoolBot(PokeBotState cfg, PokeTradeHub<PK8> hub) : base(cfg, hub)
         {
-            Hub = hub;
-            Settings = hub.Config.Bool;
+            Settings = Hub.Config.Bool;
         }
 
-        public override async Task MainLoop(CancellationToken token)
+        protected override async Task EncounterLoop(SAV8SWSH sav, CancellationToken token)
         {
-            Log("Identifying trainer data of the host console.");
-            await IdentifyTrainer(token).ConfigureAwait(false);
-
             Log("Starting main BoolBot loop.");
             Config.IterateNextRoutine();
 

@@ -104,6 +104,7 @@ namespace SysBot.Pokemon
             var print = Hub.Config.StopConditions.GetPrintName(pk);
             Log($"Encounter: {encounterCount}{Environment.NewLine}{print}{Environment.NewLine}");
             Settings.AddCompletedEggs();
+            TradeExtensions<PK8>.EncounterLogs(pk, "EncounterLogPretty_Egg.txt");
 
             if (DumpSetting.Dump && !string.IsNullOrEmpty(DumpSetting.DumpFolder))
                 DumpPokemon(DumpSetting.DumpFolder, "egg", pk);

@@ -71,22 +71,23 @@ namespace SysBot.Pokemon.Discord
             var newShowdown = new List<string>();
             var showdown = ShowdownParsing.GetShowdownText(pkm);
             foreach (var line in showdown.Split('\n'))
-                newShowdown.Add(line);
+                newShowdown.Add($"\n{line}");
 
-            if (pkm.IsEgg)
-                newShowdown.Add("\nPokémon is an egg");
-            if (pkm.Ball > (int)Ball.None)
-                newShowdown.Insert(newShowdown.FindIndex(z => z.Contains("Nature")), $"Ball: {(Ball)pkm.Ball} Ball");
-            if (pkm.IsShiny)
+            int index = newShowdown.FindIndex(z => z.Contains("Nature"));
+            if (pkm.Ball > (int)Ball.None && index != -1)
+                newShowdown.Insert(newShowdown.FindIndex(z => z.Contains("Nature")), $"\nBall: {(Ball)pkm.Ball} Ball");
+
+            index = newShowdown.FindIndex(x => x.Contains("Shiny: Yes"));
+            if (pkm is PK8 && pkm.IsShiny && index != -1)
             {
-                var index = newShowdown.FindIndex(x => x.Contains("Shiny: Yes"));
                 if (pkm.ShinyXor == 0 || pkm.FatefulEncounter)
-                    newShowdown[index] = "Shiny: Square\r";
-                else newShowdown[index] = "Shiny: Star\r";
+                    newShowdown[index] = "\nShiny: Square\r";
+                else newShowdown[index] = "\nShiny: Star\r";
             }
 
-            newShowdown.InsertRange(1, new string[] { $"OT: {pkm.OT_Name}", $"TID: {pkm.DisplayTID}", $"SID: {pkm.DisplaySID}", $"OTGender: {(Gender)pkm.OT_Gender}", $"Language: {(LanguageID)pkm.Language}" });
-            return Format.Code(string.Join("\n", newShowdown).TrimEnd());
+            var extra = new string[] { $"\nOT: {pkm.OT_Name}", $"\nTID: {pkm.DisplayTID}", $"\nSID: {pkm.DisplaySID}", $"\nOTGender: {(Gender)pkm.OT_Gender}", $"\nLanguage: {(LanguageID)pkm.Language}", $"{(pkm.IsEgg ? "\nIsEgg: Yes" : "")}" };
+            newShowdown.InsertRange(1, extra);
+            return Format.Code(string.Join("", newShowdown).Trim());
         }
 
         public static List<string> GetListFromString(string str)

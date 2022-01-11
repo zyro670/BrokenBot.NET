@@ -2,7 +2,6 @@
 using Discord;
 using Discord.WebSocket;
 using PKHeX.Core;
-using System;
 using System.Threading.Tasks;
 using SysBot.Base;
 
@@ -22,8 +21,10 @@ namespace SysBot.Pokemon.Discord
             {
                 var template = AutoLegalityWrapper.GetTemplate(set);
                 var pkm = sav.GetLegal(template, out var result);
-				if (pkm.Nickname.ToLower() == "egg" && Breeding.CanHatchAsEgg(pkm.Species))
-					TradeExtensions.EggTrade((PK8)pkm);
+                if (pkm is PK8 && pkm.Nickname.ToLower() == "egg" && Breeding.CanHatchAsEgg(pkm.Species))
+					TradeExtensions<PK8>.EggTrade(pkm);
+                else if (pkm is PB8 && pkm.Nickname.ToLower() == "egg" && Breeding.CanHatchAsEgg(pkm.Species))
+                    TradeExtensions<PB8>.EggTrade(pkm);
 
                 var la = new LegalityAnalysis(pkm);
                 var spec = GameInfo.Strings.Species[template.Species];

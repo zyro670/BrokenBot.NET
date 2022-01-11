@@ -8,14 +8,13 @@ using Newtonsoft.Json;
 
 namespace SysBot.Pokemon
 {
-    public sealed class LairBotUtil
+    public abstract class LairBotUtil
     {
         public static CancellationTokenSource EmbedSource = new();
         public static bool DiscordQueueOverride;
         public static bool EmbedsInitialized;
         public static (PK8?, bool) EmbedMon;
-        public static int TerrainDur = -1;
-        public static MoveInfo.MoveInfoRoot MoveRoot = new();
+        public int TerrainDur = -1;
 
         // Copied over from PKHeX due to accessibility
         internal static readonly ushort[] Pouch_Regular_SWSH =
@@ -56,7 +55,7 @@ namespace SysBot.Pokemon
             1592, 1604, 1606
         };
 
-        public static double[] TypeDamageMultiplier(int[] types, int moveType)
+        public double[] TypeDamageMultiplier(int[] types, int moveType)
         {
             double[] effectiveness = { -1, -1 };
             for (int i = 0; i < types.Length; i++)
@@ -87,11 +86,11 @@ namespace SysBot.Pokemon
             return effectiveness;
         }
 
-        public class MoveInfo
+        public class PokeMoveInfo
         {
             public class MoveInfoRoot
             {
-                public HashSet<MoveInfo> Moves { get; private set; } = new();
+                public HashSet<PokeMoveInfo> Moves { get; private set; } = new();
             }
 
             public int MoveID { get; set; }
@@ -113,9 +112,9 @@ namespace SysBot.Pokemon
             public MoveTarget Target { get; set; }
         }
 
-        public static int CalculateEffectiveStat(int statIV, int statEV, int statBase, int level) => ((statIV + (2 * statBase) + (statEV / 4)) * level / 100) + 5; // Taken from PKHeX
+        public int CalculateEffectiveStat(int statIV, int statEV, int statBase, int level) => ((statIV + (2 * statBase) + (statEV / 4)) * level / 100) + 5; // Taken from PKHeX
 
-        public static int PriorityIndex(PK8 pk)
+        public int PriorityIndex(PK8 pk)
         {
             int selectIndex = -1;
             for (int i = 0; i < pk.Moves.Length; i++)
@@ -129,7 +128,7 @@ namespace SysBot.Pokemon
             return selectIndex;
         }
 
-        public static bool AbilityImmunity(int ourAbility, int encounterAbility, int[] encounterTypes, MoveType ourMoveType, int ourMoveID, PK8[]? party = default)
+        private bool AbilityImmunity(int ourAbility, int encounterAbility, int[] encounterTypes, MoveType ourMoveType, int ourMoveID, PK8[]? party = default)
         {
             if (ourAbility == (int)Ability.Turboblaze || ourAbility == (int)Ability.Teravolt || ourAbility == (int)Ability.MoldBreaker)
                 return false;
@@ -161,7 +160,7 @@ namespace SysBot.Pokemon
             };
         }
 
-        public static double[] WeightedDamage(PK8[] party, PK8 pk, PK8 lairPk, bool dmax)
+        public double[] WeightedDamage(PK8[] party, PK8 pk, PK8 lairPk, PokeMoveInfo.MoveInfoRoot root, bool dmax)
         {
             if (TerrainDur >= 0)
                 --TerrainDur;
@@ -175,11 +174,11 @@ namespace SysBot.Pokemon
             for (int i = 0; i < pk.Moves.Length; i++)
             {
                 double typeMultiplier = -1.0;
-                var move = MoveRoot.Moves.FirstOrDefault(x => x.MoveID == pk.Moves[i]);
+                var move = root.Moves.FirstOrDefault(x => x.MoveID == pk.Moves[i]);
                 var power = Convert.ToDouble(move.Power);
                 bool immune = AbilityImmunity(pk.Ability, lairPk.Ability, types, move.Type, move.MoveID, party);
 
-                var typeMulti = TypeDamageMultiplier(types, (int)move.Type);
+                var typeMulti = move.Category == MoveCategory.Status ? new double[] { 1.0, 1.0 } : TypeDamageMultiplier(types, (int)move.Type);
                 if (typeMulti[0] == 0.0 || typeMulti[1] == 0.0)
                     typeMultiplier = 0.0;
                 else if (typeMulti[0] == 0.5 && typeMulti[1] == 0.5 && types[0] != types[1])
@@ -193,9 +192,7 @@ namespace SysBot.Pokemon
                 else if (typeMulti[0] == 2.0 || typeMulti[1] == 2.0)
                     typeMultiplier = 2.0;
 
-                bool usefulStatus = (!dmax && ((move.MoveID == (int)Move.Toxic && lairPk.Status_Condition != (int)StatusCondition.Poisoned) || move.MoveID == (int)Move.Counter || move.MoveID == (int)Move.LifeDew || 
-                    move.MoveID == (int)Move.WideGuard || (move.MoveID == (int)Move.Yawn && lairPk.Status_Condition != (int)StatusCondition.Asleep))) || (move.MoveID == (int)Move.Protect && dmax);
-                if (immune || (move.Category == MoveCategory.Status && !usefulStatus) || (move.MoveID == (int)Move.DreamEater && lairPk.Status_Condition != (int)StatusCondition.Asleep))
+                if (immune || (move.MoveID == (int)Move.WillOWisp && types.Contains(9)) || (move.MoveID == (int)Move.DreamEater && lairPk.Status_Condition != (int)StatusCondition.Asleep))
                     typeMultiplier = -1.0;
 
                 double target = move.Target switch
@@ -276,6 +273,11 @@ namespace SysBot.Pokemon
                     _ => 1.0,
                 };
 
+                double usefulStatus = 
+                    (!dmax && ((move.MoveID == (int)Move.Toxic && lairPk.Status_Condition != (int)StatusCondition.Poisoned) || move.MoveID == (int)Move.Counter || move.MoveID == (int)Move.LifeDew ||
+                    move.MoveID == (int)Move.WideGuard || (move.MoveID == (int)Move.Yawn && lairPk.Status_Condition != (int)StatusCondition.Asleep)))
+                    || (move.MoveID == (int)Move.Protect && dmax) ? 1.2 : 1.0;
+
                 power *= status * (!dmax && (move.Charge || move.Recharge) ? 0.5 : 1.0);
                 double terrain = 1.0;
                 if (dmax || TerrainDur > 0)
@@ -292,17 +294,17 @@ namespace SysBot.Pokemon
                 }
 
                 power *= terrain;
-                dmgCalc[i] = ((((2 * pk.CurrentLevel / 5) + 2) * power * (effectiveAttack / effectiveDefense) / 50) + 2) * multiplier;
+                dmgCalc[i] = ((((2 * pk.CurrentLevel / 5) + 2) * power * (effectiveAttack / effectiveDefense) / 50) + 2) * multiplier * usefulStatus;
             }
             return dmgCalc;
         }
 
-        public static MoveInfo.MoveInfoRoot LoadMoves()
+        public PokeMoveInfo.MoveInfoRoot LoadMoves()
         {
-            using Stream stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("SysBot.Pokemon.BotLair.MoveInfo.json");
+            using Stream stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("SysBot.Pokemon.SWSH.BotLair.MoveInfo.json");
             using TextReader reader = new StreamReader(stream);
             JsonSerializer serializer = new();
-            var root = (MoveInfo.MoveInfoRoot?)serializer.Deserialize(reader, typeof(MoveInfo.MoveInfoRoot));
+            var root = (PokeMoveInfo.MoveInfoRoot?)serializer.Deserialize(reader, typeof(PokeMoveInfo.MoveInfoRoot));
             reader.Close();
             return root ?? new();
         }

@@ -1,5 +1,6 @@
 ﻿using PKHeX.Core;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace SysBot.Pokemon
 {
@@ -126,7 +127,7 @@ namespace SysBot.Pokemon
             return true;
         }
 
-        public static void SpecificSeedSearch(DenUtil.RaidData raidInfo, out long frames, out ulong seedRes, out ulong threeDay, out string ivSpread)
+        public static void SpecificSeedSearch(DenUtil.RaidData raidInfo, out long frames, out ulong seedRes, out ulong threeDay, out string ivSpread, CancellationToken token)
         {
             threeDay = seedRes = 0;
             frames = 0;
@@ -135,6 +136,9 @@ namespace SysBot.Pokemon
             var rng = new Xoroshiro128Plus(seed);
             for (long i = 0; i < raidInfo.SearchRange; i++)
             {
+                if (token.IsCancellationRequested)
+                    return;
+
                 if (i > 0)
                 {
                     rng = new Xoroshiro128Plus(seed);
@@ -172,7 +176,7 @@ namespace SysBot.Pokemon
                     if (!natureMatch)
                         continue;
 
-                    ivSpread = DenUtil.IVSpreadByStar(GetIVSpread(allIVs), raidInfo, seed);
+                    ivSpread = DenUtil.IVSpreadByStar(GetIVSpread(allIVs), raidInfo, raidInfo.IVs, seed);
                     frames = i;
                     seedRes = seed;
                     for (int d = 3; d > 0; d--)
@@ -184,6 +188,22 @@ namespace SysBot.Pokemon
                 if (i >= raidInfo.SearchRange)
                     return;
             }
+        }
+
+        public static string GetCurrentFrameInfo(DenUtil.RaidData raidInfo, uint flawlessIVs, ulong seed, out uint shinyType, bool raid = true)
+        {
+            var rng = new Xoroshiro128Plus(seed);
+            _ = (uint)rng.NextInt(0xFFFFFFFF);
+            uint SIDTID = (uint)rng.NextInt(0xFFFFFFFF);
+            uint PID = (uint)rng.NextInt(0xFFFFFFFF);
+            shinyType = GetShinyType(PID, SIDTID);
+
+            var IVs = new uint[] { 255, 255, 255, 255, 255, 255 };
+            GetIVs(rng, IVs, flawlessIVs, out uint[,] allIVs, out _);
+            uint[] ivs = new uint[6];
+            for (int i = 0; i < 6; i++)
+                ivs[i] = allIVs[flawlessIVs - 1, i];
+            return DenUtil.IVSpreadByStar(GetIVSpread(allIVs), raidInfo, ivs, seed, raid);
         }
 
         public static uint GetCharacteristic(uint ec, uint[,] ivlist, uint guaranteedIVs, out bool charMatch, Characteristics characteristic = Characteristics.Any)
@@ -231,7 +251,7 @@ namespace SysBot.Pokemon
         {
             nature = species switch
             {
-                849 => altform == 0 ? (uint)TradeCordHelperUtil.Amped[rng.NextInt(13)] : (uint)TradeCordHelperUtil.LowKey[rng.NextInt(12)],
+                849 => altform == 0 ? (uint)TradeExtensions<PK8>.Amped[rng.NextInt(13)] : (uint)TradeExtensions<PK8>.LowKey[rng.NextInt(12)],
                 _ => (uint)rng.NextInt(25),
             };
         }
@@ -261,19 +281,13 @@ namespace SysBot.Pokemon
             }
 
             for (int i = 0; i < 6; i++)
-            {
-                if (ivs[i] != 255)
-                    ivCheck.Add(ivs[i] == allIVs[guaranteedIVs - 1, i]);
-            }
+                ivCheck.Add(ivs[i] == 255 || ivs[i] == allIVs[guaranteedIVs - 1, i]);
 
-            if (ivCheck.Contains(false))
-                match = false;
-            else match = true;
-
+            match = !ivCheck.Contains(false);
             return rng;
         }
 
-        private static string GetIVSpread(uint[,] ivResult)
+        public static string GetIVSpread(uint[,] ivResult)
         {
             string ivlist = "";
             for (int ivcount = 0; ivcount < 5; ivcount++)

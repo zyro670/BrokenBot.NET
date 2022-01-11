@@ -61,18 +61,18 @@ namespace SysBot.Pokemon.Discord
             {
                 var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
                 var pkm = sav.GetLegal(template, out var result);
-            	if (pkm.Species == 132)
-					TradeExtensions.DittoTrade((T)pkm);
+                if (pkm.Species == 132)
+                    TradeExtensions<T>.DittoTrade(pkm);
 
-				if (pkm.Nickname.ToLower() == "egg" && Breeding.CanHatchAsEgg(pkm.Species))
-					TradeExtensions.EggTrade((T)pkm);
+                if (pkm.Nickname.ToLower() == "egg" && Breeding.CanHatchAsEgg(pkm.Species))
+                    TradeExtensions<T>.EggTrade(pkm);
 
                 var la = new LegalityAnalysis(pkm);
                 var spec = GameInfo.Strings.Species[template.Species];
                 pkm = PKMConverter.ConvertToType(pkm, typeof(T), out _) ?? pkm;
-                bool memes = Info.Hub.Config.Trade.Memes && await TradeAdditionsModule<T>.TrollAsync(Context, pkm is not T || !la.Valid, template).ConfigureAwait(false);
+                bool memes = Info.Hub.Config.Trade.Memes && await TradeAdditionsModule<T>.TrollAsync(Context, pkm is not T || !la.Valid, pkm).ConfigureAwait(false);
                 if (memes)
-                	return;
+                    return;
 
                 if (pkm is not T pk || !la.Valid)
                 {

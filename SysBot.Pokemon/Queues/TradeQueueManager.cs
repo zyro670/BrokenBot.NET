@@ -35,7 +35,6 @@ namespace SysBot.Pokemon
             PokeRoutineType.Dump => Dump,
             PokeRoutineType.FixOT => FixOT,
             PokeRoutineType.TradeCord => TradeCord,
-            PokeRoutineType.Giveaway => Giveaway,
             _ => Trade,
         };
 
@@ -135,8 +134,6 @@ namespace SysBot.Pokemon
 			if (TryDequeueInternal(PokeRoutineType.FixOT, out detail, out priority))
                 return true;
             if (TryDequeueInternal(PokeRoutineType.TradeCord, out detail, out priority))
-                return true;
-            if (TryDequeueInternal(PokeRoutineType.Giveaway, out detail, out priority))
                 return true;
             return false;
         }

@@ -3,11 +3,11 @@ using PKHeX.Core;
 
 namespace SysBot.Pokemon
 {
-    class EncounterCount
+    public class BallPouchUtil
     {
         private int Master, Poke, Beast, Dive, Dream, Dusk, Fast, Friend, Great, Heal, Heavy, Level, Love, Lure, Luxury, Moon, Nest, Net, Premier, Quick, Repeat, Timer, Ultra, Sport, Safari;
 
-        private static readonly ushort[] Pouch_Ball_SWSH =
+        private readonly ushort[] Pouch_Ball_SWSH =
         {
             001, 002, 003, 004, 005, 006, 007, 008, 009, 010, 011, 012, 013, 014, 015, 016,
             492, 493, 494, 495, 496, 497, 498, 499, 500,
@@ -15,22 +15,22 @@ namespace SysBot.Pokemon
             851,
         };
 
-        private static InventoryPouch8 GetBallPouch(byte[] ballBlock)
+        private InventoryPouch8 GetBallPouch(byte[] ballBlock)
         {
             var pouch = new InventoryPouch8(InventoryType.Balls, Pouch_Ball_SWSH, 999, 0, 28);
             pouch.GetPouch(ballBlock);
             return pouch;
         }
 
-        public static EncounterCount GetBallCounts(byte[] ballBlock)
+        public BallPouchUtil GetBallCounts(byte[] ballBlock)
         {
             var pouch = GetBallPouch(ballBlock);
             return ReadCounts(pouch);
         }
 
-        private static EncounterCount ReadCounts(InventoryPouch pouch)
+        private BallPouchUtil ReadCounts(InventoryPouch pouch)
         {
-            var counts = new EncounterCount();
+            var counts = new BallPouchUtil();
             foreach (var ball in pouch.Items)
                 counts.SetCount(ball.Index, ball.Count);
             return counts;
@@ -101,6 +101,6 @@ namespace SysBot.Pokemon
             };
         }
 
-        public static int BallIndex(int ball) => Pouch_Ball_SWSH[ball == 25 || ball == 26 ? ball : ball - 1];
+        public int BallIndex(int ball) => Pouch_Ball_SWSH[ball == 25 || ball == 26 ? ball : ball - 1];
     }
 }

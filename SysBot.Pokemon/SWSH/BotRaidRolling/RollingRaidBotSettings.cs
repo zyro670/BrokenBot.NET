@@ -6,12 +6,48 @@ using SysBot.Base;
 
 namespace SysBot.Pokemon
 {
-    public class RaidSettings : IBotStateSettings, ICountSettings
+    public class RollingRaidSettings : IBotStateSettings, ICountSettings
     {
         private const string Hosting = nameof(Hosting);
         private const string Counts = nameof(Counts);
         private const string FeatureToggle = nameof(FeatureToggle);
-        public override string ToString() => "Raid Bot Settings";
+        public override string ToString() => "Rolling Raid Bot Settings";
+
+        [Category(Hosting), Description("Den ID (1 - 100 if Vanilla, 1 - 90 if IoA, 1 - 86 if CT).")]
+        public uint DenID { get; set; } = 1;
+
+        [Category(Hosting), Description("Select Den Type.")]
+        public DenType DenType { get; set; } = DenType.Vanilla;
+
+        [Category(Hosting), Description("Specify Pokémon species to stop rolling on and to soft-lock host via airplane mode.")]
+        public Species SoftLockSpecies { get; set; } = Species.None;
+
+        [Category(Hosting), Description("Will hard-lock on specified species. This will save your game.")]
+        public Species HardLockSpecies { get; set; } = Species.None;
+
+        [Category(FeatureToggle), Description("If SoftLockSpecies or HardLockSpecies is enabled, specify whether to lock on a Gmax version of that species.")]
+        public bool GmaxLock { get; set; } = false;
+
+        [Category(FeatureToggle), Description("If SoftLockSpecies or HardLockSpecies is enabled, enter a valid form to lock on for those species (or blank if doesn't matter).")]
+        public string FormLock { get; set; } = string.Empty;
+
+        [Category(FeatureToggle), Description("Enter the guaranteed flawless IV count to fine-tune what you want to lock on. \"-1\" means anything is fine.")]
+        public int GuaranteedIVLock { get; set; } = -1;
+
+        [Category(FeatureToggle), Description("If using USB-Botbase, quit out the raid by toggling airplane mode.")]
+        public bool AirplaneQuitout { get; set; } = false;
+
+        [Category(Hosting), Description("Days to skip before hosting. Default is 3.")]
+        public int DaysToRoll { get; set; } = 3;
+
+        [Category(Hosting), Description("Additional delay between rolls in milliseconds. Base delay is 500 ms.")]
+        public int DateAdvanceDelay { get; set; } = 500;
+
+        [Category(Hosting), Description("If enabled, it will check if your den unexpectedly has watts appear. If watts appear, it will attempt to fix it.")]
+        public bool RolloverPrevention { get; set; } = false;
+
+        [Category(Hosting), Description("If enabled, it will re-host a rolled lobby if no one readies up in time instead of restarting the game to save time.")]
+        public bool RehostEmptyLobby { get; set; } = false;
 
         [Category(Hosting), Description("Minimum amount of seconds to wait before starting a raid. Ranges from 0 to 180 seconds.")]
         public int MinTimeToWait { get; set; } = 90;
@@ -27,6 +63,9 @@ namespace SysBot.Pokemon
 
         [Category(FeatureToggle), Description("Echoes each party member as they lock into a Pokémon.")]
         public bool EchoPartyReady { get; set; } = false;
+
+        [Category(FeatureToggle), Description("If enabled, it will yell at players for taking too long to ready up, among other things.")]
+        public bool RaidSasser { get; set; } = false;
 
         [Category(FeatureToggle), Description("Allows the bot to echo your Friend Code if set.")]
         public string FriendCode { get; set; } = string.Empty;
@@ -57,6 +96,12 @@ namespace SysBot.Pokemon
 
         [Category(FeatureToggle), Description("When enabled, the screen will be turned off during normal bot loop operation to save power.")]
         public bool ScreenOff { get; set; } = false;
+
+        [Category(FeatureToggle), Description("When set, the bot will create a text file with current Raid Code for OBS.")]
+        public bool RaidLog { get; set; } = false;
+
+        [Category(Hosting), Description("Enter Discord channel ID(s) to post raid embeds to. Feature has to be initialized via \"$raidEmbed\" after every client restart.")]
+        public string RollingRaidEmbedChannels { get; set; } = string.Empty;
 
         /// <summary>
         /// Gets a random trade code based on the range settings.

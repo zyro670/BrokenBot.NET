@@ -6,10 +6,11 @@ using System.Linq;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using PKHeX.Core;
 
 namespace SysBot.Pokemon.Discord
 {
-    public class ExtraCommandUtil
+    public class ExtraCommandUtil<T> where T : PKM, new()
     {
         private static readonly Dictionary<ulong, ReactMessageContents> ReactMessageDict = new();
         private static bool DictWipeRunning = false;
@@ -26,7 +27,7 @@ namespace SysBot.Pokemon.Discord
         {
             List<string> pageContent = ListUtilPrep(entry);
             bool canReact = ctx.Guild.CurrentUser.GetPermissions(ctx.Channel as IGuildChannel).AddReactions;
-            var embed = new EmbedBuilder { Color = Color.DarkBlue }.AddField(x =>
+            var embed = new EmbedBuilder { Color = GetBorderColor(false) }.AddField(x =>
             {
                 x.Name = nameMsg;
                 x.Value = pageContent[0];
@@ -55,9 +56,9 @@ namespace SysBot.Pokemon.Discord
                 else ReactMessageDict.Add(ctx.User.Id, new() { Embed = embed, Pages = pageContent, MessageID = msg.Id, EntryTime = DateTime.Now });
 
                 IEmote[] reactions = { new Emoji("⬅️"), new Emoji("➡️"), new Emoji("⬆️"), new Emoji("⬇️") };
-                _ = Task.Run(() => msg.AddReactionsAsync(reactions).ConfigureAwait(false));
+                _ = Task.Run(async () => await msg.AddReactionsAsync(reactions).ConfigureAwait(false));
                 if (!DictWipeRunning)
-                    _ = Task.Run(() => DictWipeMonitor().ConfigureAwait(false));
+                    _ = Task.Run(async () => await DictWipeMonitor().ConfigureAwait(false));
             }
         }
 
@@ -79,23 +80,19 @@ namespace SysBot.Pokemon.Discord
 
         public static async Task TCUserBanned(SocketUser user, SocketGuild guild)
         {
-            if (!TradeCordHelper.TCInitialized)
+            if (!TradeCordHelper<T>.TCInitialized)
                 return;
 
-            var instance = SysCordInstance.Self.Hub.Config;
-            var helper = new TradeCordHelper(instance.TradeCord);
-            var ctx = new TradeCordHelper.TC_CommandContext() { Context = TCCommandContext.DeleteUser, ID = user.Id, Username = user.Username };
+            var instance = SysCord<T>.Runner.Hub.Config;
+            var helper = new TradeCordHelper<T>(instance.TradeCord);
+            var ctx = new TradeCordHelper<T>.TC_CommandContext() { Context = TCCommandContext.DeleteUser, ID = user.Id, Username = user.Username };
             var result = helper.ProcessTradeCord(ctx, new string[] { user.Id.ToString() });
             if (result.Success)
             {
-                var channels = instance.Discord.EchoChannels.Replace(" ", "").Split(',');
-                for (int i = 0; i < channels.Length; i++)
+                var channels = instance.Discord.EchoChannels.List;
+                for (int i = 0; i < channels.Count; i++)
                 {
-                    bool valid = ulong.TryParse(channels[i], out ulong id);
-                    if (!valid)
-                        continue;
-
-                    ISocketMessageChannel channel = (ISocketMessageChannel)guild.Channels.FirstOrDefault(x => x.Id == id);
+                    ISocketMessageChannel channel = (ISocketMessageChannel)guild.Channels.FirstOrDefault(x => x.Id == channels[i].ID);
                     if (channel == default)
                         continue;
 
@@ -107,7 +104,8 @@ namespace SysBot.Pokemon.Discord
 
         public static async Task HandleReactionAsync(Cacheable<IUserMessage, ulong> cachedMsg, ISocketMessageChannel _, SocketReaction reaction)
         {
-            if (!TradeCordHelper.TCInitialized || !reaction.User.IsSpecified)
+            bool hasEmbed = cachedMsg.HasValue && cachedMsg.Value.Embeds.Count > 0;
+            if (!hasEmbed || !reaction.User.IsSpecified || (!TradeCordHelper<T>.TCInitialized && !cachedMsg.Value.Embeds.First().Fields[0].Name.Contains("Giveaway Pool")))
                 return;
 
             var user = reaction.User.Value;
@@ -136,6 +134,9 @@ namespace SysBot.Pokemon.Discord
                 return;
 
             int page = contents.Pages.IndexOf((string)contents.Embed.Fields[0].Value);
+            if (page == -1)
+                return;
+
             if (reaction.Emote.Name == reactions[0].Name || reaction.Emote.Name == reactions[1].Name)
             {
                 if (reaction.Emote.Name == reactions[0].Name)
@@ -153,7 +154,7 @@ namespace SysBot.Pokemon.Discord
 
                 contents.Embed.Fields[0].Value = contents.Pages[page];
                 contents.Embed.Footer.Text = $"Page {page + 1} of {contents.Pages.Count}";
-                await msg.RemoveReactionAsync(reactions[reaction.Emote.Name == reactions[0].Name ? 0 : 1], user);
+                await msg.RemoveReactionAsync(reactions[reaction.Emote.Name == reactions[0].Name ? 0 : 1], user).ConfigureAwait(false);
                 await msg.ModifyAsync(msg => msg.Embed = contents.Embed.Build()).ConfigureAwait(false);
             }
             else if (reaction.Emote.Name == reactions[2].Name || reaction.Emote.Name == reactions[3].Name)
@@ -169,7 +170,7 @@ namespace SysBot.Pokemon.Discord
                 contents.Pages = ListUtilPrep(tempEntry);
                 contents.Embed.Fields[0].Value = contents.Pages[page];
                 contents.Embed.Footer.Text = $"Page {page + 1} of {contents.Pages.Count}";
-                await msg.RemoveReactionAsync(reactions[reaction.Emote.Name == reactions[2].Name ? 2 : 3], user);
+                await msg.RemoveReactionAsync(reactions[reaction.Emote.Name == reactions[2].Name ? 2 : 3], user).ConfigureAwait(false);
                 await msg.ModifyAsync(msg => msg.Embed = contents.Embed.Build()).ConfigureAwait(false);
             }
         }
@@ -201,7 +202,6 @@ namespace SysBot.Pokemon.Discord
                 }
             }
             await msg.AddReactionAsync(new Emoji("❌")).ConfigureAwait(false);
-            TradeCordHelperUtil.MuteList.Add(ctx.User.Id);
             return true;
         }
 
@@ -246,7 +246,7 @@ namespace SysBot.Pokemon.Discord
         public async Task EmbedUtil(SocketCommandContext ctx, string name, string value, EmbedBuilder? embed = null)
         {
             if (embed == null)
-                embed = new EmbedBuilder { Color = Color.DarkBlue };
+                embed = new EmbedBuilder { Color = GetBorderColor(false) };
 
             var splitName = name.Split(new string[] { "&^&" }, StringSplitOptions.None);
             var splitValue = value.Split(new string[] { "&^&" }, StringSplitOptions.None);
@@ -265,8 +265,8 @@ namespace SysBot.Pokemon.Discord
         private static List<string> SpliceAtWord(string entry, int start, int length)
         {
             int counter = 0;
-            var temp = entry.Contains(",") ? entry.Split(',').Skip(start) : entry.Contains("|") ? entry.Split('|').Skip(start) : entry.Split('\n').Skip(start);
             List<string> list = new();
+            var temp = entry.Contains(",") ? entry.Split(',').Skip(start) : entry.Contains("|") ? entry.Split('|').Skip(start) : entry.Split('\n').Skip(start);
 
             if (entry.Length < length)
             {
@@ -286,24 +286,36 @@ namespace SysBot.Pokemon.Discord
 
         private static List<string> ListUtilPrep(string entry)
         {
-            var index = 0;
             List<string> pageContent = new();
-            var emptyList = "No results found.";
-            var round = Math.Round((decimal)entry.Length / 1024, MidpointRounding.AwayFromZero);
             if (entry.Length > 1024)
             {
-                for (int i = 0; i <= round; i++)
+                var index = 0;
+                while (true)
                 {
                     var splice = SpliceAtWord(entry, index, 1024);
-                    index += splice.Count;
                     if (splice.Count == 0)
                         break;
 
+                    index += splice.Count;
                     pageContent.Add(string.Join(entry.Contains(",") ? ", " : entry.Contains("|") ? " | " : "\n", splice));
                 }
             }
-            else pageContent.Add(entry == "" ? emptyList : entry);
+            else pageContent.Add(entry == "" ? "No results found." : entry);
             return pageContent;
+        }
+
+        public Color GetBorderColor(bool gift, PKM? pkm = null)
+        {
+            bool swsh = typeof(T) == typeof(PK8);
+            if (pkm is null && swsh)
+                return gift ? Color.Purple : Color.Blue;
+            else if (pkm is null && !swsh)
+                return gift ? Color.DarkPurple : Color.DarkBlue;
+            else if (pkm is not null && swsh)
+                return (pkm.IsShiny && pkm.FatefulEncounter) || pkm.ShinyXor == 0 ? Color.Gold : pkm.IsShiny ? Color.LightOrange : Color.Teal;
+            else if (pkm is not null && !swsh)
+                return (pkm.IsShiny && pkm.FatefulEncounter) || pkm.ShinyXor == 0 ? Color.Gold : pkm.IsShiny ? Color.DarkOrange : Color.DarkTeal;
+            throw new NotImplementedException();
         }
     }
 }

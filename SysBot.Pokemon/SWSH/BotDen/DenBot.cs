@@ -7,133 +7,100 @@ using System.Threading.Tasks;
 
 namespace SysBot.Pokemon
 {
-    public class DenBot : PokeRoutineExecutor
+    public sealed class DenBot : EncounterBot
     {
-        private readonly PokeTradeHub<PK8> Hub;
         private readonly DenSettings Settings;
-        private readonly RaidBot Raid;
         private DenUtil.RaidData RaidInfo = new();
         private ulong InitialSeed;
         private ulong DestinationSeed;
-        private bool Stop;
 
-        public DenBot(PokeBotState cfg, PokeTradeHub<PK8> hub, RaidBot raid) : base(cfg)
+        public DenBot(PokeBotState cfg, PokeTradeHub<PK8> hub) : base(cfg, hub)
         {
-            Hub = hub;
             Settings = hub.Config.Den;
-            Raid = raid;
         }
 
-        public override async Task MainLoop(CancellationToken token)
+        protected override async Task EncounterLoop(SAV8SWSH sav, CancellationToken token)
         {
-            Log("Identifying trainer data of the host console.");
-            RaidInfo.TrainerInfo = await IdentifyTrainer(token).ConfigureAwait(false);
+            RaidInfo.TrainerInfo = sav;
+            if (Settings.Star < 0 || Settings.Star > 4)
+            {
+                Log("Please enter a valid star count.");
+                return;
+            }
+            else if (Settings.Randroll < 1 || Settings.Randroll > 100)
+            {
+                Log("Please enter a valid randroll");
+                return;
+            }
+            else if (Settings.SkipCount < 0)
+            {
+                Log("Please enter a valid skip count.");
+                return;
+            }
+
+            RaidInfo.Settings = Settings;
+            var denBytes = await DenData(RaidInfo.Settings.DenID, RaidInfo.Settings.DenType, token).ConfigureAwait(false);
+            RaidInfo.DenID = DenUtil.GetDenID(RaidInfo.Settings.DenID, RaidInfo.Settings.DenType);
+
+            var eventOfs = DenUtil.GetEventDenOffset((int)Hub.Config.ConsoleLanguage, RaidInfo.Settings.DenID, RaidInfo.Settings.DenType, out _);
+            var eventDenBytes = RaidInfo.Settings.DenBeamType == BeamType.Event ? await Connection.ReadBytesAsync(eventOfs, 0x23D4, token).ConfigureAwait(false) : new byte[] { };
+            RaidInfo = DenUtil.GetRaid(RaidInfo, denBytes, eventDenBytes);
 
             while (!token.IsCancellationRequested)
             {
-                Config.IterateNextRoutine();
-                var task = Config.CurrentRoutineType switch
+                if (Settings.DenMode == DenMode.Skip)
                 {
-                    PokeRoutineType.DenBot => DoDenBot(token),
-                    _ => Raid.RunAsync(token),
-                };
-                await task.ConfigureAwait(false);
+                    var skips = Settings.SkipCount;
+                    InitialSeed = RaidInfo.Den.Seed;
+                    DestinationSeed = DenUtil.GetTargetSeed(RaidInfo.Den.Seed, skips);
+                    Log($"\nInitial seed: {InitialSeed:X16}.\nDestination seed: {DestinationSeed:X16}.");
+                    await PerformDaySkip(skips, token).ConfigureAwait(false);
+                    if (!await SkipCorrection(skips, token).ConfigureAwait(false))
+                        return;
 
-                if (!Settings.HostAfterSkip || Stop)
+                    EchoUtil.Echo($"{Hub.Config.StopConditions.MatchFoundEchoMention}Skipping complete, stopping the bot.\n");
                     return;
-            }
-        }
-
-        private async Task DoDenBot(CancellationToken token)
-        {
-            async Task<bool> DenFunc(CancellationToken token)
-            {
-                if (Settings.Star < 0 || Settings.Star > 4)
-                {
-                    Log("Please enter a valid star count.");
-                    return false;
                 }
-                else if (Settings.Randroll < 1 || Settings.Randroll > 100)
+                else if (Settings.DenMode == DenMode.SeedSearch)
                 {
-                    Log("Please enter a valid randroll");
-                    return false;
+                    PerformSeedSearch(token);
+                    if (token.IsCancellationRequested)
+                        return;
+
+                    EchoUtil.Echo($"{Hub.Config.StopConditions.MatchFoundEchoMention}Seed search complete, stopping the bot.\n");
+                    return;
                 }
-                else if (Settings.SkipCount < 0)
+                else
                 {
-                    Log("Please enter a valid skip count.");
-                    return false;
-                }
+                    var seedstr = Settings.SeedToInject.StartsWith("0x") ? Settings.SeedToInject[2..] : Settings.SeedToInject;
+                    Log("Attempting to inject the seed...");
+                    denBytes[0x10] = (byte)Settings.Star;
+                    denBytes[0x11] = (byte)Settings.Randroll;
 
-                RaidInfo.Settings = Settings;
-                var denData = await DenData(RaidInfo.Settings.DenID, RaidInfo.Settings.DenType, token).ConfigureAwait(false);
-                RaidInfo.DenID = DenUtil.GetDenID(RaidInfo.Settings.DenID, RaidInfo.Settings.DenType);
-
-                var eventOfs = DenUtil.GetEventDenOffset((int)Hub.Config.ConsoleLanguage, RaidInfo.Settings.DenID, RaidInfo.Settings.DenType, out _);
-                var eventData = RaidInfo.Settings.DenBeamType == BeamType.Event ? await Connection.ReadBytesAsync(eventOfs, 0x23D4, token).ConfigureAwait(false) : new byte[] { };
-
-                RaidInfo = DenUtil.GetRaid(RaidInfo, denData, eventData);
-                Log("Starting main DenBot loop.");
-
-                while (!token.IsCancellationRequested && Config.NextRoutineType == PokeRoutineType.DenBot)
-                {
-                    Config.IterateNextRoutine();
-                    if (Settings.DenMode == DenMode.Skip)
-                    {
-                        var skips = Settings.SkipCount;
-                        InitialSeed = RaidInfo.Den.Seed;
-                        DestinationSeed = DenUtil.GetTargetSeed(RaidInfo.Den.Seed, skips);
-                        Log($"\nInitial seed: {InitialSeed:X16}.\nDestination seed: {DestinationSeed:X16}.");
-                        await PerformDaySkip(skips, token).ConfigureAwait(false);
-                        if (!await SkipCorrection(skips, token).ConfigureAwait(false))
-                            return false;
-
-                        EchoUtil.Echo($"{(!Hub.Config.StopConditions.PingOnMatch.Equals(string.Empty) ? $"<@{Hub.Config.StopConditions.PingOnMatch}> " : "")}Skipping complete\n");
-                    }
-                    else if (Settings.DenMode == DenMode.SeedSearch)
-                    {
-                        PerformSeedSearch();
-                        EchoUtil.Echo($"{(!Hub.Config.StopConditions.PingOnMatch.Equals(string.Empty) ? $"<@{Hub.Config.StopConditions.PingOnMatch}> " : "")}Seed search complete, stopping the bot.\n");
-                    }
+                    if (ulong.TryParse(seedstr, NumberStyles.HexNumber, CultureInfo.CurrentCulture, out ulong seedH))
+                        BitConverter.GetBytes(seedH).CopyTo(denBytes, 0x8);
                     else
                     {
-                        var seedstr = Settings.SeedToInject.StartsWith("0x") ? Settings.SeedToInject[2..] : Settings.SeedToInject;
-                        Log("Attempting to inject the seed...");
-                        denData[0x10] = (byte)Settings.Star;
-                        denData[0x11] = (byte)Settings.Randroll;
-
-                        if (ulong.TryParse(seedstr, NumberStyles.HexNumber, CultureInfo.CurrentCulture, out ulong seedH))
-                            BitConverter.GetBytes(seedH).CopyTo(denData, 0x8);
-                        else
-                        {
-                            Log("Please enter a seed in hex format.");
-                            return false;
-                        }
-
-                        denData[0x12] = RaidInfo.Den.IsEvent ? (byte)BeamType.CommonWish : (byte)Settings.DenBeamType;
-                        denData[0x13] = (byte)(RaidInfo.Den.IsEvent ? 3 : 1);
-                        await Connection.WriteBytesAsync(denData, DenUtil.GetDenOffset(RaidInfo.Settings.DenID, RaidInfo.Settings.DenType, out _), token).ConfigureAwait(false);
-                        Log("\nSeed injected.");
+                        Log("Please enter a seed in hex format.");
+                        return;
                     }
 
-                    if (Settings.HostAfterSkip && Settings.DenMode != DenMode.SeedSearch)
-                    {
-                        Config.Initialize(PokeRoutineType.RaidBot);
-                        await SaveGame(Hub.Config, token).ConfigureAwait(false);
-                        Log("\nInitializing RaidBot...");
-                    }
-                    else return false;
+                    denBytes[0x12] = RaidInfo.Den.IsEvent ? (byte)BeamType.CommonWish : (byte)Settings.DenBeamType;
+                    denBytes[0x13] = (byte)(RaidInfo.Den.IsEvent ? 3 : 1);
+                    await Connection.WriteBytesAsync(denBytes, DenUtil.GetDenOffset(RaidInfo.Settings.DenID, RaidInfo.Settings.DenType, out _), token).ConfigureAwait(false);
+                    Log("Seed injected, stopping the bot.");
+                    return;
                 }
-                return true;
             }
-
-            if (!await DenFunc(token).ConfigureAwait(false))
-                Stop = true;
         }
 
-        private Tuple<ulong, ulong> PerformSeedSearch()
+        private Tuple<ulong, ulong> PerformSeedSearch(CancellationToken token)
         {
             Log("Searching for a matching seed... Search may take a while.");
-            SeedSearchUtil.SpecificSeedSearch(RaidInfo, out long frames, out ulong seed, out ulong threeDay, out string ivSpread);
+            SeedSearchUtil.SpecificSeedSearch(RaidInfo, out long frames, out ulong seed, out ulong threeDay, out string ivSpread, token);
+            if (token.IsCancellationRequested)
+                return new Tuple<ulong, ulong> (seed, threeDay);
+
             if (ivSpread == string.Empty)
             {
                 Log($"No results found within the specified search range.");
@@ -142,7 +109,7 @@ namespace SysBot.Pokemon
 
             var species = RaidInfo.Den.IsEvent ? RaidInfo.RaidDistributionEncounter.Species : RaidInfo.RaidEncounter.Species;
             var specName = SpeciesName.GetSpeciesNameGeneration((int)species, 2, 8);
-            var form = TradeCordHelperUtil.FormOutput((int)(RaidInfo.Den.IsEvent ? RaidInfo.RaidDistributionEncounter.Species : RaidInfo.RaidEncounter.Species), (int)(RaidInfo.Den.IsEvent ? RaidInfo.RaidDistributionEncounter.AltForm : RaidInfo.RaidEncounter.AltForm), out _);
+            var form = TradeExtensions<PK8>.FormOutput((int)(RaidInfo.Den.IsEvent ? RaidInfo.RaidDistributionEncounter.Species : RaidInfo.RaidEncounter.Species), (int)(RaidInfo.Den.IsEvent ? RaidInfo.RaidDistributionEncounter.AltForm : RaidInfo.RaidEncounter.AltForm), out _);
             var results = $"\n\nDesired species: {(uint)RaidInfo.Den.Stars + 1}★ - {specName}{form}\n" +
                           $"\n{ivSpread}\n" +
                           $"\nStarting seed: {RaidInfo.Den.Seed:X16}\n" +
@@ -163,7 +130,7 @@ namespace SysBot.Pokemon
             EchoUtil.Echo($"Beginning to skip {(skips > 1 ? $"{skips} frames" : "1 frame")}. Skipping should take around {(timeRemaining.Days == 0 ? "" : timeRemaining.Days + "d:")}{(timeRemaining.Hours == 0 ? "" : timeRemaining.Hours + "h:")}{(timeRemaining.Minutes == 0 ? "" : timeRemaining.Minutes + "m:")}{(timeRemaining.Seconds < 1 ? "1s" : timeRemaining.Seconds + "s")}.");
 
             int remaining = await SkipCheck(skips, 0, token).ConfigureAwait(false);
-            while (remaining != 0)
+            while (remaining != 0 && !token.IsCancellationRequested)
             {
                 if (remaining == firstQuarterLog | remaining == halfLog | remaining == lastQuarterLog)
                 {
@@ -177,6 +144,9 @@ namespace SysBot.Pokemon
                 if (remaining == lastQuarterLog || remaining + 3 == skips)
                     remaining = await SkipCheck(skips, remaining, token).ConfigureAwait(false);
             }
+
+            if (token.IsCancellationRequested)
+                return;
 
             if (Settings.TimeReset == TimeReset.Reset)
                 await ResetTime(token).ConfigureAwait(false);
@@ -199,13 +169,15 @@ namespace SysBot.Pokemon
                 return false;
             }
 
-            while (currentSeed != DestinationSeed)
+            while (currentSeed != DestinationSeed && !token.IsCancellationRequested)
             {
                 skips = DenUtil.GetSkipsToTargetSeed(currentSeed, DestinationSeed, skips);
                 if (skips > 0)
                 {
                     Log($"Fell short by {skips} skips! Resuming skipping until destination seed is reached.");
                     await PerformDaySkip(skips, token).ConfigureAwait(false);
+                    if (token.IsCancellationRequested)
+                        return false;
                     currentSeed = new RaidSpawnDetail(await DenData(RaidInfo.Settings.DenID, RaidInfo.Settings.DenType, token).ConfigureAwait(false), 0).Seed;
                 }
                 else if (skips < 0)

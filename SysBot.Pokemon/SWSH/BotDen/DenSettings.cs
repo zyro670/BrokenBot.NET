@@ -32,7 +32,7 @@ namespace SysBot.Pokemon
         public DenFiltersCategory DenFilters { get; set; } = new();
 
         [Category(DenSkip), Description("If enabled, seed result output will display 1-3* Pokémon instead of 3-5* Pokémon.")]
-        public bool BabyDen { get; set; } = false;
+        public DisplayMode ResultDisplay { get; set; } = DisplayMode.Everything;
 
         [Category(DenSkip), Description("Range to search for the desired frame.")]
         public long SearchRange { get; set; } = 100000;
@@ -42,9 +42,6 @@ namespace SysBot.Pokemon
 
         [Category(DenSkip), Description("Additional delay between skips in milliseconds. Base delay is 360 ms.")]
         public int SkipDelay { get; set; } = 0;
-
-        [Category(DenSkip), Description("Host after skipping?")]
-        public bool HostAfterSkip { get; set; } = false;
 
         [Category(DenSkip), Description("Seed to inject. Please disclose seed-injected raids.")]
         public string SeedToInject { get; set; } = string.Empty;
