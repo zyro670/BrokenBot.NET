@@ -81,7 +81,7 @@ namespace SysBot.Pokemon.Discord
             }
 
             var ctx = new TradeCordHelper<T>.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.EventVote };
-            var result = Helper.ProcessTradeCord(ctx, new string[] { });
+            var result = await Helper.ProcessTradeCord(ctx, new string[] { }).ConfigureAwait(false);
 
             var t = Task.Run(async () => await Util.EventVoteCalc(Context, events).ConfigureAwait(false));
             var index = t.Result;
@@ -161,7 +161,7 @@ namespace SysBot.Pokemon.Discord
 
             TradeCordCooldown(id);
             var ctx = new TradeCordHelper<T>.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.Catch };
-            var result = Helper.ProcessTradeCord(ctx, new string[] { });
+            var result = await Helper.ProcessTradeCord(ctx, new string[] { }).ConfigureAwait(false);
 
             if (!result.Success)
             {
@@ -277,7 +277,7 @@ namespace SysBot.Pokemon.Discord
             }
 
             var ctx = new TradeCordHelper<T>.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.Trade };
-            var result = Helper.ProcessTradeCord(ctx, new string[] { id });
+            var result = await Helper.ProcessTradeCord(ctx, new string[] { id }).ConfigureAwait(false);
             if (!result.Success)
             {
                 await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
@@ -310,7 +310,7 @@ namespace SysBot.Pokemon.Discord
             }
 
             var ctx = new TradeCordHelper<T>.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.List };
-            var result = Helper.ProcessTradeCord(ctx, new string[] { content });
+            var result = await Helper.ProcessTradeCord(ctx, new string[] { content }).ConfigureAwait(false);
             if (!result.Success)
             {
                 await Util.EmbedUtil(Context, result.EmbedName, result.Message).ConfigureAwait(false);
@@ -333,7 +333,7 @@ namespace SysBot.Pokemon.Discord
             }
 
             var ctx = new TradeCordHelper<T>.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.Info };
-            var result = Helper.ProcessTradeCord(ctx, new string[] { id });
+            var result = await Helper.ProcessTradeCord(ctx, new string[] { id }).ConfigureAwait(false);
             if (!result.Success)
             {
                 await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
@@ -364,7 +364,7 @@ namespace SysBot.Pokemon.Discord
             }
 
             var ctx = new TradeCordHelper<T>.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.MassRelease };
-            var result = Helper.ProcessTradeCord(ctx, new string[] { species });
+            var result = await Helper.ProcessTradeCord(ctx, new string[] { species }).ConfigureAwait(false);
             await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
         }
 
@@ -382,7 +382,7 @@ namespace SysBot.Pokemon.Discord
             }
 
             var ctx = new TradeCordHelper<T>.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.Release };
-            var result = Helper.ProcessTradeCord(ctx, new string[] { id });
+            var result = await Helper.ProcessTradeCord(ctx, new string[] { id }).ConfigureAwait(false);
             await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
         }
 
@@ -400,7 +400,7 @@ namespace SysBot.Pokemon.Discord
             }
 
             var ctx = new TradeCordHelper<T>.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.DaycareInfo };
-            var result = Helper.ProcessTradeCord(ctx, new string[] { });
+            var result = await Helper.ProcessTradeCord(ctx, new string[] { }).ConfigureAwait(false);
             await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
         }
 
@@ -418,7 +418,7 @@ namespace SysBot.Pokemon.Discord
             }
 
             var ctx = new TradeCordHelper<T>.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.Daycare };
-            var result = Helper.ProcessTradeCord(ctx, new string[] { action, id });
+            var result = await Helper.ProcessTradeCord(ctx, new string[] { action, id }).ConfigureAwait(false);
             if (!result.Success)
             {
                 await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
@@ -463,7 +463,7 @@ namespace SysBot.Pokemon.Discord
             var mentionID = Context.Message.MentionedUsers.First().Id;
             var mentionName = Context.Message.MentionedUsers.First().Username;
             var ctx = new TradeCordHelper<T>.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, GifteeName = mentionName, GifteeID = mentionID, Context = TCCommandContext.Gift };
-            var result = Helper.ProcessTradeCord(ctx, new string[] { id });
+            var result = await Helper.ProcessTradeCord(ctx, new string[] { id }).ConfigureAwait(false);
             await Util.EmbedUtil(Context, name, result.Message, embed).ConfigureAwait(false);
         }
 
@@ -512,7 +512,7 @@ namespace SysBot.Pokemon.Discord
             var lang = $"{(LanguageID)pkm.Language}";
 
             var ctx = new TradeCordHelper<T>.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.TrainerInfoSet };
-            var result = Helper.ProcessTradeCord(ctx, new string[] { ot, gender, tid, sid, lang });
+            var result = await Helper.ProcessTradeCord(ctx, new string[] { ot, gender, tid, sid, lang }).ConfigureAwait(false);
             await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
         }
 
@@ -530,7 +530,7 @@ namespace SysBot.Pokemon.Discord
             }
 
             var ctx = new TradeCordHelper<T>.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.TrainerInfo };
-            var result = Helper.ProcessTradeCord(ctx, new string[] { });
+            var result = await Helper.ProcessTradeCord(ctx, new string[] { }).ConfigureAwait(false);
             await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
         }
 
@@ -548,7 +548,7 @@ namespace SysBot.Pokemon.Discord
             }
 
             var ctx = new TradeCordHelper<T>.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.FavoritesInfo };
-            var result = Helper.ProcessTradeCord(ctx, new string[] { });
+            var result = await Helper.ProcessTradeCord(ctx, new string[] { }).ConfigureAwait(false);
             if (!result.Success)
             {
                 await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
@@ -571,7 +571,7 @@ namespace SysBot.Pokemon.Discord
             }
 
             var ctx = new TradeCordHelper<T>.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.Favorites };
-            var result = Helper.ProcessTradeCord(ctx, new string[] { id });
+            var result = await Helper.ProcessTradeCord(ctx, new string[] { id }).ConfigureAwait(false);
             if (!result.Success)
             {
                 await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
@@ -603,7 +603,7 @@ namespace SysBot.Pokemon.Discord
             }
 
             var ctx = new TradeCordHelper<T>.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.Dex };
-            var result = Helper.ProcessTradeCord(ctx, new string[] { input });
+            var result = await Helper.ProcessTradeCord(ctx, new string[] { input }).ConfigureAwait(false);
             if (result.User.Dex.DexCompletionCount >= 1)
                 embed.WithFooter(new EmbedFooterBuilder { Text = $"You have {result.User.Dex.DexCompletionCount} unused {(result.User.Dex.DexCompletionCount == 1 ? "perk" : "perks")}!\nType \"{Hub.Config.Discord.CommandPrefix}perks\" to view available perk names!" });
 
@@ -632,7 +632,7 @@ namespace SysBot.Pokemon.Discord
             }
 
             var ctx = new TradeCordHelper<T>.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.Perks };
-            var result = Helper.ProcessTradeCord(ctx, new string[] { input });
+            var result = await Helper.ProcessTradeCord(ctx, new string[] { input }).ConfigureAwait(false);
             if (result.Success && result.User.Dex.DexCompletionCount >= 1)
                 embed.WithFooter(new EmbedFooterBuilder { Text = $"You have {result.User.Dex.DexCompletionCount} unused {(result.User.Dex.DexCompletionCount == 1 ? "perk" : "perks")}!" });
 
@@ -653,7 +653,7 @@ namespace SysBot.Pokemon.Discord
             }
 
             var ctx = new TradeCordHelper<T>.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.Boost };
-            var result = Helper.ProcessTradeCord(ctx, new string[] { input });
+            var result = await Helper.ProcessTradeCord(ctx, new string[] { input }).ConfigureAwait(false);
             await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
         }
 
@@ -672,7 +672,7 @@ namespace SysBot.Pokemon.Discord
             }
 
             var ctx = new TradeCordHelper<T>.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.Buddy };
-            var result = Helper.ProcessTradeCord(ctx, new string[] { input });
+            var result = await Helper.ProcessTradeCord(ctx, new string[] { input }).ConfigureAwait(false);
             if (!result.Success)
             {
                 await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
@@ -752,7 +752,7 @@ namespace SysBot.Pokemon.Discord
             }
 
             var ctx = new TradeCordHelper<T>.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.Nickname };
-            var result = Helper.ProcessTradeCord(ctx, new string[] { input });
+            var result = await Helper.ProcessTradeCord(ctx, new string[] { input }).ConfigureAwait(false);
             await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
         }
 
@@ -771,7 +771,7 @@ namespace SysBot.Pokemon.Discord
 
             input = input.Replace(" ", "").ToLower();
             var ctx = new TradeCordHelper<T>.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.Evolution };
-            var result = Helper.ProcessTradeCord(ctx, new string[] { input });
+            var result = await Helper.ProcessTradeCord(ctx, new string[] { input }).ConfigureAwait(false);
             if (!result.Success)
             {
                 await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
@@ -817,7 +817,7 @@ namespace SysBot.Pokemon.Discord
             }
 
             var ctx = new TradeCordHelper<T>.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.GiveItem };
-            var result = Helper.ProcessTradeCord(ctx, new string[] { input });
+            var result = await Helper.ProcessTradeCord(ctx, new string[] { input }).ConfigureAwait(false);
             await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
         }
 
@@ -875,7 +875,7 @@ namespace SysBot.Pokemon.Discord
             var mentionID = Context.Message.MentionedUsers.First().Id;
             var mentionName = Context.Message.MentionedUsers.First().Username;
             var ctx = new TradeCordHelper<T>.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, GifteeID = mentionID, GifteeName = mentionName, Context = TCCommandContext.GiftItem };
-            var result = Helper.ProcessTradeCord(ctx, new string[] { input, count });
+            var result = await Helper.ProcessTradeCord(ctx, new string[] { input, count }).ConfigureAwait(false);
             await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
         }
 
@@ -893,7 +893,7 @@ namespace SysBot.Pokemon.Discord
             }
 
             var ctx = new TradeCordHelper<T>.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.TakeItem };
-            var result = Helper.ProcessTradeCord(ctx, new string[] { });
+            var result = await Helper.ProcessTradeCord(ctx, new string[] { }).ConfigureAwait(false);
             await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
         }
 
@@ -912,7 +912,7 @@ namespace SysBot.Pokemon.Discord
 
             input = input.ToLower().Replace(" ", "");
             var ctx = new TradeCordHelper<T>.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.ItemList };
-            var result = Helper.ProcessTradeCord(ctx, new string[] { input });
+            var result = await Helper.ProcessTradeCord(ctx, new string[] { input }).ConfigureAwait(false);
             if (!result.Success)
             {
                 await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
@@ -945,7 +945,7 @@ namespace SysBot.Pokemon.Discord
             }
 
             var ctx = new TradeCordHelper<T>.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.DropItem };
-            var result = Helper.ProcessTradeCord(ctx, new string[] { input });
+            var result = await Helper.ProcessTradeCord(ctx, new string[] { input }).ConfigureAwait(false);
             await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
         }
 
@@ -963,7 +963,7 @@ namespace SysBot.Pokemon.Discord
             }
 
             var ctx = new TradeCordHelper<T>.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.TimeZone };
-            var result = Helper.ProcessTradeCord(ctx, new string[] { input });
+            var result = await Helper.ProcessTradeCord(ctx, new string[] { input }).ConfigureAwait(false);
             await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
         }
 
@@ -981,7 +981,7 @@ namespace SysBot.Pokemon.Discord
             }
 
             var ctx = new TradeCordHelper<T>.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.EventPing };
-            var result = Helper.ProcessTradeCord(ctx, new string[] { });
+            var result = await Helper.ProcessTradeCord(ctx, new string[] { }).ConfigureAwait(false);
             await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
         }
 
@@ -1016,7 +1016,7 @@ namespace SysBot.Pokemon.Discord
             }
 
             var ctx = new TradeCordHelper<T>.TC_CommandContext { ID = id, Context = TCCommandContext.DeleteUser };
-            var result = Helper.ProcessTradeCord(ctx, new string[] { input });
+            var result = await Helper.ProcessTradeCord(ctx, new string[] { input }).ConfigureAwait(false);
             result.Message = result.Success ? "Successfully deleted specified user's data." : "No data found for this user.";
             await Util.EmbedUtil(Context, result.EmbedName, result.Message).ConfigureAwait(false);
         }

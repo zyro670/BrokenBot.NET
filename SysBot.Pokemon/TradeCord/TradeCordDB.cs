@@ -52,17 +52,17 @@ namespace SysBot.Pokemon
             if (!GalarFossils.Contains(pkm.Species) && !pkm.FatefulEncounter)
             {
                 if (enc is EncounterSlot8 slot8)
-                    pkm.SetAbilityIndex(slot8.Ability == -1 ? Random.Next(3) : slot8.Ability == 0 ? Random.Next(2) : slot8.Ability == 1 ? 0 : slot8.Ability == 2 ? 1 : 2);
+                    pkm.SetAbilityIndex(slot8.Ability == AbilityPermission.Any12H ? Random.Next(3) : slot8.Ability == AbilityPermission.Any12 ? Random.Next(2) : slot8.Ability == AbilityPermission.OnlyFirst ? 0 : slot8.Ability == AbilityPermission.OnlySecond ? 1 : 2);
                 else if (enc is EncounterStatic8 static8)
-                    pkm.SetAbilityIndex(static8.Ability == -1 ? Random.Next(3) : static8.Ability == 0 ? Random.Next(2) : static8.Ability == 1 ? 0 : static8.Ability == 2 ? 1 : 2);
+                    pkm.SetAbilityIndex(static8.Ability == AbilityPermission.Any12H ? Random.Next(3) : static8.Ability == AbilityPermission.Any12 ? Random.Next(2) : static8.Ability == AbilityPermission.OnlyFirst ? 0 : static8.Ability == AbilityPermission.OnlySecond ? 1 : 2);
                 else if (enc is EncounterStatic8N static8N)
-                    pkm.SetAbilityIndex(static8N.Ability == -1 ? Random.Next(3) : static8N.Ability == 0 ? Random.Next(2) : static8N.Ability == 1 ? 0 : static8N.Ability == 2 ? 1 : 2);
+                    pkm.SetAbilityIndex(static8N.Ability == AbilityPermission.Any12H ? Random.Next(3) : static8N.Ability == AbilityPermission.Any12 ? Random.Next(2) : static8N.Ability == AbilityPermission.OnlyFirst ? 0 : static8N.Ability == AbilityPermission.OnlySecond ? 1 : 2);
                 else if (enc is EncounterStatic8NC static8NC)
-                    pkm.SetAbilityIndex(static8NC.Ability == -1 ? Random.Next(3) : static8NC.Ability == 0 ? Random.Next(2) : static8NC.Ability == 1 ? 0 : static8NC.Ability == 2 ? 1 : 2);
+                    pkm.SetAbilityIndex(static8NC.Ability == AbilityPermission.Any12H ? Random.Next(3) : static8NC.Ability == AbilityPermission.Any12 ? Random.Next(2) : static8NC.Ability == AbilityPermission.OnlyFirst ? 0 : static8NC.Ability == AbilityPermission.OnlySecond ? 1 : 2);
                 else if (enc is EncounterStatic8ND static8ND)
-                    pkm.SetAbilityIndex(static8ND.Ability == -1 ? Random.Next(3) : static8ND.Ability == 0 ? Random.Next(2) : static8ND.Ability == 1 ? 0 : static8ND.Ability == 2 ? 1 : 2);
+                    pkm.SetAbilityIndex(static8ND.Ability == AbilityPermission.Any12H ? Random.Next(3) : static8ND.Ability == AbilityPermission.Any12 ? Random.Next(2) : static8ND.Ability == AbilityPermission.OnlyFirst ? 0 : static8ND.Ability == AbilityPermission.OnlySecond ? 1 : 2);
                 else if (enc is EncounterStatic8U static8U)
-                    pkm.SetAbilityIndex(static8U.Ability == -1 ? Random.Next(3) : static8U.Ability == 0 ? Random.Next(2) : static8U.Ability == 1 ? 0 : static8U.Ability == 2 ? 1 : 2);
+                    pkm.SetAbilityIndex(static8U.Ability == AbilityPermission.Any12H ? Random.Next(3) : static8U.Ability == AbilityPermission.Any12 ? Random.Next(2) : static8U.Ability == AbilityPermission.OnlyFirst ? 0 : static8U.Ability == AbilityPermission.OnlySecond ? 1 : 2);
             }
 
             bool goMew = pkm.Species == (int)Species.Mew && enc.Version == GameVersion.GO && pkm.IsShiny;
@@ -152,13 +152,13 @@ namespace SysBot.Pokemon
                 pkm.Nature = Random.Next(25);
                 pkm.StatNature = pkm.Nature;
                 if (enc is EncounterSlot8b slot8)
-                    pkm.SetAbilityIndex(slot8.Ability == -1 ? Random.Next(3) : slot8.Ability == 0 ? Random.Next(2) : slot8.Ability == 1 ? 0 : slot8.Ability == 2 ? 1 : 2);
-                else pkm.SetAbilityIndex(Random.Next(3));
+                    pkm.SetAbilityIndex(slot8.Ability == AbilityPermission.Any12H ? Random.Next(3) : slot8.Ability == AbilityPermission.Any12 ? Random.Next(2) : slot8.Ability == AbilityPermission.OnlyFirst ? 0 : slot8.Ability == AbilityPermission.OnlySecond ? 1 : 2);
+                else if (!IsLegendaryOrMythical(pkm.Species))
+                    pkm.SetAbilityIndex(Random.Next(3));
 
                 pkm.IVs = pkm.SetRandomIVs(Random.Next(3, 7));
                 if (shiny == Shiny.AlwaysSquare)
                     CommonEdits.SetShiny(pkm, shiny);
-
             }
 
             pkm = (T)TradeExtensions<T>.TrashBytes(pkm);

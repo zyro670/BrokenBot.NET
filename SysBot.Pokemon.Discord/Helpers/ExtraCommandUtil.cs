@@ -86,7 +86,7 @@ namespace SysBot.Pokemon.Discord
             var instance = SysCord<T>.Runner.Hub.Config;
             var helper = new TradeCordHelper<T>(instance.TradeCord);
             var ctx = new TradeCordHelper<T>.TC_CommandContext() { Context = TCCommandContext.DeleteUser, ID = user.Id, Username = user.Username };
-            var result = helper.ProcessTradeCord(ctx, new string[] { user.Id.ToString() });
+            var result =  await helper.ProcessTradeCord(ctx, new string[] { user.Id.ToString() }).ConfigureAwait(false);
             if (result.Success)
             {
                 var channels = instance.Discord.EchoChannels.List;

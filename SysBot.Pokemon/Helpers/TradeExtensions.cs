@@ -63,14 +63,14 @@ namespace SysBot.Pokemon
             if (res != "Regenerated")
             {
                 Base.LogUtil.LogError($"Failed to generate a template for legal Poke Balls: \n{showdown}", "[GetLegalBalls]");
-                return new Ball[0];
+                return new Ball[1];
             }
 
             var legalBalls = BallApplicator.GetLegalBalls(pk).ToList();
             if (!legalBalls.Contains(Ball.Master))
             {
                 showdownList.Insert(1, "Ball: Master");
-                set = new ShowdownSet(string.Join("\r\n", showdownList));
+                set = new ShowdownSet(string.Join("\n", showdownList));
                 templ = AutoLegalityWrapper.GetTemplate(set);
                 pk = (T)sav.GetLegal(templ, out res);
                 if (res == "Regenerated")
@@ -83,7 +83,7 @@ namespace SysBot.Pokemon
 
         public static bool HasAdName(T pk, out string ad)
         {
-            string pattern = @"(YT$)|(YT\w*$)|(Lab$)|(\.\w*$)|(TV$)|(PKHeX)|(FB:)|(AuSLove)|(ShinyMart)|(Blainette)|(\ com)|(\ org)|(\ net)|(2DOS3)|(PPorg)|(Tik\wok$)|(YouTube)|(IG:)|(TTV\ )|(Tools)|(JokersWrath)|(bot$)|(PKMGen)";
+            string pattern = @"(YT$)|(YT\w*$)|(Lab$)|(\.\w*$)|(TV$)|(PKHeX)|(FB:)|(AuSLove)|(ShinyMart)|(Blainette)|(\ com)|(\ org)|(\ net)|(2DOS3)|(PPorg)|(Tik\wok$)|(YouTube)|(IG:)|(TTV\ )|(Tools)|(JokersWrath)|(bot$)|(PKMGen)|(.gg)";
             bool ot = Regex.IsMatch(pk.OT_Name, pattern, RegexOptions.IgnoreCase);
             bool nick = Regex.IsMatch(pk.Nickname, pattern, RegexOptions.IgnoreCase);
             ad = ot ? pk.OT_Name : nick ? pk.Nickname : "";
@@ -137,7 +137,6 @@ namespace SysBot.Pokemon
             pk.StatNature = pk.Nature;
             pk.EVs = new int[] { 0, 0, 0, 0, 0, 0 };
             pk.Markings = new int[] { 0, 0, 0, 0, 0, 0, 0, 0 };
-            pk.ClearRecordFlags();
             pk.ClearRelearnMoves();
 
             if (pk is PK8 pk8)

@@ -14,13 +14,13 @@ namespace SysBot.Pokemon
         private readonly TradeCordSettings Settings;
         public static bool TCInitialized;
         public static bool VacuumLock;
-        private static readonly object _sync = new();
         public static Dictionary<ulong, int> TradeCordTrades = new();
         private static readonly Dictionary<ulong, TCUser> UserDict = new();
         public static readonly Dictionary<ulong, DateTime> TradeCordCooldownDict = new();
         public static readonly Dictionary<ulong, List<DateTime>> UserCommandTimestamps = new();
         public static readonly HashSet<ulong> MuteList = new();
         public static DateTime EventVoteTimer = new();
+        private static readonly SemaphoreSlim _semaphore = new(1, 1);
 
         public TradeCordHelper(TradeCordSettings settings) : base()
         {
@@ -62,15 +62,23 @@ namespace SysBot.Pokemon
 
         public static void CleanDB() => CleanDatabase();
 
-        public Results ProcessTradeCord(TC_CommandContext ctx, string[] input)
+        public async Task<Results> ProcessTradeCord(TC_CommandContext ctx, string[] input)
         {
             while (VacuumLock)
-                Thread.Sleep(100);
+                await Task.Delay(100).ConfigureAwait(false);
 
-            lock (_sync)
+            await _semaphore.WaitAsync(60_000).ConfigureAwait(false);
+            try
             {
                 if (!TCInitialized)
                 {
+                    bool pla = typeof(T) == typeof(PA8);
+                    if (pla)
+                    {
+                        Base.LogUtil.LogError("PLA is currently not supported, shutting down.", "[TradeCord]");
+                        Environment.Exit(0);
+                    }
+
                     var current = Process.GetCurrentProcess();
                     var all = Process.GetProcessesByName(current.ProcessName);
                     bool sameExe = all.Count(x => x.MainModule.FileName == current.MainModule.FileName) > 1;
@@ -78,7 +86,7 @@ namespace SysBot.Pokemon
                         TCInitialized = true;
                     else
                     {
-                        Base.LogUtil.LogText("Another TradeCord instance is already running! Killing the process.");
+                        Base.LogUtil.LogError("Another TradeCord instance is already running! Killing the process.", "[TradeCord]");
                         Environment.Exit(0);
                     }
 
@@ -89,86 +97,87 @@ namespace SysBot.Pokemon
                         ClearInactiveUsers();
                 }
 
-                try
+                TCUser user = new();
+                TCUser giftee = new();
+                if (ctx.Context != TCCommandContext.DeleteUser)
                 {
-                    TCUser user = new();
-                    TCUser giftee = new();
-                    if (ctx.Context != TCCommandContext.DeleteUser)
+                    if (UserDict.ContainsKey(ctx.ID))
+                        user = UserDict[ctx.ID];
+                    else
                     {
-                        if (UserDict.ContainsKey(ctx.ID))
-                            user = UserDict[ctx.ID];
+                        user = GetCompleteUser(ctx.ID, ctx.Username);
+                        UserDict.Add(ctx.ID, user);
+                    }
+
+                    HandleTradedCatches(ctx.ID, false, user);
+                    if (ctx.Context == TCCommandContext.Gift || ctx.Context == TCCommandContext.GiftItem)
+                    {
+                        if (UserDict.ContainsKey(ctx.GifteeID))
+                            giftee = UserDict[ctx.GifteeID];
                         else
                         {
-                            user = GetCompleteUser(ctx.ID, ctx.Username);
-                            UserDict.Add(ctx.ID, user);
-                        }
-
-                        HandleTradedCatches(ctx.ID, false, user);
-                        if (ctx.Context == TCCommandContext.Gift || ctx.Context == TCCommandContext.GiftItem)
-                        {
-                            if (UserDict.ContainsKey(ctx.GifteeID))
-                                giftee = UserDict[ctx.GifteeID];
-                            else
-                            {
-                                giftee = GetCompleteUser(ctx.GifteeID, ctx.GifteeName, true);
-                                UserDict.Add(ctx.GifteeID, giftee);
-                            }
+                            giftee = GetCompleteUser(ctx.GifteeID, ctx.GifteeName, true);
+                            UserDict.Add(ctx.GifteeID, giftee);
                         }
                     }
-
-                    if (ctx.Context == TCCommandContext.EventVote)
-                    {
-                        Results res = new();
-                        res.UsersToPing = GetUsersToPing();
-                        res.Success = res.UsersToPing != null && res.UsersToPing.Length > 0;
-                        return res;
-                    }
-
-                    var task = ctx.Context switch
-                    {
-                        TCCommandContext.Catch => CatchHandler(user),
-                        TCCommandContext.Trade => TradeHandler(user, input[0]),
-                        TCCommandContext.List => ListHandler(user, input[0]),
-                        TCCommandContext.Info => InfoHandler(user, input[0]),
-                        TCCommandContext.MassRelease => MassReleaseHandler(user, input[0]),
-                        TCCommandContext.Release => ReleaseHandler(user, input[0]),
-                        TCCommandContext.DaycareInfo => DaycareInfoHandler(user),
-                        TCCommandContext.Daycare => DaycareHandler(user, input[0], input[1]),
-                        TCCommandContext.Gift => GiftHandler(user, giftee, input[0]),
-                        TCCommandContext.TrainerInfoSet => TrainerInfoSetHandler(user, input),
-                        TCCommandContext.TrainerInfo => TrainerInfoHandler(user),
-                        TCCommandContext.FavoritesInfo => FavoritesInfoHandler(user.Catches),
-                        TCCommandContext.Favorites => FavoritesHandler(user, input[0]),
-                        TCCommandContext.Dex => DexHandler(user.Dex, user.Perks, input[0]),
-                        TCCommandContext.Perks => PerkHandler(user, input[0]),
-                        TCCommandContext.Boost => SpeciesBoostHandler(user, input[0]),
-                        TCCommandContext.Buddy => BuddyHandler(user, input[0]),
-                        TCCommandContext.Nickname => NicknameHandler(user, input[0]),
-                        TCCommandContext.Evolution => EvolutionHandler(user, input[0]),
-                        TCCommandContext.GiveItem => GiveItemHandler(user, input[0]),
-                        TCCommandContext.GiftItem => GiftItemHandler(user, giftee, input[0], input[1]),
-                        TCCommandContext.TakeItem => TakeItemHandler(user),
-                        TCCommandContext.ItemList => ItemListHandler(user, input[0]),
-                        TCCommandContext.DropItem => ItemDropHandler(user, input[0]),
-                        TCCommandContext.TimeZone => TimeZoneHandler(user, input[0]),
-                        TCCommandContext.EventPing => EventPingHandler(user),
-                        TCCommandContext.DeleteUser => DeleteUserData(input[0]),
-                        _ => throw new NotImplementedException(),
-                    };
-
-                    var result = Task.Run(() => task).Result;
-                    InfoProcessing(ctx, user, result);
-                    return result;
                 }
-                catch (Exception ex)
+
+                if (ctx.Context == TCCommandContext.EventVote)
                 {
-                    Base.LogUtil.LogError($"Something went wrong during {ctx.Context} execution for {ctx.Username}.\nTarget: {ex.TargetSite}\nMessage: {ex.Message}\nStack: {ex.StackTrace}\nInner: {ex.InnerException}", "[TradeCord]");
-                    return new Results()
-                    {
-                        EmbedName = "Oops!",
-                        Message = $"Something went wrong when executing command `{ctx.Context}` for user {ctx.Username}({ctx.ID})!",
-                    };
+                    Results res = new();
+                    res.UsersToPing = GetUsersToPing();
+                    res.Success = res.UsersToPing != null && res.UsersToPing.Length > 0;
+                    return res;
                 }
+
+                var task = ctx.Context switch
+                {
+                    TCCommandContext.Catch => CatchHandler(user),
+                    TCCommandContext.Trade => TradeHandler(user, input[0]),
+                    TCCommandContext.List => ListHandler(user, input[0]),
+                    TCCommandContext.Info => InfoHandler(user, input[0]),
+                    TCCommandContext.MassRelease => MassReleaseHandler(user, input[0]),
+                    TCCommandContext.Release => ReleaseHandler(user, input[0]),
+                    TCCommandContext.DaycareInfo => DaycareInfoHandler(user),
+                    TCCommandContext.Daycare => DaycareHandler(user, input[0], input[1]),
+                    TCCommandContext.Gift => GiftHandler(user, giftee, input[0]),
+                    TCCommandContext.TrainerInfoSet => TrainerInfoSetHandler(user, input),
+                    TCCommandContext.TrainerInfo => TrainerInfoHandler(user),
+                    TCCommandContext.FavoritesInfo => FavoritesInfoHandler(user.Catches),
+                    TCCommandContext.Favorites => FavoritesHandler(user, input[0]),
+                    TCCommandContext.Dex => DexHandler(user.Dex, user.Perks, input[0]),
+                    TCCommandContext.Perks => PerkHandler(user, input[0]),
+                    TCCommandContext.Boost => SpeciesBoostHandler(user, input[0]),
+                    TCCommandContext.Buddy => BuddyHandler(user, input[0]),
+                    TCCommandContext.Nickname => NicknameHandler(user, input[0]),
+                    TCCommandContext.Evolution => EvolutionHandler(user, input[0]),
+                    TCCommandContext.GiveItem => GiveItemHandler(user, input[0]),
+                    TCCommandContext.GiftItem => GiftItemHandler(user, giftee, input[0], input[1]),
+                    TCCommandContext.TakeItem => TakeItemHandler(user),
+                    TCCommandContext.ItemList => ItemListHandler(user, input[0]),
+                    TCCommandContext.DropItem => ItemDropHandler(user, input[0]),
+                    TCCommandContext.TimeZone => TimeZoneHandler(user, input[0]),
+                    TCCommandContext.EventPing => EventPingHandler(user),
+                    TCCommandContext.DeleteUser => DeleteUserData(input[0]),
+                    _ => throw new NotImplementedException(),
+                };
+
+                var result = Task.Run(() => task).Result;
+                InfoProcessing(ctx, user, result);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Base.LogUtil.LogError($"Something went wrong during {ctx.Context} execution for {ctx.Username}.\nTarget: {ex.TargetSite}\nMessage: {ex.Message}\nStack: {ex.StackTrace}\nInner: {ex.InnerException}", "[TradeCord]");
+                return new Results()
+                {
+                    EmbedName = "Oops!",
+                    Message = $"Something went wrong when executing command `{ctx.Context}` for user {ctx.Username}({ctx.ID})!",
+                };
+            }
+            finally
+            {
+                _semaphore.Release();
             }
         }
 
@@ -1961,22 +1970,21 @@ namespace SysBot.Pokemon
                 };
             }
 
-            bool locked = TradeExtensions<T>.ShinyLockCheck(Rng.SpeciesRNG, formHack);
-            string gameVer = Rng.SpeciesRNG switch
-            {
-                (int)Species.Exeggutor or (int)Species.Marowak => "\n.Version=33",
-                (int)Species.Mew => shiny != Shiny.Never ? $"{mewOverride[Random.Next(2)]}" : "",
-                _ => UMWormhole.Contains(Rng.SpeciesRNG) && shiny == Shiny.AlwaysSquare && !locked ? "\n.Version=33" : USWormhole.Contains(Rng.SpeciesRNG) && shiny == Shiny.AlwaysSquare && !locked ? "\n.Version=32" : "",
-            };
-
-            if (Rng.SpeciesRNG == (int)Species.Mew && gameVer == mewOverride[1] && trainerInfo[4] != "")
-                trainerInfo[4] = "";
-
-            if (locked)
+            if (TradeExtensions<T>.ShinyLockCheck(Rng.SpeciesRNG, formHack))
             {
                 shinyType = "";
                 shiny = Shiny.Never;
             }
+
+            string gameVer = Rng.SpeciesRNG switch
+            {
+                (int)Species.Exeggutor or (int)Species.Marowak => "\n.Version=33",
+                (int)Species.Mew => shiny != Shiny.Never ? $"{mewOverride[Random.Next(2)]}" : "",
+                _ => UMWormhole.Contains(Rng.SpeciesRNG) && shiny == Shiny.AlwaysSquare ? "\n.Version=33" : USWormhole.Contains(Rng.SpeciesRNG) && shiny == Shiny.AlwaysSquare ? "\n.Version=32" : "",
+            };
+
+            if (Rng.SpeciesRNG == (int)Species.Mew && gameVer == mewOverride[1])
+                trainerInfo.RemoveAll(x => x.Contains("Language"));
 
             var showdown = $"{speciesName}{formHack}{shinyType}\n{string.Join("\n", trainerInfo)}{gameVer}";
             var balls = TradeExtensions<T>.GetLegalBalls(showdown);
