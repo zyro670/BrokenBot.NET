@@ -334,10 +334,9 @@ namespace SysBot.Pokemon
             list[0] = "";
             list.RemoveAll(x => x.Contains("Mega"));
             if (typeof(T) != typeof(PA8))
-                list.RemoveAll(x => x.Contains("Hisui") || x.Contains("Lord") || (x.Contains("Origin") && species != (int)Species.Giratina));
+                list.RemoveAll(x => x.Contains("Hisui") || x.Contains("Lord") || x.Contains("White") || x.Contains("Lady") || (x.Contains("Origin") && species != (int)Species.Giratina));
 
             formString = list.ToArray();
-
             if (form >= formString.Length)
                 form = formString.Length - 1;
             return formString[form].Contains("-") ? formString[form] : formString[form] == "" ? "" : $"-{formString[form]}";
