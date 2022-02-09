@@ -333,6 +333,9 @@ namespace SysBot.Pokemon
             var list = FormConverter.GetFormList(species, strings.Types, strings.forms, GameInfo.GenderSymbolASCII, typeof(T) == typeof(PK8) ? 8 : 4).ToList();
             list[0] = "";
             list.RemoveAll(x => x.Contains("Mega"));
+            if (typeof(T) != typeof(PA8))
+                list.RemoveAll(x => x.Contains("Hisui") || x.Contains("Lord") || (x.Contains("Origin") && species != (int)Species.Giratina));
+
             formString = list.ToArray();
 
             if (form >= formString.Length)

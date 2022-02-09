@@ -152,9 +152,9 @@ namespace SysBot.Pokemon
                 pkm.Nature = Random.Next(25);
                 pkm.StatNature = pkm.Nature;
                 if (enc is EncounterSlot8b slot8)
-                    pkm.SetAbilityIndex(slot8.Ability == AbilityPermission.Any12H ? Random.Next(3) : slot8.Ability == AbilityPermission.Any12 ? Random.Next(2) : slot8.Ability == AbilityPermission.OnlyFirst ? 0 : slot8.Ability == AbilityPermission.OnlySecond ? 1 : 2);
+                    pkm.SetAbilityIndex(slot8.Ability == AbilityPermission.Any12H && slot8.CanUseRadar ? Random.Next(3) : slot8.Ability == AbilityPermission.Any12 ? Random.Next(2) : slot8.Ability == AbilityPermission.OnlyFirst ? 0 : slot8.Ability == AbilityPermission.OnlySecond ? 1 : 2);
                 else if (!IsLegendaryOrMythical(pkm.Species))
-                    pkm.SetAbilityIndex(Random.Next(3));
+                    pkm.SetAbilityIndex(Random.Next(2));
 
                 pkm.IVs = pkm.SetRandomIVs(Random.Next(3, 7));
                 if (shiny == Shiny.AlwaysSquare)
@@ -230,7 +230,8 @@ namespace SysBot.Pokemon
                 pk.Ball = BallApplicator.ApplyBallLegalRandom(pk);
 
             TradeExtensions<T>.EggTrade(pk);
-            pk.SetAbilityIndex(Random.Next(3));
+            pk.SetAbilityIndex(Random.Next(Game == GameVersion.SWSH ? 3 : 2));
+
             pk.Nature = Random.Next(25);
             pk.StatNature = pk.Nature;
             pk.IVs = pk.SetRandomIVs(Random.Next(2, 7));
