@@ -56,13 +56,6 @@
         Inject,
     }
 
-    public enum TimeReset
-    {
-        NoReset,
-        Reset,
-        ResetNTP,
-    }
-
     public enum Characteristics
     {
         TakesPlentyOfSiestas,

@@ -38,6 +38,18 @@ namespace SysBot.Pokemon
         [Category(TradeConfig), Description("When enabled, the screen will be turned off during normal bot loop operation to save power.")]
         public bool ScreenOff { get; set; }
 
+        [Category(TradeConfig), Description("Spin while waiting for trade partner.")]
+        public bool SpinTrade { get; set; } = false;
+
+        [Category(TradeConfig), Description("Select default species for \"ItemTrade\", if configured.")]
+        public Species ItemTradeSpecies { get; set; } = Species.None;
+
+        [Category(TradeConfig), Description("Silly, useless feature to post a meme when certain illegal or disallowed trade requests are made.")]
+        public bool Memes { get; set; } = false;
+
+        [Category(TradeConfig), Description("Enter either direct picture or gif links, or file names with extensions. For example, file1.png, file2.jpg, etc.")]
+        public string MemeFileNames { get; set; } = string.Empty;
+
         /// <summary>
         /// Gets a random trade code based on the range settings.
         /// </summary>
@@ -49,6 +61,10 @@ namespace SysBot.Pokemon
         private int _completedSeedChecks;
         private int _completedClones;
         private int _completedDumps;
+        private int _completedEtumrepDumps;
+        private int _completedFixOTs;
+        private int _completedSupportTrades;
+        private int _completedTradeCords;
 
         [Category(Counts), Description("Completed Surprise Trades")]
         public int CompletedSurprise
@@ -92,6 +108,34 @@ namespace SysBot.Pokemon
             set => _completedDumps = value;
         }
 
+        [Category(Counts), Description("Completed Etumrep Dump Trades (Specific User)")]
+        public int CompletedEtumrepDumps
+        {
+            get => _completedEtumrepDumps;
+            set => _completedEtumrepDumps = value;
+        }
+
+        [Category(Counts), Description("Completed FixOT Trades (Specific User)")]
+        public int CompletedFixOTs
+        {
+            get => _completedFixOTs;
+            set => _completedFixOTs = value;
+        }
+
+        [Category(Counts), Description("Completed Support Trades (Specific User)")]
+        public int CompletedSupportTrades
+        {
+            get => _completedSupportTrades;
+            set => _completedSupportTrades = value;
+        }
+
+        [Category(Counts), Description("Completed TradeCord Trades (Specific User)")]
+        public int CompletedTradeCords
+        {
+            get => _completedTradeCords;
+            set => _completedTradeCords = value;
+        }
+
         [Category(Counts), Description("When enabled, the counts will be emitted when a status check is requested.")]
         public bool EmitCountsOnStatusCheck { get; set; }
 
@@ -100,7 +144,11 @@ namespace SysBot.Pokemon
         public void AddCompletedSurprise() =>Interlocked.Increment(ref _completedSurprise);
         public void AddCompletedDistribution() => Interlocked.Increment(ref _completedDistribution);
         public void AddCompletedDumps() => Interlocked.Increment(ref _completedDumps);
+        public void AddCompletedEtumrepDumps() => Interlocked.Increment(ref _completedEtumrepDumps);
         public void AddCompletedClones() => Interlocked.Increment(ref _completedClones);
+        public void AddCompletedFixOTs() => Interlocked.Increment(ref _completedFixOTs);
+        public void AddCompletedSupportTrades() => Interlocked.Increment(ref _completedSupportTrades);
+        public void AddCompletedTradeCords() => Interlocked.Increment(ref _completedTradeCords);
 
         public IEnumerable<string> GetNonZeroCounts()
         {
@@ -118,6 +166,14 @@ namespace SysBot.Pokemon
                 yield return $"Distribution Trades: {CompletedDistribution}";
             if (CompletedSurprise != 0)
                 yield return $"Surprise Trades: {CompletedSurprise}";
+            if (CompletedEtumrepDumps != 0)
+                yield return $"Etumrep Dump Trades: {CompletedEtumrepDumps}";
+            if (CompletedFixOTs != 0)
+                yield return $"FixOT Trades: {CompletedFixOTs}";
+            if (CompletedSupportTrades != 0)
+                yield return $"Support Trades: {CompletedSupportTrades}";
+            if (CompletedTradeCords != 0)
+                yield return $"TradeCord Trades: {CompletedTradeCords}";
         }
     }
 }

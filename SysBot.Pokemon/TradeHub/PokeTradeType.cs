@@ -7,6 +7,7 @@
         Seed,
         Clone,
         Dump,
+        EtumrepDump,
         FixOT,
         TradeCord,
         Giveaway,

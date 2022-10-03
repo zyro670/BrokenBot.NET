@@ -7,17 +7,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="BotDen\FlatbuffersResource\shieldEnc.bin" />
-    <None Remove="BotDen\FlatbuffersResource\swordEnc.bin" />
-    <None Remove="BotLair\MoveInfo.json" />
+    <None Remove="SWSH\BotDen\FlatbuffersResource\shieldEnc.bin" />
+    <None Remove="SWSH\BotDen\FlatbuffersResource\swordEnc.bin" />
+    <None Remove="SWSH\BotLair\MoveInfo.json" />
     <None Remove="TradeCord\Resources\DexFlavor.txt" />
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="BotLair\MoveInfo.json" />
+    <EmbeddedResource Include="SWSH\BotLair\MoveInfo.json" />
     <EmbeddedResource Include="TradeCord\Resources\DexFlavor.txt" />
-    <EmbeddedResource Include="BotDen\FlatbuffersResource\shieldEnc.bin" />
-    <EmbeddedResource Include="BotDen\FlatbuffersResource\swordEnc.bin" />
+    <EmbeddedResource Include="SWSH\BotDen\FlatbuffersResource\shieldEnc.bin" />
+    <EmbeddedResource Include="SWSH\BotDen\FlatbuffersResource\swordEnc.bin" />
   </ItemGroup>
 
   <ItemGroup>

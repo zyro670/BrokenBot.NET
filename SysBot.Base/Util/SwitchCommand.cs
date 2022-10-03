@@ -290,13 +290,6 @@ namespace SysBot.Base
         public static byte[] DaySkip(bool crlf = true) => Encode($"daySkip", crlf);
 
         /// <summary>
-        /// Sync system network clock with NTP's server.
-        /// </summary>
-        /// <param name="crlf">Line terminator (unused by USB's protocol)</param>
-        /// <returns>Encoded command bytes</returns>
-        public static byte[] ResetTimeNTP(bool crlf = true) => Encode("resetTimeNTP", crlf);
-
-        /// <summary>
         /// Sync system network clock with the initial day skip's clock.
         /// </summary>
         /// <param name="crlf">Line terminator (unused by USB's protocol)</param>

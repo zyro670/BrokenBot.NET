@@ -19,6 +19,7 @@ namespace SysBot.Pokemon.Discord
         [Summary("Lists available commands.")]
         public async Task HelpAsync()
         {
+            List<Embed> embeds = new();
             var builder = new EmbedBuilder
             {
                 Color = new Color(114, 137, 218),
@@ -57,6 +58,13 @@ namespace SysBot.Pokemon.Discord
                 if (gen != -1)
                     moduleName = moduleName[..gen];
 
+                if (builder.Fields.Count == 25)
+                {
+                    embeds.Add(builder.Build());
+                    builder.Fields.Clear();
+                    builder.Description = string.Empty;
+                }
+
                 builder.AddField(x =>
                 {
                     x.Name = moduleName;
@@ -65,7 +73,10 @@ namespace SysBot.Pokemon.Discord
                 });
             }
 
-            await ReplyAsync("Help has arrived!", false, builder.Build()).ConfigureAwait(false);
+            if (builder.Fields.Count > 0)
+                embeds.Add(builder.Build());
+
+            await ReplyAsync("Help has arrived!", false, null, null, null, null, null, null, embeds.ToArray()).ConfigureAwait(false);
         }
 
         [Command("help")]

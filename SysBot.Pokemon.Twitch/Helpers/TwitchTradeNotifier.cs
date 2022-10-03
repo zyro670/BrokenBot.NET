@@ -3,6 +3,7 @@ using SysBot.Base;
 using System;
 using System.Linq;
 using TwitchLib.Client;
+using System.Collections.Generic;
 
 namespace SysBot.Pokemon.Twitch
 {
@@ -107,5 +108,9 @@ namespace SysBot.Pokemon.Twitch
                     break;
             }
         }
+
+        // Dummy methods because not available on Twitch.
+        public void SendEtumrepEmbed(PokeRoutineExecutor<T> routine, PokeTradeDetail<T> info, IReadOnlyList<PA8> pkms) { }
+        public void SendIncompleteEtumrepEmbed(PokeRoutineExecutor<T> routine, PokeTradeDetail<T> info, string msg, IReadOnlyList<PA8> pkms) { }
     }
 }

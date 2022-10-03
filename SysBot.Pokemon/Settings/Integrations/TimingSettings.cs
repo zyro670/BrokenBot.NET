@@ -46,17 +46,20 @@ namespace SysBot.Pokemon
         [Category(Raid), Description("[RaidBot] Extra time in milliseconds to wait after deleting a friend.")]
         public int ExtraTimeDeleteFriend { get; set; }
 
-        [Category(Raid), Description("[SWSH] Extra time in milliseconds to wait to toggle airplane mode.")]
+        [Category(Raid), Description("[RollingRaidBot] Extra time in milliseconds to wait before toggling airplane mode.")]
         public int ExtraTimeAirplane { get; set; } = 0;
 
-        [Category(Raid), Description("[SWSH] Time in milliseconds to wait for game to unfreeze after toggling airplane mode and YComm state to refresh.")]
+        [Category(Raid), Description("[RollingRaidBot] Time in milliseconds to wait for game to unfreeze after toggling airplane mode and YComm state to refresh.")]
         public int AirplaneConnectionFreezeDelay { get; set; } = 0;
 
-        [Category(Raid), Description("[SWSH] Extra time in milliseconds to enter a lobby for AutoRoll.")]
+        [Category(Raid), Description("[RollingRaidBot] Extra time in milliseconds to enter a lobby for AutoRoll.")]
         public int ExtraTimeLoadLobbyAR { get; set; } = 0;
 
-        [Category(Raid), Description("[SWSH] Extra time in milliseconds between A button clicks when collecting watts. More than 250ms shouldn't be needed.")]
+        [Category(Raid), Description("[RollingRaidBot] Extra time in milliseconds between A button clicks when collecting watts. More than 250ms shouldn't be needed.")]
         public int ExtraTimeAButtonClickAR { get; set; } = 0;
+
+        [Category(Raid), Description("[RollingRaidBot] Extra scroll down duration in milliseconds for accessing date/time settings during rollover correction. [Default: 750ms]")]
+        public int ExtraTimeScrollDownAR { get; set; } = 0;
 
         // Miscellaneous settings.
         [Category(Misc), Description("[SWSH/SV] Extra time in milliseconds to wait after clicking + to connect to Y-Comm (SWSH) or L to connect online (SV).")]

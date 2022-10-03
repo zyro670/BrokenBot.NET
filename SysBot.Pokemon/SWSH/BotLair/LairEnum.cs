@@ -109,7 +109,7 @@
         GoRight,
     }
 
-    public enum PriorityMoves : int
+    public enum PriorityMoves : ushort
     {
         Accelerock = 709,
         FakeOut = 252,

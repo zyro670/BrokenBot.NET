@@ -39,6 +39,7 @@ namespace SysBot.Pokemon
                 for (int i = 0; i < 3; i++)
                     await ReadUntilChanged(BattleMenuOffset, BattleMenuReady, 5_000, 0_100, true, token).ConfigureAwait(false);
 
+                TradeExtensions<PK8>.EncounterLogs(pk, "EncounterLogPretty_EncounterLine.txt");
                 if (await HandleEncounter(pk, token).ConfigureAwait(false))
                     return;
 

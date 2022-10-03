@@ -7,7 +7,7 @@ For specific support for this fork of kwsch's SysBot.NET repo feel free to join!
 
 [<img src="https://discordapp.com/api/guilds/695809740428673034/embed.png?style=banner2">](https://discord.gg/KrPRNk9)
 
-[USB-Botbase](https://github.com/fishguy6564/USB-Botbase) client for remote USB control for this fork.
+[USB-Botbase](https://github.com/Koi-3088/USB-Botbase) client for remote USB control for this fork.
 
 [sys-botbase](https://github.com/olliz0r/sys-botbase) client for remote control automation of Nintendo Switch consoles.
 

@@ -1,4 +1,5 @@
 ﻿using Discord;
+using Discord.Rest;
 using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,6 +23,7 @@ namespace SysBot.Pokemon.Discord
     public sealed class SysCord<T> where T : PKM, new()
     {
         public static PokeBotRunner<T> Runner { get; private set; } = default!;
+        public static RestApplication App { get; private set; } = default!;
 
         private readonly DiscordSocketClient _client;
         private readonly DiscordManager Manager;
@@ -53,6 +55,7 @@ namespace SysBot.Pokemon.Discord
                 // (eg. checking Reactions, checking the content of edited/deleted messages),
                 // you must set the MessageCacheSize. You may adjust the number as needed.
                 MessageCacheSize = 100,
+                AlwaysDownloadUsers = true,
             });
 
             _commands = new CommandService(new CommandServiceConfig
@@ -129,6 +132,7 @@ namespace SysBot.Pokemon.Discord
 
             var app = await _client.GetApplicationInfoAsync().ConfigureAwait(false);
             Manager.Owner = app.Owner.Id;
+            App = app;
 
             // Wait infinitely so your bot actually stays connected.
             await MonitorStatusAsync(token).ConfigureAwait(false);
@@ -165,8 +169,11 @@ namespace SysBot.Pokemon.Discord
             // Subscribe a handler to see if a message invokes a command.
             _client.Ready += LoadLoggingAndEcho;
             _client.MessageReceived += HandleMessageAsync;
-            _client.ReactionAdded += ExtraCommandUtil.HandleReactionAsync;
-            _client.UserBanned += ExtraCommandUtil.TCUserBanned;
+            _client.ReactionAdded += ExtraCommandUtil<T>.HandleReactionAsync;
+            _client.UserBanned += ExtraCommandUtil<T>.TCUserBanned;
+            _client.ButtonExecuted += ExtraCommandUtil<T>.ButtonExecuted;
+            _client.SelectMenuExecuted += ExtraCommandUtil<T>.SelectMenuExecuted;
+            _client.ModalSubmitted += ExtraCommandUtil<T>.ModalSubmitted;
         }
 
         private async Task HandleMessageAsync(SocketMessage arg)

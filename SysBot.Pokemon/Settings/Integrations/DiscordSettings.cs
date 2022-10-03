@@ -54,6 +54,9 @@ namespace SysBot.Pokemon
         [Category(Roles), Description("Users with this role are allowed to bypass command restrictions.")]
         public RemoteControlAccessList RoleSudo { get; set; } = new() { AllowIfEmpty = false };
 
+        [Category(Roles), Description("Users with this role are allowed to enter the Etumrep Dump queue.")]
+        public RemoteControlAccessList RoleCanEtumrepDump { get; set; } = new() { AllowIfEmpty = false };
+
         [Category(Roles), Description("Users with this role are allowed to enter the FixOT queue.")]
         public RemoteControlAccessList RoleCanFixOT { get; set; } = new() { AllowIfEmpty = false };
 

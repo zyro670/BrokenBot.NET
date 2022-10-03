@@ -65,10 +65,16 @@
 
         /// <summary> Resets Swords Of Justice via the camp method. </summary>
         SoJCamp = 6007,
+
+        /// <summary> Resets Swords Of Justice via the camp method. </summary>
+        RollingRaid = 6008,
+
+        /// <summary> Resets Swords Of Justice via the camp method. </summary>
+        EtumrepDump = 6009,
     }
 
     public static class PokeRoutineTypeExtensions
     {
-        public static bool IsTradeBot(this PokeRoutineType type) => type is >=PokeRoutineType.FlexTrade and <= PokeRoutineType.Dump;
+        public static bool IsTradeBot(this PokeRoutineType type) => type is (>=PokeRoutineType.FlexTrade and <= PokeRoutineType.Dump) || type is PokeRoutineType.FixOT or PokeRoutineType.TradeCord or PokeRoutineType.EtumrepDump;
     }
 }
