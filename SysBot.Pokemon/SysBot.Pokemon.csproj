@@ -22,6 +22,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="MathNet.Numerics" Version="5.0.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
 		<PackageReference Include="PKHeX.Core" Version="22.12.19" />
 		<PackageReference Include="KdSoft.FlatBuffers" Version="1.12.0" />
