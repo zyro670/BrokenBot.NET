@@ -25,7 +25,7 @@ namespace SysBot.Pokemon
             Settings = hub.Config.RaidSV;
         }
 
-        private string Assembly = "Version: 0.0.0.1";
+        private string Assembly = "Version: 0.0.0.2";
         private string TID7 { get; set; } = string.Empty;
         private string TrainerName { get; set; } = string.Empty;
         private string HostName { get; set; } = string.Empty;
@@ -60,6 +60,7 @@ namespace SysBot.Pokemon
 
         public override async Task MainLoop(CancellationToken token)
         {
+            RaidTracker = new(); // Create new dictionary each bot start incase we changed the raid to not keep old raider info.
             if (Settings.ConfigureRolloverCorrection)
             {
                 await RolloverCorrectionSV(token).ConfigureAwait(false);
@@ -229,12 +230,12 @@ namespace SysBot.Pokemon
                 while (!await IsOnOverworld(token).ConfigureAwait(false))
                     await Click(B, 0_500, token).ConfigureAwait(false);
             }
-
+            await Task.Delay(1_000, token).ConfigureAwait(false);
             if (await IsOnline(token).ConfigureAwait(false))
             {
                 await Click(B, 1_000, token).ConfigureAwait(false);
-                await Click(A, 2_500, token).ConfigureAwait(false);
-                await Click(A, 2_500, token).ConfigureAwait(false);
+                await Click(A, 3_000, token).ConfigureAwait(false);
+                await Click(A, 3_000, token).ConfigureAwait(false);
             }
 
             if (!Settings.CodeTheRaid)
@@ -303,7 +304,9 @@ namespace SysBot.Pokemon
             await Task.Delay(1_000, token).ConfigureAwait(false);
             if (RaidSVEmbedsInitialized)
             {
-                var bytes = await SwitchConnection.Screengrab(token).ConfigureAwait(false);
+                var bytes = new byte[0];
+                if (Settings.TakeScreenshot)
+                    bytes = await SwitchConnection.Screengrab(token).ConfigureAwait(false);
                 EmbedQueue.Enqueue((bytes, info.EmbedString, info.EmbedFooter, info.EmbedTitle));
             }
             await Task.Delay(2_000, token).ConfigureAwait(false);
@@ -362,12 +365,15 @@ namespace SysBot.Pokemon
 
                     if (IsRaiderBanned(TrainerName))
                     {
-                        var msg = $"Raid Canceled Due to Banned User\nBanned User: {initialTrainers[i]} was found in the lobby.\nRecreating raid team.";
+                        var titlemsg = "Raid Canceled Due to Banned User";
+                        var msg = $"Banned User: {initialTrainers[i]} was found in the lobby.\nRecreating raid team.";
                         Log(msg);
                         if (RaidSVEmbedsInitialized)
                         {
-                            var bytes = await SwitchConnection.Screengrab(token).ConfigureAwait(false);
-                            EmbedQueue.Enqueue((bytes, "", "", msg));
+                            var bytes = new byte[0];
+                            if (Settings.TakeScreenshot)
+                                bytes = await SwitchConnection.Screengrab(token).ConfigureAwait(false);
+                            EmbedQueue.Enqueue((bytes, msg, Assembly, titlemsg));
                         }
                         await Task.Delay(2_000, token).ConfigureAwait(false);
                         return (false, LobbyNIDs, initialTrainers);
@@ -390,7 +396,9 @@ namespace SysBot.Pokemon
             await Task.Delay(2_000, token).ConfigureAwait(false);
             if (RaidSVEmbedsInitialized)
             {
-                var bytes = await SwitchConnection.Screengrab(token).ConfigureAwait(false);
+                var bytes = new byte[0];
+                if (Settings.TakeScreenshot)
+                    bytes = await SwitchConnection.Screengrab(token).ConfigureAwait(false);
                 EmbedQueue.Enqueue((bytes, info.EmbedString, info.EmbedFooter, info.EmbedTitle));
             }
             await Task.Delay(2_000, token).ConfigureAwait(false);

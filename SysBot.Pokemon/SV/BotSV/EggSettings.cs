@@ -12,7 +12,7 @@ namespace SysBot.Pokemon
         public override string ToString() => "Egg Bot Settings";
 
         [Category(FeatureToggle), Description("When enabled, the bot will continue after finding a suitable match.")]
-        public ContinueAfterMatch ContinueAfterMatch { get; set; } = ContinueAfterMatch.StopExit;
+        public ContinueAfterMatch ContinueAfterMatch { get; set; } = ContinueAfterMatch.PauseWaitAcknowledge;
 
         [Category(FeatureToggle), Description("When enabled, the bot will make a sandwich on start.")]
         public bool EatFirst { get; set; } = true;

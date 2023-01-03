@@ -20,6 +20,12 @@ namespace SysBot.Pokemon
         [Category(Hosting), Description("Input the Species to post a Thumbnail in the embeds. Ignored if 0.")]
         public Species RaidSpecies { get; set; } = Species.None;
 
+        [Category(Hosting), Description("If the species does not have an alternate form, leave at 0.")]
+        public int RaidSpeciesForm { get; set; } = 0;
+
+        [Category(Hosting), Description("If the species is female set to true.")]
+        public bool RaidSpeciesIsFemale { get; set; } = false;
+
         [Category(FeatureToggle), Description("If true, the bot will use a random code for the raid.")]
         public bool CodeTheRaid { get; set; } = true;
 
@@ -43,6 +49,9 @@ namespace SysBot.Pokemon
 
         [Category(FeatureToggle), Description("If true, start the bot when you are on the HOME screen with the game closed. The bot will only run the rollover routine so you can try to configure accurate timing.")]
         public bool ConfigureRolloverCorrection { get; set; } = false;
+
+        [Category(FeatureToggle), Description("If true, the bot will attempt take screenshots for the Raid Embeds. If you experience crashes often about \"Size/Parameter\" try setting this to false.")]
+        public bool TakeScreenshot { get; set; } = true;
 
         [Category(Hosting), Description("Enter Discord channel ID(s) to post raid embeds to. Feature has to be initialized via \"$resv\" after every client restart.")]
         public string RaidEmbedChannelsSV { get; set; } = string.Empty;

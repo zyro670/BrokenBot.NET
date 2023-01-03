@@ -14,7 +14,7 @@ namespace SysBot.Pokemon
                 or PokeRoutineType.TradeCord
                 => new PokeTradeBotBS(Hub, cfg),
 
-            PokeRoutineType.RemoteControl => new RemoteControlBot(cfg),
+            PokeRoutineType.RemoteControl => new RemoteControlBotBS(cfg),
 
             _ => throw new ArgumentException(nameof(cfg.NextRoutineType)),
         };

@@ -16,7 +16,7 @@ namespace SysBot.Pokemon
                 => new PokeTradeBotLA(Hub, cfg),
 
             PokeRoutineType.ArceusBot => new ArceusBot(cfg, Hub),
-            PokeRoutineType.RemoteControl => new RemoteControlBot(cfg),
+            PokeRoutineType.RemoteControl => new RemoteControlBotLA(cfg),
 
             _ => throw new ArgumentException(nameof(cfg.NextRoutineType)),
         };

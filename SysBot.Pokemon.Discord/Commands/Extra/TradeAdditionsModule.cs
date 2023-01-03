@@ -666,11 +666,28 @@ namespace SysBot.Pokemon.Discord
                 {
                     var img = "zap.jpg";
                     var turl = string.Empty;
-                    var thumb = (ushort)RaidSettingsSV.RaidSpecies;
-                    if (thumb != 0)
+                    var form = string.Empty;
+                    var gender = string.Empty;                    
+                    PK9 pk = new();
+                    pk.Species = (ushort)RaidSettingsSV.RaidSpecies;
+                    pk.Form = (byte)RaidSettingsSV.RaidSpeciesForm;
+                    if (pk.Form != 0)
+                        form = $"-{pk.Form}";                    
+                    CommonEdits.SetShiny(pk, Shiny.Always);
+                    if (RaidSettingsSV.RaidSpeciesIsFemale)
                     {
-                        turl = $"https://raw.githubusercontent.com/zyro670/PokeTextures/main/Placeholder%20Sprites/scaled_up_sprites/" + $"{thumb}" + ".png";
+                        pk.Gender = (int)Gender.Female;
+                        gender = "f";
                     }
+                    if ((Species)pk.Species <= Species.Enamorus)
+                    {
+                        turl = TradeExtensions<PK9>.PokeImg(pk, false, false);
+                    }
+                    if ((Species)pk.Species is Species.Wooper && pk.Form != 0 || (Species)pk.Species is Species.Tauros && pk.Form != 0 || (Species)pk.Species > Species.Enamorus && pk.Species != 0)
+                        turl = $"https://raw.githubusercontent.com/zyro670/PokeTextures/main/Placeholder%20Sprites/scaled_up_sprites/Shiny/" + $"{pk.Species}{form}{gender}" + ".png";
+                    if (turl == null)
+                        turl = $"https://raw.githubusercontent.com/zyro670/PokeTextures/main/Placeholder%20Sprites/scaled_up_sprites/" + $"{pk.Species}{form}{gender}" + ".png";
+
                     var embed = new EmbedBuilder
                     {
                         Title = embedInfo.Item4,
@@ -688,7 +705,10 @@ namespace SysBot.Pokemon.Discord
 #pragma warning restore CS8604 // Possible null reference argument.
                         try
                         {
-                            await channel.SendFileAsync(ms, img, "", false, embed: embed.Build()).ConfigureAwait(false);
+                            if (!RaidSettingsSV.TakeScreenshot)
+                                await channel.SendMessageAsync(null, false, embed: embed.Build()).ConfigureAwait(false);
+                            else
+                                await channel.SendFileAsync(ms, img, "", false, embed: embed.Build()).ConfigureAwait(false);
                         }
                         catch { }
                     }
