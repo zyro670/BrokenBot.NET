@@ -4,7 +4,6 @@ using SysBot.Pokemon.Models;
 using SysBot.Pokemon.Utils;
 using System.Buffers.Binary;
 using System.Collections.Concurrent;
-using System.Net;
 using System.Text;
 using static SysBot.Base.SwitchButton;
 
@@ -404,10 +403,8 @@ namespace SysBot.Pokemon
             List<BannedRaider> bannedRaiders = new List<BannedRaider>();
             try
             {
-                WebClient client = new WebClient();
-                Stream stream = client.OpenRead("https://raw.githubusercontent.com/PokemonAutomation/ServerConfigs-PA-SHA/main/PokemonScarletViolet/TeraAutoHost-BanList.json");
-                StreamReader reader = new StreamReader(stream);
-                var content = reader.ReadToEnd();
+                HttpClient client = new HttpClient();
+                var content = client.GetStringAsync("https://raw.githubusercontent.com/PokemonAutomation/ServerConfigs-PA-SHA/main/PokemonScarletViolet/TeraAutoHost-BanList.json").Result;
                 var jsonContent = JsonConvert.DeserializeObject<List<BannedRaider>>(content);
                 bannedRaiders = jsonContent.Where(item => item.Enabled == "true").ToList();
             }
