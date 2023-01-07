@@ -61,10 +61,9 @@ namespace SysBot.Pokemon.Discord
             {
                 var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
                 var pkm = sav.GetLegal(template, out var result);
-                if (pkm.Species == 132)
-                    TradeExtensions<T>.DittoTrade(pkm);
+                bool pla = typeof(T) == typeof(PA8);
 
-                if (pkm.Nickname.ToLower() == "egg" && Breeding.CanHatchAsEgg(pkm.Species))
+                if (!pla && pkm.Nickname.ToLower() == "egg" && Breeding.CanHatchAsEgg(pkm.Species))
                     TradeExtensions<T>.EggTrade(pkm, template);
 
                 var la = new LegalityAnalysis(pkm);

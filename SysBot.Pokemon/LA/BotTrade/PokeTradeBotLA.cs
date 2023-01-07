@@ -889,10 +889,35 @@ namespace SysBot.Pokemon
                 return PokeTradeResult.TrainerTooSlow;
             }
 
-            bool different = TradeExtensions<PA8>.SameFamily(dumps);
+            ushort[] multiExceptions = new ushort[]
+            {
+                (ushort)Species.Bidoof, (ushort)Species.Eevee,
+                (ushort)Species.Combee,
+                (ushort)Species.Qwilfish,
+                (ushort)Species.Abra, (ushort)Species.Kadabra,
+                (ushort)Species.Basculin,
+                (ushort)Species.Magikarp, (ushort)Species.Gyarados,
+                (ushort)Species.Shellos, (ushort)Species.Gastrodon,
+                (ushort)Species.Ralts, (ushort)Species.Budew, (ushort)Species.Roselia,
+                (ushort)Species.Hippopotas, (ushort)Species.Hippowdon,
+                (ushort)Species.Aipom,
+                (ushort)Species.Pikachu, (ushort)Species.Pichu, (ushort)Species.Kricketot,
+                (ushort)Species.Psyduck, (ushort)Species.Buneary,
+                (ushort)Species.Petilil, (ushort)Species.Gastly, (ushort)Species.Haunter,
+                (ushort)Species.Glameow, (ushort)Species.Purugly,
+                (ushort)Species.Teddiursa, (ushort)Species.Ursaring,
+                (ushort)Species.Beautifly, (ushort)Species.Dustox, (ushort)Species.Mothim,
+                (ushort)Species.Murkrow,
+                (ushort)Species.Swinub, (ushort)Species.Piloswine,
+                (ushort)Species.Paras, (ushort)Species.Parasect, (ushort)Species.Zubat, (ushort)Species.Golbat,
+                (ushort)Species.Rufflet,
+            };
+
+            bool isMulti = multiExceptions.Intersect(dumps.Select(x => x.Species)).ToArray().Length >= 1 && dumps.All(x => multiExceptions.Contains(x.Species));
+            bool different = TradeExtensions<PA8>.DifferentFamily(dumps) && !isMulti;
             if (different)
             {
-                var msg = "Shown Pokémon are not of the same family. Please show Pokémon that were caught in an MO or MMO.";
+                var msg = "Shown Pokémon are not of the same family and do not belong in currently supported multi spawners. Please show Pokémon that were caught in an MO, MMO, or multi spawner.";
                 detail.Notifier.SendIncompleteEtumrepEmbed(this, detail, msg, dumps);
                 return PokeTradeResult.TrainerTooSlow;
             }
@@ -941,10 +966,10 @@ namespace SysBot.Pokemon
             if (clone.FatefulEncounter)
             {
                 clone.SetDefaultNickname(laInit);
-                var info = new SimpleTrainerInfo { Gender = clone.OT_Gender, Language = clone.Language, OT = name, TID = clone.TID, SID = clone.SID };
+                var info = new SimpleTrainerInfo { Gender = clone.OT_Gender, Language = clone.Language, OT = name, TID = clone.TID, SID = clone.SID, Generation = 8 };
                 var mg = EncounterEvent.GetAllEvents().Where(x => x.Species == clone.Species && x.Form == clone.Form && x.IsShiny == clone.IsShiny && x.OT_Name == clone.OT_Name).ToList();
                 if (mg.Count > 0)
-                    clone = TradeExtensions<PA8>.CherishHandler(mg.First(), info, clone.Format);
+                    clone = TradeExtensions<PA8>.CherishHandler(mg.First(), info);
                 else clone = (PA8)sav.GetLegal(AutoLegalityWrapper.GetTemplate(new ShowdownSet(string.Join("\n", set))), out _);
             }
             else clone = (PA8)sav.GetLegal(AutoLegalityWrapper.GetTemplate(new ShowdownSet(string.Join("\n", set))), out _);

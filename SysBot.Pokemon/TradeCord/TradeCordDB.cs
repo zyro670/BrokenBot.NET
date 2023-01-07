@@ -11,7 +11,7 @@ namespace SysBot.Pokemon
     {
         protected T RngRoutineSWSH(T pkm, IBattleTemplate template, Shiny shiny)
         {
-            if (pkm.Species is (int)Species.Alcremie)
+            if (pkm.Species is (ushort)Species.Alcremie)
             {
                 var data = pkm.Data;
                 var deco = (uint)Random.Next(7);
@@ -65,8 +65,8 @@ namespace SysBot.Pokemon
                     pkm.SetAbilityIndex(static8U.Ability is AbilityPermission.Any12H ? Random.Next(3) : static8U.Ability is AbilityPermission.Any12 ? Random.Next(2) : static8U.Ability is AbilityPermission.OnlyFirst ? 0 : static8U.Ability is AbilityPermission.OnlySecond ? 1 : 2);
             }
 
-            bool goMew = pkm.Species is (int)Species.Mew && enc.Version is GameVersion.GO && pkm.IsShiny;
-            bool goOther = (pkm.Species is (int)Species.Victini or (int)Species.Jirachi or (int)Species.Celebi or (int)Species.Genesect) && enc.Version is GameVersion.GO;
+            bool goMew = pkm.Species is (ushort)Species.Mew && enc.Version is GameVersion.GO && pkm.IsShiny;
+            bool goOther = (pkm.Species is (ushort)Species.Victini or (ushort)Species.Jirachi or (ushort)Species.Celebi or (ushort)Species.Genesect) && enc.Version is GameVersion.GO;
             if (enc is EncounterSlotGO slotGO && !goMew && !goOther)
                 pkm.SetRandomIVsGO(slotGO.Type.GetMinIV());
             else if (enc is EncounterStatic8N static8N)
@@ -170,9 +170,9 @@ namespace SysBot.Pokemon
 
         protected T EggRngRoutine(IReadOnlyList<EvoCriteria> evos, int[] balls, int generation, string trainerInfo, Shiny shiny)
         {
-            var shinyRng = shiny == Shiny.AlwaysSquare ? "\nShiny: Square" : shiny == Shiny.AlwaysStar ? "\nShiny: Star" : shiny != Shiny.Never ? "\nShiny: Yes" : "";
+            var shinyRng = shiny is Shiny.AlwaysSquare ? "\nShiny: Square" : shiny is Shiny.AlwaysStar ? "\nShiny: Star" : shiny is not Shiny.Never ? "\nShiny: Yes" : "";
             int dittoLoc = DittoSlot(evos[0].Species, evos[1].Species);
-            bool random = evos.All(x => x.Species == 132);
+            bool random = evos.All(x => x.Species is 132);
 
             ushort baseSpecies = 0;
             byte formID = 0;
@@ -219,7 +219,7 @@ namespace SysBot.Pokemon
                 _ => formName,
             };
 
-            if (speciesID is (ushort)Species.Rotom || FormInfo.IsBattleOnlyForm(speciesID, formID, generation) || !Breeding.CanHatchAsEgg(speciesID, formID, generation))
+            if (speciesID is (ushort)Species.Rotom || FormInfo.IsBattleOnlyForm(speciesID, formID, generation) || !Breeding.CanHatchAsEgg(speciesID, formID, (EntityContext)generation))
                 formName = "";
 
             var set = new ShowdownSet($"Egg({speciesName}{formName}){shinyRng}\n{trainerInfo}");
@@ -241,11 +241,11 @@ namespace SysBot.Pokemon
             return pk;
         }
 
-        private int DittoSlot(int species1, int species2)
+        private int DittoSlot(ushort species1, ushort species2)
         {
-            if (species1 == 132 && species2 != 132)
+            if (species1 is 132 && species2 is not 132)
                 return 1;
-            else if (species2 == 132 && species1 != 132)
+            else if (species2 is 132 && species1 is not 132)
                 return 2;
             else return 0;
         }
@@ -449,9 +449,11 @@ namespace SysBot.Pokemon
             }
 
             bool applyMoves = false;
+            bool edgeEvos = (pk.Species is (ushort)Species.Koffing && result.EvolvedForm is 0) || ((pk.Species is (ushort)Species.Exeggcute || pk.Species is (ushort)Species.Pikachu || pk.Species is (ushort)Species.Cubone) && result.EvolvedForm > 0);
             var enc = new LegalityAnalysis(pk).EncounterMatch;
-            var sav = new SimpleTrainerInfo() { OT = pk.OT_Name, Gender = pk.OT_Gender, Generation = pk.Version, Language = pk.Language, SID = pk.TrainerSID7, TID = pk.TrainerID7 };
-            if (typeof(T) == typeof(PK8) && pk.Generation is 8 && ((pk.Species is (ushort)Species.Koffing && result.EvolvedForm is 0) || ((pk.Species is (ushort)Species.Exeggcute || pk.Species is (ushort)Species.Pikachu || pk.Species is (ushort)Species.Cubone) && result.EvolvedForm > 0)))
+            var sav = new SimpleTrainerInfo() { OT = pk.OT_Name, Gender = pk.OT_Gender, Generation = pk.Version, Language = pk.Language, SID = pk.TrainerSID7, TID = pk.TrainerID7, Context = Game is GameVersion.BDSP ? EntityContext.Gen8b : EntityContext.Gen8 };
+
+            if (typeof(T) == typeof(PK8) && pk.Generation is 8 && edgeEvos)
             {
                 applyMoves = true;
                 int version = pk.Version;
@@ -459,7 +461,6 @@ namespace SysBot.Pokemon
                 pk.Met_Location = 78; // Paniola Ranch
                 pk.Met_Level = 1;
                 pk.SetEggMetData(GameVersion.UM, (GameVersion)version);
-                sav.Generation = version;
                 enc = new LegalityAnalysis(pk).EncounterMatch;
                 pk.SetHandlerandMemory(sav, enc);
                 if (pk is PK8 pk8)
@@ -562,10 +563,10 @@ namespace SysBot.Pokemon
         private EvolutionTemplate GetWurmpleEvo(PKM pkm, List<EvolutionTemplate> list)
         {
             var clone = pkm.Clone();
-            clone.Species = (int)Species.Silcoon;
+            clone.Species = (ushort)Species.Silcoon;
             if (WurmpleUtil.IsWurmpleEvoValid(clone))
-                return list.Find(x => x.EvolvesInto == (int)Species.Silcoon);
-            else return list.Find(x => x.EvolvesInto == (int)Species.Cascoon);
+                return list.Find(x => x.EvolvesInto is (ushort)Species.Silcoon);
+            else return list.Find(x => x.EvolvesInto is (ushort)Species.Cascoon);
         }
 
         protected string ListNameSanitize(string name)
@@ -607,7 +608,7 @@ namespace SysBot.Pokemon
             var pkm1 = GetLookupAsClassObject<T>(user.UserInfo.UserID, "binary_catches", $"and id = {user.Daycare.ID1}");
             if (pkm1.Species is 0)
             {
-                if (user.Daycare.Species2 != 0)
+                if (user.Daycare.Species2 is not 0)
                     user.Daycare = new() { Ball2 = user.Daycare.Ball2, Form2 = user.Daycare.Form2, ID2 = user.Daycare.ID2, Shiny2 = user.Daycare.Shiny2, Species2 = user.Daycare.Species2 };
                 else user.Daycare = new();
                 update = true;

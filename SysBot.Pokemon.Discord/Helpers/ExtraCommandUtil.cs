@@ -282,8 +282,11 @@ namespace SysBot.Pokemon.Discord
                         Base.LogUtil.LogError(msg, "[ButtonExecuted Event]");
                     }
                 }
-                else if (id.Contains("permute") && !component.HasResponded)
-                    await PermuteUtil.HandlePermuteRequestAsync(component, id).ConfigureAwait(false);
+                else if (id.Contains("permute"))
+                {
+                    var service = id.Contains(';') ? id.Split(';')[1] : "";
+                    await PermuteUtil.HandlePermuteRequestAsync(component, service, id).ConfigureAwait(false);
+                }
             });
 
             return Task.CompletedTask;
@@ -294,11 +297,13 @@ namespace SysBot.Pokemon.Discord
             _ = Task.Run(async () =>
             {
                 var id = component.Data.CustomId;
-                if (id is "permute_json_filter" && !component.HasResponded)
-                {
-                    await component.DeferAsync().ConfigureAwait(false);
-                    await PermuteUtil.GetPermuteFilterAsync(component).ConfigureAwait(false);
-                }
+                string service = id.Contains(';') ? id.Split(';')[1] : component.Data.Values.First() ?? "";
+                await component.DeferAsync().ConfigureAwait(false);
+
+                if (id.Contains("permute_json_filter"))
+                    await PermuteUtil.HandlePermuteButtonAsync(component, service).ConfigureAwait(false);
+                else if (id.Contains("permute_json_select"))
+                    await PermuteUtil.HandlePermuteRequestAsync(component, service, id).ConfigureAwait(false);
             });
 
             return Task.CompletedTask;
@@ -310,8 +315,9 @@ namespace SysBot.Pokemon.Discord
             {
                 await modal.DeferAsync().ConfigureAwait(false);
                 var id = modal.Data.CustomId;
+                string service = id.Contains(';') ? id.Split(';')[1] : "";
                 if (id.Contains("permute_json"))
-                    await PermuteUtil.VerifyAndRunPermuteAsync(modal).ConfigureAwait(false);
+                    await PermuteUtil.VerifyAndRunPermuteAsync(modal, service).ConfigureAwait(false);
             });
 
             return Task.CompletedTask;

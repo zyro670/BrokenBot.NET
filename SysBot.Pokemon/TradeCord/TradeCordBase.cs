@@ -307,7 +307,7 @@ namespace SysBot.Pokemon
         {
             T? pk = null;
             if (reader.Read())
-                pk = (T?)EntityFormat.GetFromBytes((byte[])reader["data"]);
+                pk = (T?)EntityFormat.GetFromBytes((byte[])reader["data"], typeof(T) == typeof(PK8) ? EntityContext.Gen8 : EntityContext.Gen8b);
             return pk ?? new();
         }
 
@@ -337,7 +337,7 @@ namespace SysBot.Pokemon
                 if (perkArr[0] != "")
                 {
                     for (int i = 0; i < perkArr.Length; i++)
-                        perks.ActivePerks.Add((DexPerks)int.Parse(perkArr[i]));
+                        perks.ActivePerks.Add((DexPerks)ushort.Parse(perkArr[i]));
                 }
                 perks.SpeciesBoost = boost;
             }
@@ -361,12 +361,15 @@ namespace SysBot.Pokemon
             TCDex dex = new();
             if (reader.Read())
             {
-                var dexEntries = reader["entries"].ToString().Split(',');
+                var dexEntries = reader["entries"].ToString().Replace(" ", "").Split(',');
                 var count = (int)reader["dex_count"];
                 if (dexEntries[0] != "")
                 {
                     for (int i = 0; i < dexEntries.Length; i++)
-                        dex.Entries.Add(ushort.Parse(dexEntries[i]));
+                    {
+                        if (dexEntries[i] is not "-1")
+                            dex.Entries.Add(ushort.Parse(dexEntries[i]));
+                    }
                 }
                 dex.DexCompletionCount = count;
             }
@@ -676,7 +679,7 @@ namespace SysBot.Pokemon
         private string DexText(ushort species, byte form, bool gmax)
         {
             bool patterns = form > 0 && species is (ushort)Arceus or (ushort)Unown or (ushort)Deoxys or (ushort)Burmy or (ushort)Wormadam or (ushort)Mothim or (ushort)Vivillon or (ushort)Furfrou;
-            if (FormInfo.IsBattleOnlyForm(species, form, 8) || FormInfo.IsFusedForm(species, form, 8) || FormInfo.IsTotemForm(species, form, 8) || FormInfo.IsLordForm(species, form, 8) || patterns)
+            if (FormInfo.IsBattleOnlyForm(species, form, 8) || FormInfo.IsFusedForm(species, form, 8) || FormInfo.IsTotemForm(species, form, EntityContext.Gen8) || FormInfo.IsLordForm(species, form, EntityContext.Gen8) || patterns)
                 return "";
 
             var resourcePath = "SysBot.Pokemon.TradeCord.Resources.DexFlavor.txt";
@@ -738,11 +741,11 @@ namespace SysBot.Pokemon
             var table = EvolutionTree.GetEvolutionTree(pkm.Context);
             var evos = table.GetValidPreEvolutions(pkm, 100, 8, true);
             var encs = EncounterEggGenerator.GenerateEggs(pkm, evos, 8, true).ToArray();
-            if (encs.Length is 0 || !Breeding.CanHatchAsEgg(species) || !Breeding.CanHatchAsEgg(species, form, 8))
+            if (encs.Length is 0 || !Breeding.CanHatchAsEgg(species) || !Breeding.CanHatchAsEgg(species, form, EntityContext.Gen8))
                 return false;
 
             baseSpecies = encs[^1].Species;
-            if (GameData.GetPersonal(Game).GetFormEntry(baseSpecies, form).IsFormWithinRange(form) && Breeding.CanHatchAsEgg(baseSpecies, form, 8))
+            if (GameData.GetPersonal(Game).GetFormEntry(baseSpecies, form).IsFormWithinRange(form) && Breeding.CanHatchAsEgg(baseSpecies, form, EntityContext.Gen8))
                 baseForm = (byte)(species is (ushort)Darmanitan && form <= 1 ? 0 : form);
             else baseForm = encs[^1].Form;
             return true;
@@ -1165,7 +1168,7 @@ namespace SysBot.Pokemon
 
                     if (preEvos.Length >= 2 && evos.Count() is 0)
                     {
-                        for (ushort c = 0; c < preEvos.Length; c++)
+                        for (int c = 0; c < preEvos.Length; c++)
                         {
                             var evoType = preEvos[c].Method;
                             TCItems item = TCItems.None;
@@ -1175,7 +1178,7 @@ namespace SysBot.Pokemon
                                 evoType = EvolutionType.LevelUp;
 
                             if (evoType is EvolutionType.TradeHeldItem or EvolutionType.UseItem or EvolutionType.UseItemFemale or EvolutionType.UseItemMale or EvolutionType.LevelUpHeldItemDay or EvolutionType.LevelUpHeldItemNight or EvolutionType.Spin)
-                                item = GetEvoItem(baseSp ? -1 : preEvos[c - 1].Species, f);
+                                item = GetEvoItem((ushort)(baseSp ? 0 : preEvos[c - 1].Species), f);
 
                             var template = new EvolutionTemplate
                             {
@@ -1204,47 +1207,47 @@ namespace SysBot.Pokemon
             return list;
         }
 
-        private static TCItems GetEvoItem(int species, int form)
+        private static TCItems GetEvoItem(ushort species, byte form)
         {
             return species switch
             {
                 // Use item
-                (int)Vaporeon or (int)Poliwrath or (int)Cloyster or (int)Starmie or (int)Ludicolo or (int)Simipour => TCItems.WaterStone,
-                (int)Jolteon or (int)Raichu or (int)Magnezone or (int)Eelektross or (int)Vikavolt => TCItems.ThunderStone,
-                (int)Ninetales or (int)Sandshrew when form > 0 => TCItems.IceStone,
-                (int)Flareon or (int)Ninetales or (int)Arcanine or (int)Simisear => TCItems.FireStone,
-                (int)Leafeon or (int)Vileplume or (int)Victreebel or (int)Exeggutor or (int)Shiftry or (int)Simisage => TCItems.LeafStone,
-                (int)Glaceon => TCItems.IceStone,
-                (int)Darmanitan when form == 2 => TCItems.IceStone,
-                (int)Nidoqueen or (int)Nidoking or (int)Clefable or (int)Wigglytuff or (int)Delcatty or (int)Musharna => TCItems.MoonStone,
-                (int)Bellossom or (int)Sunflora or (int)Whimsicott or (int)Lilligant or (int)Heliolisk or (int)Sunflora => TCItems.SunStone,
-                (int)Togekiss or (int)Roserade or (int)Cinccino or (int)Florges => TCItems.ShinyStone,
-                (int)Honchkrow or (int)Mismagius or (int)Chandelure or (int)Aegislash => TCItems.DuskStone,
-                (int)Gallade or (int)Froslass => TCItems.DawnStone,
-                (int)Polteageist => form == 0 ? TCItems.CrackedPot : TCItems.ChippedPot,
-                (int)Appletun => TCItems.SweetApple,
-                (int)Flapple => TCItems.TartApple,
-                (int)Slowbro when form > 0 => TCItems.GalaricaCuff,
-                (int)Slowking when form > 0 => TCItems.GalaricaWreath,
-                (int)Slowking or (int)Politoed => TCItems.KingsRock,
+                (ushort)Vaporeon or (ushort)Poliwrath or (ushort)Cloyster or (ushort)Starmie or (ushort)Ludicolo or (ushort)Simipour => TCItems.WaterStone,
+                (ushort)Jolteon or (ushort)Raichu or (ushort)Magnezone or (ushort)Eelektross or (ushort)Vikavolt => TCItems.ThunderStone,
+                (ushort)Ninetales or (ushort)Sandshrew when form > 0 => TCItems.IceStone,
+                (ushort)Flareon or (ushort)Ninetales or (ushort)Arcanine or (ushort)Simisear => TCItems.FireStone,
+                (ushort)Leafeon or (ushort)Vileplume or (ushort)Victreebel or (ushort)Exeggutor or (ushort)Shiftry or (ushort)Simisage => TCItems.LeafStone,
+                (ushort)Glaceon => TCItems.IceStone,
+                (ushort)Darmanitan when form == 2 => TCItems.IceStone,
+                (ushort)Nidoqueen or (ushort)Nidoking or (ushort)Clefable or (ushort)Wigglytuff or (ushort)Delcatty or (ushort)Musharna => TCItems.MoonStone,
+                (ushort)Bellossom or (ushort)Sunflora or (ushort)Whimsicott or (ushort)Lilligant or (ushort)Heliolisk or (ushort)Sunflora => TCItems.SunStone,
+                (ushort)Togekiss or (ushort)Roserade or (ushort)Cinccino or (ushort)Florges => TCItems.ShinyStone,
+                (ushort)Honchkrow or (ushort)Mismagius or (ushort)Chandelure or (ushort)Aegislash => TCItems.DuskStone,
+                (ushort)Gallade or (ushort)Froslass => TCItems.DawnStone,
+                (ushort)Polteageist => form == 0 ? TCItems.CrackedPot : TCItems.ChippedPot,
+                (ushort)Appletun => TCItems.SweetApple,
+                (ushort)Flapple => TCItems.TartApple,
+                (ushort)Slowbro when form > 0 => TCItems.GalaricaCuff,
+                (ushort)Slowking when form > 0 => TCItems.GalaricaWreath,
+                (ushort)Slowking or (ushort)Politoed => TCItems.KingsRock,
 
                 // Held item
-                (int)Kingdra => TCItems.DragonScale,
-                (int)PorygonZ => TCItems.DubiousDisc,
-                (int)Electivire => TCItems.Electirizer,
-                (int)Magmortar => TCItems.Magmarizer,
-                (int)Steelix or (int)Scizor => TCItems.MetalCoat,
-                (int)Chansey => TCItems.OvalStone,
-                (int)Milotic => TCItems.PrismScale,
-                (int)Huntail => TCItems.DeepSeaTooth,
-                (int)Gorebyss => TCItems.DeepSeaScale,
-                (int)Rhyperior => TCItems.Protector,
-                (int)Weavile => TCItems.RazorClaw,
-                (int)Dusknoir => TCItems.ReaperCloth,
-                (int)Aromatisse => TCItems.Sachet,
-                (int)Porygon2 => TCItems.Upgrade,
-                (int)Slurpuff => TCItems.WhippedDream,
-                (int)Alcremie => TCItems.Sweets,
+                (ushort)Kingdra => TCItems.DragonScale,
+                (ushort)PorygonZ => TCItems.DubiousDisc,
+                (ushort)Electivire => TCItems.Electirizer,
+                (ushort)Magmortar => TCItems.Magmarizer,
+                (ushort)Steelix or (ushort)Scizor => TCItems.MetalCoat,
+                (ushort)Chansey => TCItems.OvalStone,
+                (ushort)Milotic => TCItems.PrismScale,
+                (ushort)Huntail => TCItems.DeepSeaTooth,
+                (ushort)Gorebyss => TCItems.DeepSeaScale,
+                (ushort)Rhyperior => TCItems.Protector,
+                (ushort)Weavile => TCItems.RazorClaw,
+                (ushort)Dusknoir => TCItems.ReaperCloth,
+                (ushort)Aromatisse => TCItems.Sachet,
+                (ushort)Porygon2 => TCItems.Upgrade,
+                (ushort)Slurpuff => TCItems.WhippedDream,
+                (ushort)Alcremie => TCItems.Sweets,
                 _ => TCItems.None,
             };
         }

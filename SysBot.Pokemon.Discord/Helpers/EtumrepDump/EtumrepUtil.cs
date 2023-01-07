@@ -9,6 +9,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using Discord;
+using Discord.Net;
 using Discord.WebSocket;
 using Newtonsoft.Json;
 using PKHeX.Core;
@@ -67,25 +68,34 @@ namespace SysBot.Pokemon.Discord
             }
 
             var embed = new EmbedBuilder { Color = Color.Blue };
-            var dmCh = await user.CreateDMChannelAsync().ConfigureAwait(false);
-
-            bool exists = Config.EtumrepDump.Servers.Count > 0 && Config.EtumrepDump.Servers.FirstOrDefault(x => x.IP != string.Empty && x.Token != string.Empty) is not null;
-            if (exists)
+            try
             {
-                var buttonYes = new ButtonBuilder() { CustomId = "etumrep_yes", Label = "Yes", Style = ButtonStyle.Primary };
-                var buttonNo = new ButtonBuilder() { CustomId = "etumrep_no", Label = "No", Style = ButtonStyle.Secondary };
-                var components = new ComponentBuilder().WithButton(buttonYes).WithButton(buttonNo);
+                var dmCh = await user.CreateDMChannelAsync().ConfigureAwait(false);
+                bool exists = Config.EtumrepDump.Servers.Count > 0 && Config.EtumrepDump.Servers.FirstOrDefault(x => x.IP != string.Empty && x.Token != string.Empty) is not null;
 
-                embed.Description = "Here are all the Pokémon you dumped!\nWould you like to calculate your seed using EtumrepMMO?";
-                embed.WithAuthor(x => { x.Name = "EtumrepMMO Service"; });
+                if (exists)
+                {
+                    var buttonYes = new ButtonBuilder() { CustomId = "etumrep_yes", Label = "Yes", Style = ButtonStyle.Primary };
+                    var buttonNo = new ButtonBuilder() { CustomId = "etumrep_no", Label = "No", Style = ButtonStyle.Secondary };
+                    var components = new ComponentBuilder().WithButton(buttonYes).WithButton(buttonNo);
 
-                await dmCh.SendFilesAsync(list, null, false, embed: embed.Build(), null, null, null, components: components.Build()).ConfigureAwait(false);
-                return;
+                    embed.Description = "Here are all the Pokémon you dumped!\nWould you like to calculate your seed using EtumrepMMO?";
+                    embed.WithAuthor(x => { x.Name = "EtumrepMMO Service"; });
+
+                    await dmCh.SendFilesAsync(list, null, false, embed: embed.Build(), null, null, null, components: components.Build()).ConfigureAwait(false);
+                    return;
+                }
+
+                embed.Description = "Here are all the Pokémon you dumped!";
+                embed.WithAuthor(x => { x.Name = "Pokémon Legends: Arceus Dump"; });
+                await dmCh.SendFilesAsync(list, null, false, embed: embed.Build()).ConfigureAwait(false);
             }
-
-            embed.Description = "Here are all the Pokémon you dumped!";
-            embed.WithAuthor(x => { x.Name = "Pokémon Legends: Arceus Dump"; });
-            await dmCh.SendFilesAsync(list, null, false, embed: embed.Build()).ConfigureAwait(false);
+            catch (HttpException ex)
+            {
+                var msg = $"{ex.HttpCode}: {ex.Message}";
+                LogUtil.LogError(msg, "[SendEtumrepEmbedAsync]");
+                await user.SendMessageAsync(msg).ConfigureAwait(false);
+            }
         }
 
         public static async Task HandleEtumrepRequestAsync(SocketMessageComponent component, string id)
@@ -318,8 +328,8 @@ namespace SysBot.Pokemon.Discord
                 var buttonNo = new ButtonBuilder() { CustomId = "permute_no", Label = "No", Style = ButtonStyle.Secondary };
                 components.WithButton(buttonNo);
 
-                var seedMsg = $"Your seed is `{seed}`";
-                msg = $"Result received! {seedMsg}\nWould you like to calculate your shiny paths using PermuteMMO?";
+                var seedMsg = $"`{seed}`";
+                msg = $"Result received! Your seed is {seedMsg}\nWould you like to calculate your shiny paths using PermuteMMO?";
                 await UpdateEtumrepEmbed(user.Component.Message, msg, Color.Gold, components.Build(), seedMsg).ConfigureAwait(false);
                 LogUtil.LogInfo($"{user.BotName}: Seed calculation for {user.SeedCheckerName} completed successfully.", "[EtumrepMMO Queue]");
             }
@@ -335,12 +345,29 @@ namespace SysBot.Pokemon.Discord
                 Description = desc,
             }.WithAuthor(x => { x.Name = "EtumrepMMO Service"; });
 
-            await message.ModifyAsync(x =>
+            int retryCount = 5;
+            const int retryTime = 5_000;
+
+            while (retryCount > 0)
             {
-                x.Embed = embed.Build();
-                x.Components = components;
-                x.Content = seed;
-            }).ConfigureAwait(false);
+                try
+                {
+                    await message.ModifyAsync(x =>
+                    {
+                        x.Embed = embed.Build();
+                        x.Components = components;
+                        x.Content = seed;
+                    }).ConfigureAwait(false);
+
+                    break;
+                }
+                catch
+                {
+                    retryCount--;
+                    if (retryCount is not 0)
+                        await Task.Delay(retryTime).ConfigureAwait(false);
+                }
+            }
         }
 
         private static async Task<bool> GetServerConfirmation(EtumrepUser user, string reasonIfFailed)

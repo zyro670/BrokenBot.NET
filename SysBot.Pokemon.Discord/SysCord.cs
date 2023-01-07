@@ -56,6 +56,7 @@ namespace SysBot.Pokemon.Discord
                 // you must set the MessageCacheSize. You may adjust the number as needed.
                 MessageCacheSize = 100,
                 AlwaysDownloadUsers = true,
+                GatewayIntents = GatewayIntents.All,
             });
 
             _commands = new CommandService(new CommandServiceConfig
@@ -144,9 +145,13 @@ namespace SysBot.Pokemon.Discord
 
             await _commands.AddModulesAsync(assembly, _services).ConfigureAwait(false);
             var genericTypes = assembly.DefinedTypes.Where(z => z.IsSubclassOf(typeof(ModuleBase<SocketCommandContext>)) && z.IsGenericType);
+            bool initTC = typeof(T) == typeof(PK8) || typeof(T) == typeof(PB8);
             foreach (var t in genericTypes)
             {
                 var genModule = t.MakeGenericType(typeof(T));
+                if (!initTC && t.Name.Contains("TradeCordModule"))
+                    continue;
+
                 await _commands.AddModuleAsync(genModule, _services).ConfigureAwait(false);
             }
             var modules = _commands.Modules.ToList();

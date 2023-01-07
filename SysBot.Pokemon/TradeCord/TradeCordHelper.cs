@@ -268,10 +268,10 @@ namespace SysBot.Pokemon
                     result.EggPoke = EggProcess(user.Daycare, evos, balls, 8, trainerInfo, out eggMsg);
                     if (!new LegalityAnalysis(result.EggPoke).Valid)
                     {
-                        result.Message = $"Oops, something went wrong when generating an egg!\nEgg 1: {(Species)evos[0].Species}-{evos[0].Form}" +
-                            $"\nEgg 2: {(Species)evos[1].Species}-{evos[1].Form}" +
-                            $"\nDC1 ID {user.Daycare.ID1}: {user.Daycare.Species1}{user.Daycare.Form1}" +
-                            $"\nDC2 ID {user.Daycare.ID2}: {user.Daycare.Species2}{user.Daycare.Form2}";
+                        result.Message = $"Oops, something went wrong when generating an egg!" +
+                            $"\nParent 1: {(Species)evos[0].Species}-{evos[0].Form} | DC ID: {user.Daycare.ID1} ({user.Daycare.Species1}{user.Daycare.Form1})" +
+                            $"\nParent 2: {(Species)evos[1].Species}-{evos[1].Form} | DC ID: {user.Daycare.ID2} ({user.Daycare.Species2}{user.Daycare.Form2})" +
+                            $"\nResult: {(Species)result.EggPoke.Species}-{result.EggPoke.Form} ({(Ball)result.EggPoke.Ball})";
                         return false;
                     }
                     else
@@ -309,8 +309,8 @@ namespace SysBot.Pokemon
                         {
                             Enum.TryParse(user.TrainerInfo.OTGender, out Gender gender);
                             Enum.TryParse(user.TrainerInfo.Language, out LanguageID language);
-                            var info = new SimpleTrainerInfo { Gender = (int)gender, Language = (int)language, OT = user.TrainerInfo.OTName, TID = user.TrainerInfo.TID, SID = user.TrainerInfo.SID };
-                            result.Poke = TradeExtensions<T>.CherishHandler(mgRng, info, format);
+                            var info = new SimpleTrainerInfo { Gender = (int)gender, Language = (int)language, OT = user.TrainerInfo.OTName, TID = user.TrainerInfo.TID, SID = user.TrainerInfo.SID, Context = Game is GameVersion.BDSP ? EntityContext.Gen8b : EntityContext.Gen8, Generation = format };
+                            result.Poke = TradeExtensions<T>.CherishHandler(mgRng, info);
                         }
                     }
 
@@ -319,7 +319,10 @@ namespace SysBot.Pokemon
 
                     if (!new LegalityAnalysis(result.Poke).Valid)
                     {
-                        result.Message = $"Something went wrong when generating a catch!\nSpecies: {speciesName}\nForm: {result.Poke.Form}\nShiny: {Rng.ShinyRNG >= 200 - Settings.StarShinyRate}";
+                        result.Message = $"Something went wrong when generating a catch!" +
+                            $"\nSpecies: {speciesName}" +
+                            $"\nForm: {result.Poke.Form}" +
+                            $"\nShiny: {Rng.ShinyRNG >= 200 - Settings.StarShinyRate}";
                         return false;
                     }
 
@@ -715,16 +718,16 @@ namespace SysBot.Pokemon
             }
 
             var dc = user.Daycare;
-            if (dc.ID1 == 0 && dc.ID2 == 0)
+            if (dc.ID1 is 0 && dc.ID2 is 0)
                 result.Message = "You do not have anything in daycare.";
             else
             {
-                var dcSpecies1 = dc.ID1 == 0 ? "" : $"(ID: {dc.ID1}) {(dc.Shiny1 ? "★" : "")}{SpeciesName.GetSpeciesNameGeneration(dc.Species1, 2, 8)}{(dc.Species1 == 29 || dc.Species1 == 32 ? "" : dc.Form1)} ({(Ball)dc.Ball1})";
-                var dcSpecies2 = dc.ID2 == 0 ? "" : $"(ID: {dc.ID2}) {(dc.Shiny2 ? "★" : "")}{SpeciesName.GetSpeciesNameGeneration(dc.Species2, 2, 8)}{(dc.Species2 == 29 || dc.Species2 == 32 ? "" : dc.Form2)} ({(Ball)dc.Ball2})";
-                if (dc.ID1 != 0 && dc.ID2 != 0)
+                var dcSpecies1 = dc.ID1 is 0 ? "" : $"(ID: {dc.ID1}) {(dc.Shiny1 ? "★" : "")}{SpeciesName.GetSpeciesNameGeneration(dc.Species1, 2, 8)}{(dc.Species1 is 29 || dc.Species1 is 32 ? "" : dc.Form1)} ({(Ball)dc.Ball1})";
+                var dcSpecies2 = dc.ID2 is 0 ? "" : $"(ID: {dc.ID2}) {(dc.Shiny2 ? "★" : "")}{SpeciesName.GetSpeciesNameGeneration(dc.Species2, 2, 8)}{(dc.Species2 is 29 || dc.Species2 is 32 ? "" : dc.Form2)} ({(Ball)dc.Ball2})";
+                if (dc.ID1 is not 0 && dc.ID2 is not 0)
                     result.Message = $"{dcSpecies1}\n{dcSpecies2}{(canBreed ? "\n\nThey seem to really like each other." : "\n\nThey don't really seem to be fond of each other. Make sure they're of the same evolution tree, can be eggs, and have been hatched!")}";
-                else if (dc.ID1 == 0 || dc.ID2 == 0)
-                    result.Message = $"{(dc.ID1 == 0 ? dcSpecies2 : dcSpecies1)}\n\nIt seems lonely.";
+                else if (dc.ID1 is 0 || dc.ID2 is 0)
+                    result.Message = $"{(dc.ID1 is 0 ? dcSpecies2 : dcSpecies1)}\n\nIt seems lonely.";
             }
 
             result.Success = true;
@@ -762,14 +765,14 @@ namespace SysBot.Pokemon
                 var names = new string[] { "@id1", "@species1", "@form1", "@ball1", "@shiny1", "@id2", "@species2", "@form2", "@ball2", "@shiny2", "@user_id" };
                 if (withdraw)
                 {
-                    if (user.Daycare.ID1 == 0 && user.Daycare.ID2 == 0)
+                    if (user.Daycare.ID1 is 0 && user.Daycare.ID2 is 0)
                     {
                         result.Message = "You do not have anything in daycare.";
                         return false;
                     }
 
-                    var form1 = user.Daycare.Species1 == 29 || user.Daycare.Species1 == 32 ? "" : user.Daycare.Form1;
-                    var form2 = user.Daycare.Species1 == 29 || user.Daycare.Species1 == 32 ? "" : user.Daycare.Form1;
+                    var form1 = user.Daycare.Species1 is 29 || user.Daycare.Species1 is 32 ? "" : user.Daycare.Form1;
+                    var form2 = user.Daycare.Species1 is 29 || user.Daycare.Species1 is 32 ? "" : user.Daycare.Form1;
                     if (id != "all")
                     {
                         if (user.Daycare.ID1.Equals(int.Parse(id)))
@@ -794,8 +797,8 @@ namespace SysBot.Pokemon
                     }
                     else
                     {
-                        bool fullDC = user.Daycare.ID1 != 0 && user.Daycare.ID2 != 0;
-                        speciesString = !fullDC ? $"(ID: {(user.Daycare.ID1 != 0 ? user.Daycare.ID1 : user.Daycare.ID2)}) {(user.Daycare.ID1 != 0 && user.Daycare.Shiny1 ? "★" : user.Daycare.ID2 != 0 && user.Daycare.Shiny2 ? "★" : "")}{SpeciesName.GetSpeciesNameGeneration(user.Daycare.ID1 != 0 ? user.Daycare.Species1 : user.Daycare.Species2, 2, 8)}{(user.Daycare.ID1 != 0 ? form1 : form2)}" :
+                        bool fullDC = user.Daycare.ID1 is not 0 && user.Daycare.ID2 is not 0;
+                        speciesString = !fullDC ? $"(ID: {(user.Daycare.ID1 is not 0 ? user.Daycare.ID1 : user.Daycare.ID2)}) {(user.Daycare.ID1 is not 0 && user.Daycare.Shiny1 ? "★" : user.Daycare.ID2 is not 0 && user.Daycare.Shiny2 ? "★" : "")}{SpeciesName.GetSpeciesNameGeneration(user.Daycare.ID1 is not 0 ? user.Daycare.Species1 : user.Daycare.Species2, 2, 8)}{(user.Daycare.ID1 is not 0 ? form1 : form2)}" :
                             $"(ID: {user.Daycare.ID1}) {(user.Daycare.Shiny1 ? "★" : "")}{SpeciesName.GetSpeciesNameGeneration(user.Daycare.Species1, 2, 8)}{form1} and (ID: {user.Daycare.ID2}) {(user.Daycare.Shiny2 ? "★" : "")}{SpeciesName.GetSpeciesNameGeneration(user.Daycare.Species2, 2, 8)}{form2}";
                         user.Daycare = new();
                         var obj = new object[] { 0, 0, string.Empty, 0, 0, 0, 0, string.Empty, 0, 0, user.UserInfo.UserID };
@@ -804,7 +807,7 @@ namespace SysBot.Pokemon
                 }
                 else if (deposit)
                 {
-                    if (user.Daycare.ID1 != 0 && user.Daycare.ID2 != 0)
+                    if (user.Daycare.ID1 is not 0 && user.Daycare.ID2 is not 0)
                     {
                         result.Message = "Daycare full, please withdraw something first.";
                         return false;
@@ -814,9 +817,10 @@ namespace SysBot.Pokemon
                     speciesStr += match.Species + match.Form == "Nidoran-M" ? "M" : match.Species + match.Form == "Nidoran-F" ? "F" : "";
                     Enum.TryParse(match.Ball, out Ball ball);
                     Enum.TryParse(speciesStr, out Species species);
-                    if ((user.Daycare.ID1 == 0 && user.Daycare.ID2 == 0) || (user.Daycare.ID1 == 0 && user.Daycare.ID2 != _id))
+
+                    if ((user.Daycare.ID1 is 0 && user.Daycare.ID2 is 0) || (user.Daycare.ID1 is 0 && user.Daycare.ID2 != _id))
                         user.Daycare = new() { Ball1 = (int)ball, Form1 = match.Form, ID1 = match.ID, Shiny1 = match.Shiny, Species1 = (ushort)species, Ball2 = user.Daycare.Ball2, Form2 = user.Daycare.Form2, ID2 = user.Daycare.ID2, Shiny2 = user.Daycare.Shiny2, Species2 = user.Daycare.Species2 };
-                    else if (user.Daycare.ID2 == 0 && user.Daycare.ID1 != _id)
+                    else if (user.Daycare.ID2 is 0 && user.Daycare.ID1 != _id)
                         user.Daycare = new() { Ball2 = (int)ball, Form2 = match.Form, ID2 = match.ID, Shiny2 = match.Shiny, Species2 = (ushort)species, Ball1 = user.Daycare.Ball1, Form1 = user.Daycare.Form1, ID1 = user.Daycare.ID1, Shiny1 = user.Daycare.Shiny1, Species1 = user.Daycare.Species1 };
                     else
                     {
@@ -868,7 +872,7 @@ namespace SysBot.Pokemon
                 }
 
                 var pk = GetLookupAsClassObject<T>(user.UserInfo.UserID, "binary_catches", $"and id = {match.ID}");
-                if (pk.Species == 0)
+                if (pk.Species is 0)
                 {
                     result.Message = "Cannot find this Pokémon.";
                     return false;
@@ -1963,14 +1967,15 @@ namespace SysBot.Pokemon
             TradeExtensions<T>.FormOutput(Rng.SpeciesRNG, 0, out string[] forms);
             var formIDs = Dex[Rng.SpeciesRNG].ToArray();
             var formRng = formIDs[Random.Next(formIDs.Length)];
-            var form = eventForm is 255 ? forms[formRng] : forms[eventForm];
+            var formIndex = eventForm is 255 ? formRng : eventForm;
+            var form = forms[formIndex];
 
             if (!ignoreForm.Contains(Rng.SpeciesRNG))
             {
                 formHack = Rng.SpeciesRNG switch
                 {
                     (ushort)Species.Meowstic or (ushort)Species.Indeedee => formEdgeCaseRng < 5 ? "-M" : "-F",
-                    (ushort)Species.NidoranF or (ushort)Species.NidoranM => Rng.SpeciesRNG is (int)Species.NidoranF ? "-F" : "-M",
+                    (ushort)Species.NidoranF or (ushort)Species.NidoranM => Rng.SpeciesRNG is (ushort)Species.NidoranF ? "-F" : "-M",
                     (ushort)Species.Sinistea or (ushort)Species.Polteageist => formEdgeCaseRng < 5 ? "" : "-Antique",
                     (ushort)Species.Dracovish or (ushort)Species.Dracozolt => formEdgeCaseRng < 5 ? "" : "\nAbility: Sand Rush",
                     (ushort)Species.Arctovish or (ushort)Species.Arctozolt => formEdgeCaseRng < 5 ? "" : "\nAbility: Slush Rush",
@@ -2006,13 +2011,14 @@ namespace SysBot.Pokemon
             if (Rng.SpeciesRNG is (ushort)Species.Mew && gameVer == mewOverride[1])
                 trainerInfo[4] = "";
 
-            var showdown = $"{speciesName}{formHack}{shinyType}\n{string.Join("", trainerInfo)}{gameVer}";
+            var tInfo = $"\n{string.Join("", trainerInfo)}";
+            var showdown = $"{speciesName}{formHack}{shinyType}{tInfo}{gameVer}";
             var balls = TradeExtensions<T>.GetLegalBalls(showdown);
             string ball = balls.Length > 0 ? $"\nBall: {balls[Random.Next(balls.Length)]}" : "";
 
             var set = new ShowdownSet($"{showdown}{ball}");
             if (set.CanToggleGigantamax(set.Species, set.Form) && Rng.GmaxRNG >= 100 - Settings.GmaxRate)
-                set.CanGigantamax = true;
+                set = new($"{showdown}{ball}\nGigantamax: Yes");
 
             var template = AutoLegalityWrapper.GetTemplate(set);
             var sav = AutoLegalityWrapper.GetTrainerInfo<T>();

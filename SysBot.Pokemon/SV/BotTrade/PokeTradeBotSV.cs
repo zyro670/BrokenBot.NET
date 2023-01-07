@@ -434,6 +434,10 @@ namespace SysBot.Pokemon
                 counts.AddCompletedDistribution();
             else if (poke.Type == PokeTradeType.Clone)
                 counts.AddCompletedClones();
+            else if (poke.Type == PokeTradeType.FixOT)
+                counts.AddCompletedFixOTs();
+            else if (poke.Type == PokeTradeType.SupportTrade)
+                counts.AddCompletedSupportTrades();
             else
                 counts.AddCompletedTrade();
 
@@ -808,6 +812,7 @@ namespace SysBot.Pokemon
             {
                 PokeTradeType.Random => await HandleRandomLedy(sav, poke, offered, toSend, partnerID, token).ConfigureAwait(false),
                 PokeTradeType.Clone => await HandleClone(sav, poke, offered, oldEC, token).ConfigureAwait(false),
+                PokeTradeType.FixOT => await HandleFixOT(sav, poke, offered, partnerID, token).ConfigureAwait(false),
                 _ => (toSend, PokeTradeResult.Success),
             };
         }
@@ -1046,5 +1051,104 @@ namespace SysBot.Pokemon
             Name = name,
             Comment = $"Added automatically on {DateTime.Now:yyyy.MM.dd-hh:mm:ss} ({comment})",
         };
+
+        private async Task<(PK9 toSend, PokeTradeResult check)> HandleFixOT(SAV9SV sav, PokeTradeDetail<PK9> poke, PK9 offered, PartnerDataHolder partnerID, CancellationToken token)
+        {
+            if (Hub.Config.Discord.ReturnPKMs)
+                poke.SendNotification(this, offered, "Here's what you showed me!");
+
+            var adOT = TradeExtensions<PK9>.HasAdName(offered, out _);
+            var laInit = new LegalityAnalysis(offered);
+            if (!adOT && laInit.Valid)
+            {
+                poke.SendNotification(this, "No ad detected in Nickname or OT, and the Pokémon is legal. Exiting trade.");
+                return (offered, PokeTradeResult.TrainerRequestBad);
+            }
+
+            var clone = (PK9)offered.Clone();
+            if (Hub.Config.Legality.ResetHOMETracker)
+                clone.Tracker = 0;
+
+            string shiny = string.Empty;
+            if (!TradeExtensions<PK9>.ShinyLockCheck(offered.Species, TradeExtensions<PK9>.FormOutput(offered.Species, offered.Form, out _), $"{(Ball)offered.Ball}"))
+                shiny = $"\nShiny: {(offered.ShinyXor == 0 ? "Square" : offered.IsShiny ? "Star" : "No")}";
+            else shiny = "\nShiny: No";
+
+            var name = partnerID.TrainerName;
+            var ball = $"\n{(Ball)offered.Ball}";
+            var extraInfo = $"OT: {name}{ball}{shiny}";
+            var set = ShowdownParsing.GetShowdownText(offered).Split('\n').ToList();
+            set.Remove(set.Find(x => x.Contains("Shiny")) ?? "");
+            set.InsertRange(1, extraInfo.Split('\n'));
+
+            if (!laInit.Valid)
+            {
+                Log($"FixOT request has detected an illegal Pokémon from {name}: {(Species)offered.Species}");
+                var report = laInit.Report();
+                Log(laInit.Report());
+                poke.SendNotification(this, $"**Shown Pokémon is not legal. Attempting to regenerate...**\n\n```{report}```");
+                if (DumpSetting.Dump)
+                    DumpPokemon(DumpSetting.DumpFolder, "hacked", offered);
+            }
+
+            if (clone.FatefulEncounter)
+            {
+                clone.SetDefaultNickname(laInit);
+                var info = new SimpleTrainerInfo { Gender = clone.OT_Gender, Language = clone.Language, OT = name, TID = clone.TID, SID = clone.SID, Generation = 9 };
+                var mg = EncounterEvent.GetAllEvents().Where(x => x.Species == clone.Species && x.Form == clone.Form && x.IsShiny == clone.IsShiny && x.OT_Name == clone.OT_Name).ToList();
+                if (mg.Count > 0)
+                    clone = TradeExtensions<PK9>.CherishHandler(mg.First(), info);
+                else clone = (PK9)sav.GetLegal(AutoLegalityWrapper.GetTemplate(new ShowdownSet(string.Join("\n", set))), out _);
+            }
+            else clone = (PK9)sav.GetLegal(AutoLegalityWrapper.GetTemplate(new ShowdownSet(string.Join("\n", set))), out _);
+
+            clone = (PK9)TradeExtensions<PK9>.TrashBytes(clone, new LegalityAnalysis(clone));
+            clone.ResetPartyStats();
+
+            var la = new LegalityAnalysis(clone);
+            if (!la.Valid)
+            {
+                poke.SendNotification(this, "This Pokémon is not legal per PKHeX's legality checks. I was unable to fix this. Exiting trade.");
+                return (clone, PokeTradeResult.IllegalTrade);
+            }
+
+            poke.SendNotification(this, $"{(!laInit.Valid ? "**Legalized" : "**Fixed Nickname/OT for")} {(Species)clone.Species}**! Now confirm the trade!");
+            Log($"{(!laInit.Valid ? "Legalized" : "Fixed Nickname/OT for")} {(Species)clone.Species}!");
+
+            // Wait for a bit in case trading partner tries to switch out.
+            await Task.Delay(2_000, token).ConfigureAwait(false);
+
+            var pk2 = await ReadUntilPresent(TradePartnerOfferedOffset, 15_000, 0_200, BoxFormatSlotSize, token).ConfigureAwait(false);
+            bool changed = pk2 is null || pk2.Species != offered.Species || offered.OT_Name != pk2.OT_Name;
+            if (changed)
+            {
+                // They get one more chance.
+                poke.SendNotification(this, "**Offer the originally shown Pokémon or I'm leaving!**");
+
+                var timer = 10_000;
+                while (changed)
+                {
+                    pk2 = await ReadUntilPresent(TradePartnerOfferedOffset, 2_000, 0_500, BoxFormatSlotSize, token).ConfigureAwait(false);
+                    changed = pk2 == null || clone.Species != pk2.Species || offered.OT_Name != pk2.OT_Name;
+                    await Task.Delay(1_000, token).ConfigureAwait(false);
+                    timer -= 1_000;
+
+                    if (timer <= 0)
+                        break;
+                }
+            }
+
+            if (changed)
+            {
+                poke.SendNotification(this, "Pokémon was swapped and not changed back. Exiting trade.");
+                Log("Trading partner did not wish to send away their ad-mon.");
+                return (offered, PokeTradeResult.TrainerTooSlow);
+            }
+
+            await Click(A, 0_800, token).ConfigureAwait(false);
+            await SetBoxPokemonAbsolute(BoxStartOffset, clone, token, sav).ConfigureAwait(false);
+
+            return (clone, PokeTradeResult.Success);
+        }
     }
 }

@@ -15,7 +15,7 @@ namespace SysBot.Pokemon.Discord.Commands
         public async Task PermuteAsync()
         {
             var ch = await Context.User.CreateDMChannelAsync().ConfigureAwait(false);
-            var selectMenuBuilder = PermuteUtil.GetPermuteSelectMenu();
+            var selectMenuBuilder = PermuteUtil.GetPermuteServiceSelectMenu();
             var component = new ComponentBuilder().WithSelectMenu(selectMenuBuilder).Build();
 
             try
@@ -27,7 +27,7 @@ namespace SysBot.Pokemon.Discord.Commands
                 await Context.Message.ReplyAsync($"Could not send a DM: {ex.Message}").ConfigureAwait(false);
             }
 
-            IEmote reaction = new Emoji("👍");
+            IEmote reaction = new Emoji("✔️");
             await Context.Message.AddReactionAsync(reaction).ConfigureAwait(false);
         }
     }

@@ -173,7 +173,7 @@ namespace SysBot.Pokemon
         {
             RollingRaidEmbedsInitialized = false;
             RaidEmbedSource.Cancel();
-            await CleanExit(Settings, CancellationToken.None).ConfigureAwait(false);
+            await CleanExit(CancellationToken.None).ConfigureAwait(false);
         }
 
         private async Task<bool> AutoRollDen(int code, CancellationToken token)

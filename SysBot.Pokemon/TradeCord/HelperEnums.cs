@@ -120,15 +120,15 @@
         Carnivine = 455,
     }
 
-    public enum DexPerks
+    public enum DexPerks : ushort
     {
-        CatchBoost,
-        EggRateBoost,
-        ShinyBoost,
-        SpeciesBoost,
-        GmaxBoost,
-        CherishBoost,
-        ItemBoost,
+        CatchBoost = 0,
+        EggRateBoost = 1,
+        ShinyBoost = 2,
+        SpeciesBoost = 3,
+        GmaxBoost = 4,
+        CherishBoost = 5,
+        ItemBoost = 6,
     }
 
     public enum Halloween : ushort

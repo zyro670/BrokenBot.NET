@@ -41,7 +41,7 @@ namespace SysBot.Pokemon
                 return true;
             else if (species is (ushort)Species.Pikachu && form is not "" && form is not "-Partner")
                 return true;
-            else if ((species is (ushort)Species.Zacian or (ushort)Species.Zamazenta) && !ball.Contains("Cherish") && ball is not "")
+            else if ((species is (ushort)Species.Zacian or (ushort)Species.Zamazenta) && !ball.Contains("Cherish"))
                 return true;
             return false;
         }
@@ -93,9 +93,26 @@ namespace SysBot.Pokemon
             var dittoStats = new string[] { "atk", "spe", "spa" };
             var nickname = pkm.Nickname.ToLower();
             pkm.StatNature = pkm.Nature;
-            pkm.Met_Location = pkm is not PB8 ? 162 : 400;
-            if (pkm is PB8)
-                pkm.Met_Level = 29;
+            pkm.Met_Location = pkm switch
+            {
+                PB8 => 400,
+                PK9 => 28,
+                _   => 162, // PK8
+            };
+
+            pkm.Met_Level = pkm switch
+            {
+                PB8 => 29,
+                PK9 => 34,
+                _   => pkm.Met_Level,
+            };
+
+            if (pkm is PK9 pk9)
+            {
+                pk9.Obedience_Level = (byte)pk9.Met_Level;
+                pk9.TeraTypeOriginal = MoveType.Normal;
+                pk9.TeraTypeOverride = (MoveType)19;
+            }
 
             pkm.Ball = 21;
             pkm.IVs = new int[] { 31, nickname.Contains(dittoStats[0]) ? 0 : 31, 31, nickname.Contains(dittoStats[1]) ? 0 : 31, nickname.Contains(dittoStats[2]) ? 0 : 31, 31 };
@@ -119,14 +136,26 @@ namespace SysBot.Pokemon
             };
 
             pk.IsEgg = true;
-            pk.Egg_Location = pk is PK8 ? 60002 : 60010;
+            pk.Egg_Location = pk switch
+            {
+                PB8 => 60010,
+                PK9 => 30023,
+                _ => 60002, //PK8
+            };
+
             pk.MetDate = DateTime.Parse("2020/10/20");
             pk.EggMetDate = pk.MetDate;
             pk.HeldItem = 0;
             pk.CurrentLevel = 1;
             pk.EXP = 0;
             pk.Met_Level = 1;
-            pk.Met_Location = pk is PK8 ? 30002 : 65535;
+            pk.Met_Location = pk switch
+            {
+                PB8 => 65535,
+                PK9 => 0,
+                _ => 30002, //PK8
+            };
+
             pk.CurrentHandler = 0;
             pk.OT_Friendship = 1;
             pk.HT_Name = "";
@@ -162,17 +191,29 @@ namespace SysBot.Pokemon
                 pb8.HT_Intensity = 0;
                 pb8.DynamaxLevel = pb8.GetSuggestedDynamaxLevel(pb8, 0);
             }
+            else if (pk is PK9 pk9)
+            {
+                pk9.HT_Language = 0;
+                pk9.HT_Gender = 0;
+                pk9.HT_Memory = 0;
+                pk9.HT_Feeling = 0;
+                pk9.HT_Intensity = 0;
+                pk9.Obedience_Level = 1;
+                pk9.Version = 0;
+                pk9.BattleVersion = 0;
+                pk9.TeraTypeOverride = (MoveType)19;
+            }
 
             pk = TrashBytes(pk);
             var la = new LegalityAnalysis(pk);
             var enc = la.EncounterMatch;
             pk.CurrentFriendship = enc is EncounterStatic s ? s.EggCycles : pk.PersonalInfo.HatchCycles;
 
-            MoveBreed.GetExpectedMoves(pk.Moves, la.EncounterMatch, pk.Moves);
-            pk.RelearnMoves = pk.Moves;
+            pk.RelearnMoves = (ushort[])enc.GetSuggestedRelearn(pk);
+            pk.SetSuggestedMoves();
+
             pk.Move1_PPUps = pk.Move2_PPUps = pk.Move3_PPUps = pk.Move4_PPUps = 0;
             pk.SetMaximumPPCurrent(pk.Moves);
-
             pk.SetSuggestedHyperTrainingData();
             pk.SetSuggestedRibbons(template, enc);
         }
@@ -247,7 +288,7 @@ namespace SysBot.Pokemon
         public static PKM TrashBytes(PKM pkm, LegalityAnalysis? la = null)
         {
             var pkMet = (T)pkm.Clone();
-            if (pkMet.Version != (int)GameVersion.GO)
+            if (pkMet.Version is not (int)GameVersion.GO)
                 pkMet.MetDate = DateTime.Parse("2020/10/20");
 
             var analysis = new LegalityAnalysis(pkMet);
@@ -266,24 +307,28 @@ namespace SysBot.Pokemon
             return pkm;
         }
 
-        public static T CherishHandler(MysteryGift mg, ITrainerInfo info, int format)
+        public static T CherishHandler(MysteryGift mg, ITrainerInfo info)
         {
+            var result = EntityConverterResult.None;
             var mgPkm = mg.ConvertToPKM(info);
-            mgPkm = EntityConverter.IsConvertibleToFormat(mgPkm, format) ? EntityConverter.ConvertToType(mgPkm, typeof(T), out _) : mgPkm;
-            if (mgPkm != null)
+            bool canConvert = EntityConverter.IsConvertibleToFormat(mgPkm, info.Generation);
+            mgPkm = canConvert ? EntityConverter.ConvertToType(mgPkm, typeof(T), out result) : mgPkm;
+
+            if (mgPkm is not null && result is EntityConverterResult.Success)
             {
                 var enc = new LegalityAnalysis(mgPkm).EncounterMatch;
                 mgPkm.SetHandlerandMemory(info, enc);
-                if (mgPkm.TID == 0 && mgPkm.SID == 0)
+
+                if (mgPkm.TID is 0 && mgPkm.SID is 0)
                 {
                     mgPkm.TID = info.TID;
                     mgPkm.SID = info.SID;
                 }
 
                 mgPkm.CurrentLevel = mg.LevelMin;
-                if (mgPkm.Species == (int)Species.Giratina && mgPkm.Form > 0)
+                if (mgPkm.Species is (ushort)Species.Giratina && mgPkm.Form > 0)
                     mgPkm.HeldItem = 112;
-                else if (mgPkm.Species == (int)Species.Silvally && mgPkm.Form > 0)
+                else if (mgPkm.Species is (ushort)Species.Silvally && mgPkm.Form > 0)
                     mgPkm.HeldItem = mgPkm.Form + 903;
                 else mgPkm.HeldItem = 0;
             }
@@ -294,8 +339,10 @@ namespace SysBot.Pokemon
             if (!la.Valid)
             {
                 mgPkm.SetRandomIVs(6);
-                var showdown = ShowdownParsing.GetShowdownText(mgPkm);
-                var pk = AutoLegalityWrapper.GetLegal(info, new ShowdownSet(showdown), out _);
+                var text = ShowdownParsing.GetShowdownText(mgPkm);
+                var set = new ShowdownSet(text);
+                var template = AutoLegalityWrapper.GetTemplate(set);
+                var pk = AutoLegalityWrapper.GetLegal(info, template, out _);
                 pk.SetAllTrainerData(info);
                 return (T)pk;
             }
@@ -348,7 +395,7 @@ namespace SysBot.Pokemon
             return formString[form].Contains("-") ? formString[form] : formString[form] == "" ? "" : $"-{formString[form]}";
         }
 
-        public static bool SameFamily(IReadOnlyList<T> pkms)
+        public static bool DifferentFamily(IReadOnlyList<T> pkms)
         {
             var criteriaList = new List<EvoCriteria>();
             for (int i = 0; i < pkms.Count; i++)
