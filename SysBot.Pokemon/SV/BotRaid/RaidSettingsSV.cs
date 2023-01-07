@@ -11,6 +11,12 @@ namespace SysBot.Pokemon
         private const string FeatureToggle = nameof(FeatureToggle);
         public override string ToString() => "Raid Bot Settings";
 
+        [Category(FeatureToggle), Description("URL to Pokémon Automation's Tera Ban List json (or one matching the required structure).")]
+        public string BanListURL { get; set; } = "https://raw.githubusercontent.com/PokemonAutomation/ServerConfigs-PA-SHA/main/PokemonScarletViolet/TeraAutoHost-BanList.json";
+
+        [Category(Hosting), Description("Amount of raids before updating the ban list.")]
+        public int RaidsBetweenUpdate { get; set; } = 10;
+
         [Category(FeatureToggle), Description("Optional description of the raid title the bot is hosting.")]
         public string RaidTitleDescription { get; set; } = string.Empty;
 

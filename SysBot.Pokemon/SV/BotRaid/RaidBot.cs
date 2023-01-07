@@ -1,8 +1,6 @@
-﻿using Discord;
-using Newtonsoft.Json;
-using PKHeX.Core;
-using SysBot.Pokemon.Models;
-using SysBot.Pokemon.Utils;
+using Discord;
+﻿using PKHeX.Core;
+using SysBot.Pokemon.SV;
 using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Text;
@@ -51,8 +49,6 @@ namespace SysBot.Pokemon
         private bool CheckBannedRaider(ulong uid) => RaiderBanList.Contains(uid);
 
         private Dictionary<ulong, int> RaidTracker = new();
-
-        private List<BannedRaider> bannedRaiders = new List<BannedRaider>();
         private string GlobalBanReason { get; set; } = string.Empty;
 
         private DateTime startTime = new();
@@ -70,7 +66,7 @@ namespace SysBot.Pokemon
             }
 
             if (Settings.TimeToWaitPerSlot is < 0 or > 180)
-            {                
+            {
                 Log("Time to wait must be between 0 and 180 seconds.");
                 return;
             }
@@ -340,7 +336,9 @@ namespace SysBot.Pokemon
                         RaidTracker.Add(TrainerNID, RaidPenaltyCount);
 
                     bool textvalid = TrainerName.Length != 0;
-                    if (CheckBannedRaider(TrainerNID) && !inRaid || IsRaiderBanned(TrainerName) && textvalid && !inRaid)
+                    bool updateBanList = RaidCount % Settings.RaidsBetweenUpdate == 0;
+                    bool isBanned = textvalid && (await BanService.IsRaiderBanned(TrainerName, Settings.BanListURL, Connection.Label, updateBanList).ConfigureAwait(false) || CheckBannedRaider(TrainerNID));
+                    if (!inRaid && isBanned)
                     {
                         var titlemsg = "Raid Canceled Due to Banned User";
                         var msg = $"{TrainerName} was found in the lobby.\nRecreating raid team.\n";
@@ -465,36 +463,6 @@ namespace SysBot.Pokemon
                 EmbedQueue.Enqueue((bytes, embed));
             }
             return (true, LobbyNIDs, initialTrainers);
-        }
-
-        public bool IsRaiderBanned(string raiderName)
-        {
-            //Gets banned list
-            List<BannedRaider> bannedRaiders = new List<BannedRaider>();
-            try
-            {
-                HttpClient client = new HttpClient();
-                var content = client.GetStringAsync("https://raw.githubusercontent.com/PokemonAutomation/ServerConfigs-PA-SHA/main/PokemonScarletViolet/TeraAutoHost-BanList.json").Result;
-                var jsonContent = JsonConvert.DeserializeObject<List<BannedRaider>>(content);
-                bannedRaiders = jsonContent.Where(item => item.Enabled == "true").ToList();
-            }
-            catch (Exception e)
-            {
-                Log("Error retrieving ban list from PA.");
-                return false;
-            }
-
-            List<LanguageData> languages = JsonConvert.DeserializeObject<List<LanguageData>>(File.ReadAllText("Files\\languages.json"));
-
-            var result = BanService.CheckRaider(raiderName, bannedRaiders, languages);
-
-            if (result.IsBanned)
-            {
-                GlobalBanReason = $"Banned user found from global banlist." + "\nReason: " + result.BanReason + $"\nLog10p: {result.Log10p}";
-                Log(GlobalBanReason);
-            }
-
-            return result.IsBanned;
         }
 
         private async Task ClearPlayerHistory(CancellationToken token)
