@@ -402,7 +402,7 @@ namespace SysBot.Pokemon
             var names = lobbyTrainersFinal.Select(x => x.Item2.OT).ToArray();
             string hattrick = string.Empty;
             if (lobbyTrainersFinal.Count == 3 && names.Distinct().Count() == 1)
-                hattrick = $" 🌟🎩🌟 {lobbyTrainers[0]} Hat Trick 🌟🎩🌟\n\n{Settings.RaidTitleDescription}";
+                hattrick = $" 🪄🎩🌟 {lobbyTrainers[0]} Hat Trick 🪄🎩🌟\n\n{Settings.RaidTitleDescription}";
 
             await Task.Delay(2_000, token).ConfigureAwait(false);
             if (RaidSVEmbedsInitialized)
