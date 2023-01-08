@@ -11,9 +11,8 @@ namespace SysBot.Pokemon.SV
         private static List<LanguageData> Languages = new();
         private static List<BannedRaider> BannedList = new();
         private static readonly string languageResource = "SysBot.Pokemon.SV.BotRaid.BanList.Resources.languages.json";
-        public static string GlobalBanReason = string.Empty;
 
-        public static async Task<bool> IsRaiderBanned(string raiderName, string url, string connectionLabel, bool updateJson)
+        public static async Task<(bool, string)> IsRaiderBanned(string raiderName, string url, string connectionLabel, bool updateJson)
         {
             //Gets banned list
             var bannedRaiders = new List<BannedRaider>();
@@ -30,7 +29,7 @@ namespace SysBot.Pokemon.SV
             catch (Exception e)
             {
                 LogUtil.LogError($"Error retrieving ban list from PA: {e.Message}", connectionLabel);
-                return false;
+                return (false, "");
             }
 
             if (Languages.Count == 0)
@@ -39,16 +38,14 @@ namespace SysBot.Pokemon.SV
                 if (languages is null)
                 {
                     LogUtil.LogError("Failed to deserialize languages.", connectionLabel);
-                    return false;
+                    return (false, "");
                 }
                 else Languages = languages;
             }
 
             var result = CheckRaider(raiderName, bannedRaiders, Languages, connectionLabel);
-            if (result.IsBanned)            
-                GlobalBanReason = $"\nBanned user {raiderName} found from global banlist." + "\nReason: " + result.BanReason + $"\nLog10p: {result.Log10p}";
-            
-            return (result.IsBanned);
+            var msg = result.IsBanned ? $"\nBanned user {raiderName} found from global ban list.\nReason: {result.BanReason}\nLog10p: {result.Log10p}" : "";       
+            return (result.IsBanned, msg);
         }
 
         private static int CalculateLevenshteinDistance(string normRaider, string normBanned)

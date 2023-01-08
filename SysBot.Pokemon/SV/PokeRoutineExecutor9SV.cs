@@ -296,7 +296,7 @@ namespace SysBot.Pokemon
             address += finadd;
             if (heaprealtive)
             {
-                ulong heap = await SwitchConnection.GetHeapBaseAsync(token);
+                ulong heap = await SwitchConnection.GetHeapBaseAsync(token).ConfigureAwait(false);
                 address -= heap;
             }
             return address;

@@ -17,9 +17,8 @@ namespace SysBot.Pokemon
         public static readonly List<(PA8?, bool)> EmbedMons = new();
         public static CancellationTokenSource EmbedSource { get; set; } = new();
         public ICountSettings Counts => Settings;
-#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+
         public ArceusBot(PokeBotState cfg, PokeTradeHub<PA8> hub) : base(cfg)
-#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
             Hub = hub;
             Settings = Hub.Config.ArceusLA;
@@ -76,7 +75,7 @@ namespace SysBot.Pokemon
                     ArceusMode.PlayerCoordScan => PlayerCoordScan(token),
                     ArceusMode.SeedAdvancer => SeedAdvancer(token),
                     ArceusMode.TimeSeedAdvancer => TimeSeedAdvancer(token),
-                    ArceusMode.StaticAlphaScan => ScanForAlphas(dex, token),
+                    ArceusMode.StaticAlphaScan => ScanForAlphas(token),
                     ArceusMode.DistortionSpammer => DistortionSpammer(token),
                     ArceusMode.DistortionReader => DistortionReader(dex, token),
                     ArceusMode.MassiveOutbreakHunter => MassiveOutbreakHunter(dex, token),
@@ -1018,7 +1017,7 @@ namespace SysBot.Pokemon
             Settings.SpecialConditions.CampZoneZ = coordinates.Item3;
         }
 
-        private async Task ScanForAlphas(PokedexSaveData dex, CancellationToken token)
+        private async Task ScanForAlphas(CancellationToken token)
         {
             Settings.AlphaScanConditions.StopOnMatch = false;
             int attempts = 1;

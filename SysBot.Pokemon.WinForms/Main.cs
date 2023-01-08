@@ -100,7 +100,9 @@ namespace SysBot.Pokemon.WinForms
             CB_Protocol.SelectedIndex = (int)SwitchProtocol.WiFi; // default option
 
             LogUtil.Forwarders.Add(AppendLog);
-            ResultsUtil.Forwarders.Add(AppendResults);
+            if (Config.Mode is not ProgramMode.LA)
+                Tab_Results.Dispose();
+            else ResultsUtil.Forwarders.Add(AppendResults);
         }
 
         private void AppendLog(string message, string identity)
@@ -335,41 +337,6 @@ namespace SysBot.Pokemon.WinForms
 
             RTB_Results.AppendText(line);
             RTB_Results.ScrollToCaret();
-        }
-
-        public async Task<ulong> NewParsePointer(string pointer, CancellationToken token, bool heaprealtive = false) //Code from LiveHex
-        {
-            var ptr = pointer;
-            if (string.IsNullOrWhiteSpace(ptr) || ptr.IndexOfAny(new char[] { '-', '/', '*' }) != -1)
-                return 0;
-            while (ptr.Contains("]]"))
-                ptr = ptr.Replace("]]", "]+0]");
-            uint? finadd = null;
-            if (!ptr.EndsWith("]"))
-            {
-                finadd = Util.GetHexValue(ptr.Split('+').Last());
-                ptr = ptr.Substring(0, ptr.LastIndexOf('+'));
-            }
-            var jumps = ptr.Replace("main", "").Replace("[", "").Replace("]", "").Split(new[] { "+" }, StringSplitOptions.RemoveEmptyEntries);
-            if (jumps.Length == 0)
-                return 0;
-
-            var initaddress = Util.GetHexValue(jumps[0].Trim());
-            ulong address = BitConverter.ToUInt64(await SwitchConnection.ReadBytesMainAsync(initaddress, 0x8, token).ConfigureAwait(false), 0);
-            foreach (var j in jumps)
-            {
-                var val = Util.GetHexValue(j.Trim());
-                if (val == initaddress)
-                    continue;
-                address = BitConverter.ToUInt64(await SwitchConnection.ReadBytesAbsoluteAsync(address + val, 0x8, token).ConfigureAwait(false), 0);
-            }
-            if (finadd != null) address += (ulong)finadd;
-            if (heaprealtive)
-            {
-                ulong heap = await SwitchConnection.GetHeapBaseAsync(token);
-                address -= heap;
-            }
-            return address;
         }
 
         private void ContinueButton_Click(object sender, EventArgs e)

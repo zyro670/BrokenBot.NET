@@ -1,7 +1,6 @@
 using Discord;
 ﻿using PKHeX.Core;
 using SysBot.Pokemon.SV;
-using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Text;
 using static SysBot.Base.SwitchButton;
@@ -14,9 +13,10 @@ namespace SysBot.Pokemon
         private readonly RaidSettingsSV Settings;
         public ICountSettings Counts => Settings;
 
-        public static CancellationTokenSource RaidSVEmbedSource = new();
-        public static bool RaidSVEmbedsInitialized;
-        public static ConcurrentQueue<(byte[]?, EmbedBuilder)> EmbedQueue = new();
+        public static CancellationTokenSource RaidSVEmbedSource { get; set; } = new();
+        public static bool RaidSVEmbedsInitialized { get; set; }
+        public static ConcurrentQueue<(byte[]?, EmbedBuilder)> EmbedQueue { get; set; } = new();
+        private RemoteControlAccessList RaiderBanList => Settings.RaiderBanList;
 
         public RaidSV(PokeBotState cfg, PokeTradeHub<PK9> hub) : base(cfg)
         {
@@ -24,38 +24,21 @@ namespace SysBot.Pokemon
             Settings = hub.Config.RaidSV;
         }
 
-        private string TID7 { get; set; } = string.Empty;
-        private string TrainerName { get; set; } = string.Empty;
-        private string HostName { get; set; } = string.Empty;
-        private ulong TrainerNID;
-        private string RaidCode { get; set; } = string.Empty;
-        private const string Player2 = "[[[main+437ECE0]+48]+E0]";
-        private const string Player3 = "[[[main+437ECE0]+48]+110]";
-        private const string Player4 = "[[[main+437ECE0]+48]+140]";
-        private const string ConnectionStatus = "[main+437E280]+30";
-        private const string OverworldPointer = "[[[[main+43A7848]+348]+10]+D8]+28";
-        private const string PlayerNIDs = "[[main+43A28F0]+F8]"; // length 32
-        private const string RaidCodePointer = "[[[[[[main+437DEC0]+98]]+10]+30]+10]+1A9";
-        private uint RaidLobby = 0x0403F4B0;
-        private uint LoadedIntoRaid = 0x04416020;
+        private int RaidsAtStart;
         private int RaidCount;
         private int ResetCount;
-        private int RaidPenaltyCount;
         private int WinCount;
         private int LossCount;
-        private const string RaidBlock = "[[main+4384B18]+180]+60";
-        private int RaidsAtStart { get; set; }
-        private RemoteControlAccessList RaiderBanList => Settings.RaiderBanList;
-        private bool CheckBannedRaider(ulong uid) => RaiderBanList.Contains(uid);
+        private readonly Dictionary<ulong, int> RaidTracker = new();
 
-        private Dictionary<ulong, int> RaidTracker = new();
-
-        private DateTime startTime = new();
+        private ulong OverworldOffset;
+        private ulong ConnectedOffset;
+        private ulong TeraRaidBlockOffset;
+        private ulong TeraRaidCodeOffset;
+        private readonly ulong[] TeraNIDOffsets = new ulong[3];
 
         public override async Task MainLoop(CancellationToken token)
         {
-            RaidTracker = new(); // Create new dictionary each bot start incase we changed the raid to not keep old raider info.
-
             if (Settings.ConfigureRolloverCorrection)
             {
                 await RolloverCorrectionSV(token).ConfigureAwait(false);
@@ -71,16 +54,12 @@ namespace SysBot.Pokemon
             {
                 Log("Identifying trainer data of the host console.");
                 var sav = await IdentifyTrainer(token).ConfigureAwait(false);
-                HostName = sav.OT;
                 await InitializeHardware(Settings, token).ConfigureAwait(false);
 
                 Log("Starting main RaidBot loop.");
-                startTime = DateTime.Now;
-                await InnerLoop(token).ConfigureAwait(false);
+                await InnerLoop(sav.OT, token).ConfigureAwait(false);
             }
-#pragma warning disable CA1031 // Do not catch general exception types
             catch (Exception e)
-#pragma warning restore CA1031 // Do not catch general exception types
             {
                 Log(e.Message);
             }
@@ -89,32 +68,41 @@ namespace SysBot.Pokemon
             await HardStop().ConfigureAwait(false);
         }
 
-        private async Task InnerLoop(CancellationToken token)
+        private async Task InnerLoop(string ot, CancellationToken token)
         {
-            RaidCount = 0;
-            ResetCount = 0;
-            WinCount = 0;
-            LossCount = 0;
             bool partyReady;
-            List<ulong> LobbyNIDs = new();
-            List<string> LobbyTrainers = new();
+            List<(ulong, TradeMyStatus)> lobbyTrainers = new();
+            var startTime = DateTime.Now;
 
-            await CountRaids(LobbyNIDs, LobbyTrainers, token).ConfigureAwait(false);
+            await CountRaids(lobbyTrainers, token).ConfigureAwait(false);
             while (!token.IsCancellationRequested)
             {
-                await ClearPlayerHistory(token).ConfigureAwait(false);
-                var nids = await InitialTrainerNIDRead(token).ConfigureAwait(false);
-                await PrepareForRaid(token).ConfigureAwait(false);
-                var lobbyReady = await GetLobbyReady(token).ConfigureAwait(false);
-                if (!lobbyReady)
+                // Initialize offsets at the start of the routine and cache them.
+                await InitializeSessionOffsets(token).ConfigureAwait(false);
+
+                // Clear NIDs.
+                await SwitchConnection.WriteBytesAbsoluteAsync(new byte[32], TeraNIDOffsets[0], token).ConfigureAwait(false);
+
+                // Connect online and enter den.
+                if (!await PrepareForRaid(token).ConfigureAwait(false))
+                {
+                    Log("Failed to prepare the raid. Stopping the routine.");
+                    return;
+                }
+
+                // Wait until we're in lobby.
+                if (!await GetLobbyReady(token).ConfigureAwait(false))
                     continue;
-                (partyReady, LobbyNIDs, LobbyTrainers) = await ReadTrainers(nids, token).ConfigureAwait(false);
+
+                // Read trainers until someone joins.
+                (partyReady, lobbyTrainers) = await ReadTrainers(startTime, ot, token).ConfigureAwait(false);
                 if (!partyReady)
                 {
                     await RegroupFromBannedUser(token).ConfigureAwait(false);
                     continue;
                 }
-                await CompleteRaid(LobbyNIDs, LobbyTrainers, token).ConfigureAwait(false);
+
+                await CompleteRaid(lobbyTrainers, token).ConfigureAwait(false);
             }
         }
 
@@ -125,12 +113,9 @@ namespace SysBot.Pokemon
             await CleanExit(Settings, CancellationToken.None).ConfigureAwait(false);
         }
 
-        private async Task CompleteRaid(List<ulong> NIDs, List<string> trainers, CancellationToken token)
+        private async Task CompleteRaid(List<(ulong, TradeMyStatus)> trainers, CancellationToken token)
         {
-            string value = string.Empty;
-            bool isReady = await IsConnectedToLobby(token).ConfigureAwait(false);
-
-            if (isReady)
+            if (await IsConnectedToLobby(token).ConfigureAwait(false))
             {
                 int b = 0;
                 Log("Preparing for battle!");
@@ -141,29 +126,21 @@ namespace SysBot.Pokemon
                 {
                     b++;
                     await Click(A, 3_000, token).ConfigureAwait(false);
-                    if (b == 10)
-                    {
+                    if (b % 10 == 0)
                         Log("Still in battle...");
-                        b = 0;
-                    }
                 }
             }
 
             Log("Raid lobby disbanded!");
-
             await Click(B, 0_500, token).ConfigureAwait(false);
             await Click(B, 0_500, token).ConfigureAwait(false);
             await Click(DDOWN, 0_500, token).ConfigureAwait(false);
 
             Log("Returning to overworld...");
-
-            while (!await IsOnOverworld(token).ConfigureAwait(false))
+            while (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
                 await Click(A, 1_000, token).ConfigureAwait(false);
 
-            Log("Back in the overworld, checking if we won or lost.");
-            Settings.AddCompletedRaids();
-
-            await CountRaids(NIDs, trainers, token).ConfigureAwait(false);
+            await CountRaids(trainers, token).ConfigureAwait(false);
 
             ResetCount++;
             await CloseGame(Hub.Config, token).ConfigureAwait(false);
@@ -177,146 +154,141 @@ namespace SysBot.Pokemon
             await StartGame(Hub.Config, token).ConfigureAwait(false);
         }
 
-        private void ApplyPenalty(List<ulong> LobbyNIDs, List<string> initialTrainers)
+        private void ApplyPenalty(List<(ulong, TradeMyStatus)> trainers)
         {
-            for (int i = 0; i < LobbyNIDs.Count; i++)
+            for (int i = 0; i < trainers.Count; i++)
             {
-                RaidPenaltyCount = 0;
-                if (RaidTracker.ContainsKey(LobbyNIDs[i]) && LobbyNIDs[i] != 0)
+                var nid = trainers[i].Item1;
+                var name = trainers[i].Item2.OT;
+                if (RaidTracker.ContainsKey(nid) && nid != 0)
                 {
-                    RaidPenaltyCount = RaidTracker[LobbyNIDs[i]] + RaidPenaltyCount + 1;
-                    RaidTracker.Remove(LobbyNIDs[i]);
-                    RaidTracker.Add(LobbyNIDs[i], RaidPenaltyCount);
-                    Log($"Player: {initialTrainers[i]} completed the raid with Penalty Count: {RaidPenaltyCount}.");
-                    if (RaidPenaltyCount > Settings.CatchLimit && !RaiderBanList.Contains(LobbyNIDs[i]) && Settings.CatchLimit != 0)
+                    var entry = RaidTracker[nid];
+                    var penalty = entry + 1;
+                    RaidTracker[nid] = penalty;
+                    Log($"Player: {name} completed the raid with Penalty Count: {penalty}.");
+
+                    if (penalty > Settings.CatchLimit && !RaiderBanList.Contains(nid) && Settings.CatchLimit != 0)
                     {
-                        Log($"Player: {initialTrainers[i]} has been added to the banlist for joining {RaidPenaltyCount}x this raid session on {DateTime.Now}.");
-                        RaiderBanList.List.Add(new() { ID = LobbyNIDs[i], Name = initialTrainers[i], Comment = $"Exceeded catch limit on {DateTime.Now}." });
+                        Log($"Player: {name} has been added to the banlist for joining {penalty}x this raid session on {DateTime.Now}.");
+                        RaiderBanList.List.Add(new() { ID = nid, Name = name, Comment = $"Exceeded catch limit on {DateTime.Now}." });
                     }
                 }
             }
         }
 
-        private async Task CountRaids(List<ulong> LobbyNIDs, List<string> initialTrainers, CancellationToken token)
+        private async Task CountRaids(List<(ulong, TradeMyStatus)> trainers, CancellationToken token)
         {
             List<uint> seeds = new();
-            var ofs = await GetPointerAddress(RaidBlock, token).ConfigureAwait(false);
-            var data = await SwitchConnection.ReadBytesAbsoluteAsync(ofs, 2304, token).ConfigureAwait(false);
+            var data = await SwitchConnection.ReadBytesAbsoluteAsync(TeraRaidBlockOffset, 2304, token).ConfigureAwait(false);
+
             for (int i = 0; i < 69; i++)
             {
                 var seed = BitConverter.ToUInt32(data.Slice(0 + (i * 32), 4));
                 if (seed != 0)
                     seeds.Add(seed);
             }
+
             Log($"Total raids: {seeds.Count}");
             if (RaidCount == 0)
+            {
                 RaidsAtStart = seeds.Count;
+                return;
+            }
 
-            if (RaidsAtStart > seeds.Count && RaidCount != 0)
+            Log("Back in the overworld, checking if we won or lost.");
+            Settings.AddCompletedRaids();
+            if (RaidsAtStart < seeds.Count)
             {
                 Log("We defeated the raid boss!");
                 WinCount++;
-                ApplyPenalty(LobbyNIDs, initialTrainers);
+                ApplyPenalty(trainers);
+                return;
             }
-            else if (RaidsAtStart == seeds.Count && RaidCount != 0)
-            {
-                Log("We lost the raid..");
-                LossCount++;
-            }
+
+            Log("We lost the raid..");
+            LossCount++;
         }
 
-        private async Task PrepareForRaid(CancellationToken token)
+        private async Task<bool> PrepareForRaid(CancellationToken token)
         {
             Log("Preparing lobby...");
-            if (!await IsOnline(token).ConfigureAwait(false))
+
+            // Make sure we're connected.
+            while (!await IsConnectedOnline(ConnectedOffset, token).ConfigureAwait(false))
             {
-                await Click(X, 2_500, token).ConfigureAwait(false);
-                await Click(L, 5_000, token).ConfigureAwait(false);
-                while (!await IsOnOverworld(token).ConfigureAwait(false))
-                    await Click(B, 0_500, token).ConfigureAwait(false);
+                Log("Connecting...");
+                await RecoverToOverworld(token).ConfigureAwait(false);
+                if (!await ConnectToOnline(Hub.Config, token).ConfigureAwait(false))
+                    return false;
             }
-            await Click(B, 1_000, token).ConfigureAwait(false);
+
+            // Recover and check if we're connected again.
+            await RecoverToOverworld(token).ConfigureAwait(false);
+            if (!await IsConnectedOnline(ConnectedOffset, token).ConfigureAwait(false))
+            {
+                Log("Connecting again...");
+                if (!await ConnectToOnline(Hub.Config, token).ConfigureAwait(false))
+                    return false;
+            }
+
+            await Click(B, 2_000, token).ConfigureAwait(false);
             await Click(A, 3_000, token).ConfigureAwait(false);
             await Click(A, 3_000, token).ConfigureAwait(false);
 
             if (!Settings.CodeTheRaid)
                 await Click(DDOWN, 1_000, token).ConfigureAwait(false);
 
-            await Click(A, 6_000, token).ConfigureAwait(false);
+            await Click(A, 8_000, token).ConfigureAwait(false);
+            return true;
         }
 
         private async Task<bool> GetLobbyReady(CancellationToken token)
         {
-            bool isReady = await IsConnectedToLobby(token).ConfigureAwait(false);
             var x = 0;
-            if (!isReady)
+            Log("Connecting to lobby...");
+            while (!await IsConnectedToLobby(token).ConfigureAwait(false))
             {
-                Log("Connecting to lobby...");
-                while (!await IsConnectedToLobby(token).ConfigureAwait(false))
+                await Click(A, 1_000, token).ConfigureAwait(false);
+                x++;
+                if (x == 30)
                 {
-                    await Click(A, 1_000, token).ConfigureAwait(false);
-                    x++;
-                    if (x == 30)
-                    {
-                        Log("Failed to connect to lobby, restarting game incase we were in battle/bad connection.");
-                        await Click(A, 1_000, token).ConfigureAwait(false);
-                        await CloseGame(Hub.Config, token).ConfigureAwait(false);
-                        await StartGame(Hub.Config, token).ConfigureAwait(false);
-                        Log("Attempting to restart routine!");
-                        await Task.Delay(1_000, token).ConfigureAwait(false);
-                    }
+                    Log("Failed to connect to lobby, restarting game incase we were in battle/bad connection.");
+                    await ReOpenGame(Hub.Config, token).ConfigureAwait(false);
+                    Log("Attempting to restart routine!");
+                    return false;
                 }
             }
-            return isReady;
+            return true;
         }
 
         private async Task<string> GetRaidCode(CancellationToken token)
         {
-            var ofs = await GetPointerAddress(RaidCodePointer, token).ConfigureAwait(false);
-            var data = await SwitchConnection.ReadBytesAbsoluteAsync(ofs, 6, token).ConfigureAwait(false);
-            RaidCode = Encoding.ASCII.GetString(data);
-            Log("Raid Code: " + RaidCode);
-            return $"\nRaid Code: {RaidCode}\n";
+            var data = await SwitchConnection.ReadBytesAbsoluteAsync(TeraRaidCodeOffset, 6, token).ConfigureAwait(false);
+            var str = Encoding.UTF8.GetString(data);
+            if (!char.IsLetterOrDigit(str[0]))
+                str = "Free For All";
+
+            Log($"Raid Code: {str}");
+            return $"\nRaid Code: {str}\n";
         }
 
-        private async Task<ulong[]> InitialTrainerNIDRead(CancellationToken token)
+        private async Task<bool> CheckIfTrainerBanned(string name, uint tid, ulong nid, int player, CancellationToken token)
         {
-            var nids = new ulong[3];
-            var ofs = await GetPointerAddress($"{PlayerNIDs}+8", token).ConfigureAwait(false);
-            var data = await SwitchConnection.ReadBytesAbsoluteAsync(ofs, 24, token).ConfigureAwait(false);
-            for (int i = 0; i < 3; i++)
-                nids[i] = BitConverter.ToUInt64(data.Slice(0 + (i * 8), 8), 0);
+            Log($"Player {player} - {name} | TID: {tid} | NID: {nid}");
+            if (!RaidTracker.ContainsKey(nid))
+                RaidTracker.Add(nid, 0);
 
-            RaidCount++;
-            return nids;
-        }
+            bool updateBanList = RaidCount == 0 || RaidCount % Settings.RaidsBetweenUpdate == 0;
+            var banResultCC = await BanService.IsRaiderBanned(name, Settings.BanListURL, Connection.Label, updateBanList).ConfigureAwait(false);
+            var banResultCFW = RaiderBanList.List.FirstOrDefault(x => x.ID == nid);
 
-        private async Task<bool> ValidateTrainer(bool inRaid, int i, CancellationToken token)
-        {
-            bool isValid = true;
-
-            Log($"Player {i + 2} - " + TrainerName + " | TID: " + TID7 + $" | NID: {TrainerNID}");
-            RaidPenaltyCount = 0;
-
-            if (!RaidTracker.ContainsKey(TrainerNID))
-                RaidTracker.Add(TrainerNID, RaidPenaltyCount);
-
-            bool textvalid = TrainerName.Length != 0;
-            bool updateBanList = RaidCount % Settings.RaidsBetweenUpdate == 0;
-            bool isBanned = textvalid && (await BanService.IsRaiderBanned(TrainerName, Settings.BanListURL, Connection.Label, updateBanList).ConfigureAwait(false) || CheckBannedRaider(TrainerNID));
-            if (!inRaid && isBanned)
+            bool isBanned = banResultCC.Item1 || banResultCFW != default;
+            if (isBanned)
             {
                 var titlemsg = "Raid Canceled Due to Banned User";
-                var msg = string.Empty;
-                if (!string.IsNullOrEmpty(BanService.GlobalBanReason))
-                    msg += BanService.GlobalBanReason;
-                else if (RaiderBanList.Contains(TrainerNID))
-                {
-                    RemoteControlAccess? item = RaiderBanList.List.FirstOrDefault(x => x.ID == TrainerNID);
-                    if (item != null)
-                        msg += $"\nBanned user {TrainerName} found from host's ban list.\n{item.Comment}";
-                }
+                var msg = banResultCC.Item1 ? banResultCC.Item2 : $"\nBanned user {banResultCFW!.Name} found from host's ban list.\n{banResultCFW.Comment}";
                 Log(msg);
+
                 if (RaidSVEmbedsInitialized)
                 {
                     var bytes = Array.Empty<byte>();
@@ -331,27 +303,27 @@ namespace SysBot.Pokemon
                     EmbedQueue.Enqueue((bytes, embed));
                 }
 
-                isValid = false;
+                return true;
             }
 
-            return isValid;
+            return false;
         }
 
-        private async Task<(bool, List<ulong>, List<string>)> ReadTrainers(ulong[] nids, CancellationToken token)
+        // This is messy, needs a way to check if player X is ready, and when we're in a raid, in order to avoid adding players that may have disconnected or quit. Players get shifted down as they leave.
+        private async Task<(bool, List<(ulong, TradeMyStatus)>)> ReadTrainers(DateTime startTime, string ot, CancellationToken token)
         {
+            await Task.Delay(2_000, token).ConfigureAwait(false);
+
             var uptime = DateTime.Now - startTime;
             var embed = new EmbedBuilder();
             embed.AddField("Tera Raid Notification:", $"**{Settings.RaidTitleDescription}**" + $"\n\nUptime: " + uptime.ToString(@"d\.hh\:mm\:ss"));
             embed.AddField("Description:", $"\n{Settings.RaidDescription}");
             embed.AddField("Raid Code:", await GetRaidCode(token).ConfigureAwait(false));
-            embed.AddField("Host:", $"{HostName}");
+            embed.AddField("Host:", ot);
             embed.AddField("Session Stats:", $"Raids: {WinCount + LossCount} - Wins: {WinCount} - Losses: {LossCount}");
             embed.ImageUrl = "attachment://zap.jpg";
             embed.Color = Color.Green;
-            string hattrick = string.Empty;
-            TrainerNID = new();
 
-            await Task.Delay(2_000, token).ConfigureAwait(false);
             if (RaidSVEmbedsInitialized)
             {
                 var bytes = Array.Empty<byte>();
@@ -360,117 +332,110 @@ namespace SysBot.Pokemon
                 EmbedQueue.Enqueue((bytes, embed));
             }
 
-            string value = string.Empty;
-            string NID = $"{PlayerNIDs}+8";
-            List<string> initialTrainers = new();
-            List<ulong> LobbyNIDs = new();
-
+            List<(ulong, TradeMyStatus)> lobbyTrainers = new();
             var time = TimeSpan.FromSeconds(Settings.TimeToWait);
             var start = DateTime.Now;
-            while (DateTime.Now - start < time)
+            bool full = false;
+
+            while (!full && (DateTime.Now - start < time))
             {
+                // Loop through trainers
                 for (int i = 0; i < 3; i++)
                 {
-                    switch (i)
-                    {
-                        case 0: value = Player2; break;
-                        case 1: value = Player3; break;
-                        case 2: value = Player4; break;
-                    }
+                    var player = i + 2;
+                    Log($"Waiting for Player {player} to load...");
 
-                    var nidofs = await GetPointerAddress(NID, token).ConfigureAwait(false);
-                    var nidData = await SwitchConnection.ReadBytesAbsoluteAsync(nidofs, 24, token).ConfigureAwait(false);
-                    TrainerNID = BitConverter.ToUInt64(nidData.Slice(0 + (i * 8), 8), 0);
-
-                    while (nids[i] == TrainerNID && TrainerNID == 0)
+                    var nidOfs = TeraNIDOffsets[i];
+                    var data = await SwitchConnection.ReadBytesAbsoluteAsync(nidOfs, 8, token).ConfigureAwait(false);
+                    var nid = BitConverter.ToUInt64(data, 0);
+                    while (nid == 0 && DateTime.Now - start < time)
                     {
-                        await Task.Delay(1_000, token).ConfigureAwait(false);
-                        nidData = await SwitchConnection.ReadBytesAbsoluteAsync(nidofs, 32, token).ConfigureAwait(false);
-                        TrainerNID = BitConverter.ToUInt64(nidData.Slice(0 + (i * 8), 8), 0);
-                    }
-
-                    var ofs = await GetPointerAddress(value, token).ConfigureAwait(false);
-                    var Data = await SwitchConnection.ReadBytesAbsoluteAsync(ofs, 32, token).ConfigureAwait(false);
-                    TrainerName = StringConverter8.GetString(Data.AsSpan(8, 24));
-                    Log($"Waiting for Player {i + 2} to load...");
-                    while (string.IsNullOrEmpty(TrainerName)) // Wait for player to load into lobby
-                    {
-                        Data = await SwitchConnection.ReadBytesAbsoluteAsync(ofs, 32, token).ConfigureAwait(false);
-                        TrainerName = StringConverter8.GetString(Data.AsSpan(8, 24));
                         await Task.Delay(0_500, token).ConfigureAwait(false);
+                        data = await SwitchConnection.ReadBytesAbsoluteAsync(nidOfs, 8, token).ConfigureAwait(false);
+                        nid = BitConverter.ToUInt64(data, 0);
                     }
-                    var DisplayTID = BinaryPrimitives.ReadUInt32LittleEndian(Data.AsSpan(0)) % 1_000_000;
-                    TID7 = DisplayTID.ToString("D6");
 
-                    var isValid = await ValidateTrainer(false, i, token).ConfigureAwait(false);
-                    if (isValid == false)
-                        return (false, LobbyNIDs, initialTrainers);
+                    var info = new TradeMyStatus();
+                    var pointer = new long[] { 0x437ECE0, 0x48, 0xE0 + (i * 0x30), 0x0 };
+                    var trainer = await GetTradePartnerMyStatus(pointer, token).ConfigureAwait(false);
 
-                    LobbyNIDs.Add(TrainerNID);
-                    initialTrainers.Add(TrainerName);
+                    while (trainer.OT.Length == 0 && DateTime.Now - start < time)
+                    {
+                        await Task.Delay(0_500, token).ConfigureAwait(false);
+                        trainer = await GetTradePartnerMyStatus(pointer, token).ConfigureAwait(false);
+                    }
+
+                    if (lobbyTrainers.FirstOrDefault(x => x.Item1 == nid && x.Item2.OT == trainer.OT) != default)
+                        lobbyTrainers[i] = (nid, trainer);
+                    else lobbyTrainers.Add((nid, trainer));
+
+                    full = lobbyTrainers.Count == 3;
+                    if (full)
+                        break;
                 }
-                break;
             }
 
-            Log($"Raid #{RaidCount} is starting!");
-
-            if (!string.IsNullOrEmpty(initialTrainers[0]) && !string.IsNullOrEmpty(initialTrainers[1]) && !string.IsNullOrEmpty(initialTrainers[2]))
+            // Loop through trainers again in case someone disconnected.
+            List<(ulong, TradeMyStatus)> lobbyTrainersFinal = new();
+            for (int i = 0; i < 3; i++)
             {
-                if (string.Equals(initialTrainers[0], initialTrainers[1]) && string.Equals(initialTrainers[1], initialTrainers[2]))
-                {
-                    hattrick = $" 🌟🎩🌟 {initialTrainers[1]} Hat Trick 🌟🎩🌟\n\n" + Settings.RaidTitleDescription;
-                }
+                var player = i + 2;
+                var nidOfs = TeraNIDOffsets[i];
+                var data = await SwitchConnection.ReadBytesAbsoluteAsync(nidOfs, 8, token).ConfigureAwait(false);
+                var nid = BitConverter.ToUInt64(data, 0);
+
+                var info = new TradeMyStatus();
+                var pointer = new long[] { 0x437ECE0, 0x48, 0xE0 + (i * 0x30), 0x0 };
+                var trainer = await GetTradePartnerMyStatus(pointer, token).ConfigureAwait(false);
+
+                if (await CheckIfTrainerBanned(trainer.OT, trainer.DisplayTID, nid, player, token).ConfigureAwait(false))
+                    return (false, lobbyTrainersFinal);
+
+                lobbyTrainersFinal.Add((nid, trainer));
             }
+
+            if (lobbyTrainersFinal.Count == 0)
+                return (false, lobbyTrainers);
+
+            RaidCount++;
+            Log($"Raid #{RaidCount} is starting!");
+            var names = lobbyTrainersFinal.Select(x => x.Item2.OT).ToArray();
+            string hattrick = string.Empty;
+            if (lobbyTrainersFinal.Count == 3 && names.Distinct().Count() == 1)
+                hattrick = $" 🌟🎩🌟 {lobbyTrainers[0]} Hat Trick 🌟🎩🌟\n\n{Settings.RaidTitleDescription}";
+
             await Task.Delay(2_000, token).ConfigureAwait(false);
             if (RaidSVEmbedsInitialized)
             {
-                var rez = string.Join("\nPlayer - ", initialTrainers);
+                var rez = string.Join("\nPlayer - ", names);
                 var bytes = Array.Empty<byte>();
                 if (Settings.TakeScreenshot)
                     bytes = await SwitchConnection.Screengrab(token).ConfigureAwait(false);
+
                 embed = new EmbedBuilder();
                 if (!string.IsNullOrEmpty(hattrick))
                     embed.AddField("Special Event:", $"{hattrick}");
-                embed.AddField("Description:", $"Raid #{RaidCount} is starting!\n\nHost - {HostName}\nPlayer - {rez}");
+
+                embed.AddField("Description:", $"Raid #{RaidCount} is starting!\n\nHost - {ot}\nPlayer - {rez}");
                 embed.AddField("Session Stats:", $"Raids: {WinCount + LossCount} - Wins: {WinCount} - Losses: {LossCount}");
                 embed.ImageUrl = "attachment://zap.jpg";
                 embed.Color = Color.Teal;
                 EmbedQueue.Enqueue((bytes, embed));
             }
-            return (true, LobbyNIDs, initialTrainers);
-        }
 
-        private async Task ClearPlayerHistory(CancellationToken token)
-        {
-            var trainerdata = new byte[32];
-            var ofs = await GetPointerAddress(PlayerNIDs, token).ConfigureAwait(false);
-            await SwitchConnection.WriteBytesAbsoluteAsync(trainerdata, ofs, token).ConfigureAwait(false);
-        }
-
-        private async Task<bool> IsOnline(CancellationToken token)
-        {
-            var ofs = await GetPointerAddress(ConnectionStatus, token).ConfigureAwait(false);
-            var Data = await SwitchConnection.ReadBytesAbsoluteAsync(ofs, 1, token).ConfigureAwait(false);
-            return Data[0] == 1;
+            return (true, lobbyTrainersFinal);
         }
 
         private async Task<bool> IsConnectedToLobby(CancellationToken token)
         {
-            var Data = await SwitchConnection.ReadBytesMainAsync(RaidLobby, 1, token).ConfigureAwait(false);
-            return Data[0] != 0x00; // 0 when in lobby but not connected
-        }
-
-        private async Task<bool> IsOnOverworld(CancellationToken token)
-        {
-            var ofs = await GetPointerAddress(OverworldPointer, token).ConfigureAwait(false);
-            var Data = await SwitchConnection.ReadBytesAbsoluteAsync(ofs, 1, token).ConfigureAwait(false);
-            return Data[0] == 0x11;
+            var data = await SwitchConnection.ReadBytesMainAsync(Offsets.TeraLobby, 1, token).ConfigureAwait(false);
+            return data[0] != 0x00; // 0 when in lobby but not connected
         }
 
         private async Task<bool> IsInRaid(CancellationToken token)
         {
-            var Data = await SwitchConnection.ReadBytesMainAsync(LoadedIntoRaid, 1, token).ConfigureAwait(false);
-            return Data[0] == 0x02; // 2 when in raid, 1 when not
+            var data = await SwitchConnection.ReadBytesMainAsync(Offsets.LoadedIntoRaid, 1, token).ConfigureAwait(false);
+            return data[0] == 0x02; // 2 when in raid, 1 when not
         }
 
         private async Task RolloverCorrectionSV(CancellationToken token)
@@ -508,6 +473,92 @@ namespace SysBot.Pokemon
             await Click(A, 3_000, token).ConfigureAwait(false);
             await Click(A, 1_500, token).ConfigureAwait(false);
             await Click(B, 1_000, token).ConfigureAwait(false);
+        }
+
+        private async Task InitializeSessionOffsets(CancellationToken token)
+        {
+            Log("Caching session offsets...");
+            OverworldOffset = await SwitchConnection.PointerAll(Offsets.OverworldPointer, token).ConfigureAwait(false);
+            ConnectedOffset = await SwitchConnection.PointerAll(Offsets.IsConnectedPointer, token).ConfigureAwait(false);
+            TeraRaidBlockOffset = await SwitchConnection.PointerAll(Offsets.TeraRaidBlockPointer, token).ConfigureAwait(false);
+            TeraRaidCodeOffset = await SwitchConnection.PointerAll(Offsets.TeraRaidCodePointer, token).ConfigureAwait(false);
+
+            var nidPointer = new long[] { Offsets.LinkTradePartnerNIDPointer[0], Offsets.LinkTradePartnerNIDPointer[1], Offsets.LinkTradePartnerNIDPointer[2] };
+            for (int p = 0; p < TeraNIDOffsets.Length; p++)
+            {
+                nidPointer[2] = Offsets.LinkTradePartnerNIDPointer[2] + (p * 0x8);
+                TeraNIDOffsets[p] = await SwitchConnection.PointerAll(nidPointer, token).ConfigureAwait(false);
+            }
+            Log("Caching offsets complete!");
+        }
+
+        // From PokeTradeBotSV, modified.
+        private async Task<bool> ConnectToOnline(PokeTradeHubConfig config, CancellationToken token)
+        {
+            if (await IsConnectedOnline(ConnectedOffset, token).ConfigureAwait(false))
+                return true;
+
+            await Click(X, 3_000, token).ConfigureAwait(false);
+            await Click(L, 5_000 + config.Timings.ExtraTimeConnectOnline, token).ConfigureAwait(false);
+
+            // Try one more time.
+            if (!await IsConnectedOnline(ConnectedOffset, token).ConfigureAwait(false))
+            {
+                Log("Failed to connect the first time, trying again...");
+                await RecoverToOverworld(token).ConfigureAwait(false);
+                await Click(X, 3_000, token).ConfigureAwait(false);
+                await Click(L, 5_000 + config.Timings.ExtraTimeConnectOnline, token).ConfigureAwait(false);
+            }
+
+            var wait = 0;
+            while (!await IsConnectedOnline(ConnectedOffset, token).ConfigureAwait(false))
+            {
+                await Task.Delay(0_500, token).ConfigureAwait(false);
+                if (++wait > 30) // More than 15 seconds without a connection.
+                    return false;
+            }
+
+            // There are several seconds after connection is established before we can dismiss the menu.
+            await Task.Delay(3_000 + config.Timings.ExtraTimeConnectOnline, token).ConfigureAwait(false);
+            await Click(A, 1_000, token).ConfigureAwait(false);
+            return true;
+        }
+
+        // From PokeTradeBotSV.
+        private async Task<bool> RecoverToOverworld(CancellationToken token)
+        {
+            if (await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
+                return true;
+
+            Log("Attempting to recover to overworld.");
+            var attempts = 0;
+            while (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
+            {
+                attempts++;
+                if (attempts >= 30)
+                    break;
+
+                await Click(B, 1_300, token).ConfigureAwait(false);
+                if (await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
+                    break;
+
+                await Click(B, 2_000, token).ConfigureAwait(false);
+                if (await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
+                    break;
+
+                await Click(A, 1_300, token).ConfigureAwait(false);
+                if (await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
+                    break;
+            }
+
+            // We didn't make it for some reason.
+            if (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
+            {
+                Log("Failed to recover to overworld, rebooting the game.");
+                await ReOpenGame(Hub.Config, token).ConfigureAwait(false);
+            }
+            await Task.Delay(1_000, token).ConfigureAwait(false);
+            return true;
         }
     }
 }

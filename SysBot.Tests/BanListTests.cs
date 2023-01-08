@@ -12,14 +12,14 @@ namespace SysBot.Tests
         [Fact]
         public async void IsBannedTestCC()
         {
-            bool banned = await BanService.IsRaiderBanned("Fidio", Url, "TestRoutine", true).ConfigureAwait(false);
-            banned.Should().BeTrue();
+            var result = await BanService.IsRaiderBanned("Fidio", Url, "TestRoutine", true).ConfigureAwait(false);
+            result.Item1.Should().BeTrue();
 
-            banned = await BanService.IsRaiderBanned("Nishikigoi", Url, "TestRoutine", true).ConfigureAwait(false);
-            banned.Should().BeFalse();
+            result = await BanService.IsRaiderBanned("Nishikigoi", Url, "TestRoutine", true).ConfigureAwait(false);
+            result.Item1.Should().BeFalse();
 
-            banned = await BanService.IsRaiderBanned("Kazuha", Url, "TestRoutine", true).ConfigureAwait(false);
-            banned.Should().BeFalse();
+            result = await BanService.IsRaiderBanned("Kazuha", Url, "TestRoutine", true).ConfigureAwait(false);
+            result.Item1.Should().BeFalse();
         }
     }
 }
