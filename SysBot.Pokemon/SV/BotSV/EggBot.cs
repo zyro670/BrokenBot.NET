@@ -146,13 +146,16 @@ namespace SysBot.Pokemon
                         waiting++;
                         await Task.Delay(1_500, token).ConfigureAwait(false);
                         pk = await ReadPokemonSV(EggData, 344, token).ConfigureAwait(false);
-                        if (waiting == 50)
+                        if (waiting == 80)
                         {
-                            waiting = 0;
-                            ctr = 0;
+                            Log("2 minutes have passed without an egg.  Attempting full recovery.");
                             await ReopenPicnic(token).ConfigureAwait(false);
                             await MakeSandwich(token).ConfigureAwait(false);
-                            continue;
+                            await ReopenPicnic(token).ConfigureAwait(false);
+                            wait = TimeSpan.FromMinutes(30);
+                            endTime = DateTime.Now + wait;
+                            waiting = 0;
+                            ctr = 0;
                         }
                     }
 
