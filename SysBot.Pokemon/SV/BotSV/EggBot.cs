@@ -121,12 +121,49 @@ namespace SysBot.Pokemon
         {
             await Task.Delay(0_500, token).ConfigureAwait(false);
             await Click(Y, 1_500, token).ConfigureAwait(false);
-            while (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
-                await Click(A, 0_500, token).ConfigureAwait(false);
+            var overworldWaitCycles = 0;
+            var hasReset = false;
+            while (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false)) //wait until we return to the overworld
+            {
+                await Click(A, 1_000, token).ConfigureAwait(false);
+                overworldWaitCycles++;
+
+                if (overworldWaitCycles == 10)
+                {
+                    Log("Attempting to leave menus.");
+                    for (int i = 0; i < 5; i++)
+                        await Click(B, 0_500, token).ConfigureAwait(false); // Click a few times to attempt to escape any menu
+
+                    Log("Attempting to leave picnic again.");
+                    await Click(Y, 1_500, token).ConfigureAwait(false); // Attempt to leave the picnic again, in case you were stuck interacting with a pokemon
+                    await Click(A, 1_000, token).ConfigureAwait(false); // Overworld seems to trigger true when you leave the Pokemon washing mode, so we have to try to exit picnic immediately
+                    
+                    Log("Attempting to leave menus again.");
+                    for (int i = 0; i < 4; i++)
+                        await Click(B, 0_500, token).ConfigureAwait(false); // Click a few times to attempt to escape any menu
+                }
+
+                else if (overworldWaitCycles >= 53) //if still not in the overworld after ~1 minute of trying, hard reset the game
+                {
+                    overworldWaitCycles = 0;
+                    Log("Failed to return to the overworld after 1 minute.  Forcing a game reset.");
+                    await ReOpenGame(Hub.Config, token).ConfigureAwait(false);
+                    OverworldOffset = await SwitchConnection.PointerAll(Offsets.OverworldPointer, token).ConfigureAwait(false);  //re-acquire overworld offset to escape the while loop
+                    hasReset = true;
+                }
+            }
             for (int i = 0; i < 10; i++)
                 await Click(A, 0_500, token).ConfigureAwait(false); // Click A alot incase pokemon are not level 100
             await Click(X, 1_500, token).ConfigureAwait(false);
-            await Click(A, 4_500, token).ConfigureAwait(false);
+            if (hasReset) //If we are starting fresh, we need to reposition over the picnic button
+            {
+                await Click(DRIGHT, 0_250, token).ConfigureAwait(false);
+                await Click(DDOWN, 0_250, token).ConfigureAwait(false);
+                await Click(DDOWN, 0_250, token).ConfigureAwait(false);
+                await Click(A, 7_000, token).ConfigureAwait(false); //first picnic opening takes longer, so lets give it a little more time
+            }
+            else
+                await Click(A, 4_500, token).ConfigureAwait(false);
         }
 
         private async Task WaitForEggs(CancellationToken token)
@@ -146,7 +183,7 @@ namespace SysBot.Pokemon
                         waiting++;
                         await Task.Delay(1_500, token).ConfigureAwait(false);
                         pk = await ReadPokemonSV(EggData, 344, token).ConfigureAwait(false);
-                        if (waiting == 80)
+                        if (waiting == 5)
                         {
                             Log("2 minutes have passed without an egg.  Attempting full recovery.");
                             await ReopenPicnic(token).ConfigureAwait(false);
