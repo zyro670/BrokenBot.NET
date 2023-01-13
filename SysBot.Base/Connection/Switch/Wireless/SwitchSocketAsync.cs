@@ -227,22 +227,42 @@ namespace SysBot.Base
         public async Task<byte[]> Screengrab(CancellationToken token)
         {
             List<byte> flexBuffer = new();
-            int received = 0;
+            Connection.ReceiveTimeout = 1_000;
 
             await SendAsync(SwitchCommand.Screengrab(), token).ConfigureAwait(false);
             await Task.Delay(Connection.ReceiveBufferSize / DelayFactor + BaseDelay, token).ConfigureAwait(false);
-            while (Connection.Available > 0)
+
+            int available = Connection.Available;
+            do
             {
-                byte[] buffer = new byte[Connection.ReceiveBufferSize];
-                received += Connection.Receive(buffer, 0, Connection.ReceiveBufferSize, SocketFlags.None);
-                flexBuffer.AddRange(buffer);
+                byte[] buffer = new byte[available];
+                try
+                {
+                    Connection.Receive(buffer, available, SocketFlags.None);
+                    flexBuffer.AddRange(buffer);
+                }
+                catch (Exception ex)
+                {
+                    LogError($"Socket exception thrown while receiving screenshot data:\n{ex.Message}");
+                    return Array.Empty<byte>();
+                }
+
                 await Task.Delay(MaximumTransferSize / DelayFactor + BaseDelay, token).ConfigureAwait(false);
+                available = Connection.Available;
+            } while (flexBuffer.Count == 0 || flexBuffer.Last() != (byte)'\n');
+
+            Connection.ReceiveTimeout = 0;
+            var result = Array.Empty<byte>();
+            try
+            {
+                result = Decoder.ConvertHexByteStringToBytes(flexBuffer.ToArray());
+            }
+            catch (Exception e)
+            {
+                LogError($"Malformed screenshot data received:\n{e.Message}");
             }
 
-            byte[] data = new byte[flexBuffer.Count];
-            flexBuffer.CopyTo(data);
-            var result = data.SliceSafe(0, received);
-            return Decoder.ConvertHexByteStringToBytes(result);
+            return result;
         }
     }
 }
