@@ -130,15 +130,12 @@ namespace SysBot.Pokemon
 
                 if (overworldWaitCycles == 10)
                 {
-                    Log("Attempting to leave menus.");
                     for (int i = 0; i < 5; i++)
                         await Click(B, 0_500, token).ConfigureAwait(false); // Click a few times to attempt to escape any menu
 
-                    Log("Attempting to leave picnic again.");
                     await Click(Y, 1_500, token).ConfigureAwait(false); // Attempt to leave the picnic again, in case you were stuck interacting with a pokemon
                     await Click(A, 1_000, token).ConfigureAwait(false); // Overworld seems to trigger true when you leave the Pokemon washing mode, so we have to try to exit picnic immediately
                     
-                    Log("Attempting to leave menus again.");
                     for (int i = 0; i < 4; i++)
                         await Click(B, 0_500, token).ConfigureAwait(false); // Click a few times to attempt to escape any menu
                 }
@@ -183,7 +180,7 @@ namespace SysBot.Pokemon
                         waiting++;
                         await Task.Delay(1_500, token).ConfigureAwait(false);
                         pk = await ReadPokemonSV(EggData, 344, token).ConfigureAwait(false);
-                        if (waiting == 5)
+                        if (waiting == 80)
                         {
                             Log("2 minutes have passed without an egg.  Attempting full recovery.");
                             await ReopenPicnic(token).ConfigureAwait(false);
