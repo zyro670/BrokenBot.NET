@@ -157,10 +157,8 @@ namespace SysBot.Pokemon
                 await Click(DRIGHT, 0_250, token).ConfigureAwait(false);
                 await Click(DDOWN, 0_250, token).ConfigureAwait(false);
                 await Click(DDOWN, 0_250, token).ConfigureAwait(false);
-                await Click(A, 7_000, token).ConfigureAwait(false); //first picnic opening takes longer, so lets give it a little more time
             }
-            else
-                await Click(A, 4_500, token).ConfigureAwait(false);
+            await Click(A, 7_000, token).ConfigureAwait(false); //first picnic *might* take longer.  value originally was 4_500
         }
 
         private async Task WaitForEggs(CancellationToken token)
