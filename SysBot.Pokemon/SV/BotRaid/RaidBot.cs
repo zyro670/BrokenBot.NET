@@ -44,7 +44,9 @@ namespace SysBot.Pokemon
         private const string RaidBlock = "[[main+4384B18]+180]+60";
         private int RaidsAtStart { get; set; }
         private RemoteControlAccessList RaiderBanList => Settings.RaiderBanList;
+        private RemoteControlAccessList RaiderAllowList => Settings.RaiderAllowList;
         private bool BannedRaider(ulong uid) => RaiderBanList.Contains(uid);
+        private bool AllowedRaider(ulong uid) => RaiderAllowList.Contains(uid);
 
         private Dictionary<ulong, int> RaidTracker = new();
 
@@ -202,7 +204,7 @@ namespace SysBot.Pokemon
                         RaidTracker.Remove(LobbyNIDs[i]);
                         RaidTracker.Add(LobbyNIDs[i], RaidPenaltyCount);
                         Log($"Player: {initialTrainers[i]} completed the raid with Penalty Count: {RaidPenaltyCount}.");
-                        if (RaidPenaltyCount > Settings.CatchLimit && !RaiderBanList.Contains(LobbyNIDs[i]) && Settings.CatchLimit != 0)
+                        if (RaidPenaltyCount > Settings.CatchLimit && !RaiderBanList.Contains(LobbyNIDs[i]) && Settings.CatchLimit != 0 && !RaiderAllowList.Contains(LobbyNIDs[i]))
                         {
                             Log($"Player: {initialTrainers[i]} has been added to the banlist for joining {RaidPenaltyCount}x this raid session on {DateTime.Now}.");
                             RaiderBanList.List.Add(new() { ID = LobbyNIDs[i], Name = initialTrainers[i], Comment = $"Exceeded max joins on {DateTime.Now}." });

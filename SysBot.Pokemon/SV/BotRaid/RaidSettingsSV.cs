@@ -38,6 +38,9 @@ namespace SysBot.Pokemon
         [Category(Hosting), Description("Users NIDs here are banned raiders.")]
         public RemoteControlAccessList RaiderBanList { get; set; } = new() { AllowIfEmpty = false };
 
+        [Category(Hosting), Description("Users NIDs that override CatchLimit.  These users will never be added to the BanList.")]
+        public RemoteControlAccessList RaiderAllowList { get; set; } = new() { AllowIfEmpty = false };
+
         [Category(FeatureToggle), Description("If true, the bot will apply rollback correction.")]
         public bool RollbackTime { get; set; } = true;
 
