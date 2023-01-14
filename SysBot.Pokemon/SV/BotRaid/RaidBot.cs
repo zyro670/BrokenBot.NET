@@ -18,6 +18,7 @@ namespace SysBot.Pokemon
         public static bool RaidSVEmbedsInitialized { get; set; }
         public static ConcurrentQueue<(byte[]?, EmbedBuilder)> EmbedQueue { get; set; } = new();
         private RemoteControlAccessList RaiderBanList => Settings.RaiderBanList;
+        private RemoteControlAccessList RaiderAllowList => Settings.RaiderAllowList;
 
         public RaidSV(PokeBotState cfg, PokeTradeHub<PK9> hub) : base(cfg)
         {
@@ -360,6 +361,8 @@ namespace SysBot.Pokemon
         private async Task<bool> CheckIfTrainerBanned(TradeMyStatus trainer, ulong nid, int player, bool updateBanList, CancellationToken token)
         {
             Log($"Player {player}: {trainer.OT} | TID: {trainer.DisplayTID} | NID: {nid}");
+            if (RaiderAllowList.Contains(nid))  // whitelist
+                return false;
             if (!RaidTracker.ContainsKey(nid))
                 RaidTracker.Add(nid, 0);
 
