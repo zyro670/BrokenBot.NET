@@ -162,7 +162,7 @@ namespace SysBot.Pokemon
             }
             for (int i = 0; i < 10; i++)
                 await Click(A, 0_500, token).ConfigureAwait(false); // Click A alot incase pokemon are not level 100
-            await Click(X, 1_500, token).ConfigureAwait(false);
+            await Click(X, 1_700, token).ConfigureAwait(false);
             if (hasReset) // If we are starting fresh, we need to reposition over the picnic button
             {
                 await Click(DRIGHT, 0_250, token).ConfigureAwait(false);
@@ -218,8 +218,8 @@ namespace SysBot.Pokemon
                         Settings.AddCompletedEggs();
                         TradeExtensions<PK9>.EncounterLogs(pk, "EncounterLogPretty_Egg.txt");
                         ctr++;
-                        bool match = CheckEncounter(print, pk);
-                        if (!match)
+                        bool match = !CheckEncounter(print, pk); 
+                        if (match)
                         {
                             Log("Make sure to pick up your egg in the basket!");
                             return;
@@ -251,6 +251,7 @@ namespace SysBot.Pokemon
         {
             Log("Resetting game to rid us of any memory leak.");
             await ReOpenGame(Hub.Config, token).ConfigureAwait(false);
+            OverworldOffset = await SwitchConnection.PointerAll(Offsets.OverworldPointer, token).ConfigureAwait(false);
             await Task.Delay(1_000, token).ConfigureAwait(false);
             await Click(X, 2_000, token).ConfigureAwait(false);
             await Click(DRIGHT, 0_250, token).ConfigureAwait(false);
@@ -285,14 +286,14 @@ namespace SysBot.Pokemon
                         Settings.AddCompletedEggs();
                         TradeExtensions<PK9>.EncounterLogs(pk, "EncounterLogPretty_Egg.txt");
 
-                        bool match = CheckEncounter(print, pk);
+                        bool match = !CheckEncounter(print, pk);
 
                         await Task.Delay(0_500, token).ConfigureAwait(false);
                         await Click(A, 2_500, token).ConfigureAwait(false);
                         await Click(A, 1_200, token).ConfigureAwait(false);
 
                         await RetrieveEgg(token).ConfigureAwait(false);
-                        if (!match)
+                        if (match)
                             return;
 
                         pkprev = pk;
@@ -320,6 +321,9 @@ namespace SysBot.Pokemon
             }
         }
 
+        // CheckEncounter(): Should the scanning continue based on the given encounter?
+        // Returns true if there is no match or it should be ignored
+        // Returns false if the scanning should abort
         private bool CheckEncounter(string print, PK9 pk)
         {
             if (!StopConditionSettings.EncounterFound(pk, DesiredMinIVs, DesiredMaxIVs, Hub.Config.StopConditions, null))
@@ -327,7 +331,7 @@ namespace SysBot.Pokemon
                 if (Hub.Config.StopConditions.ShinyTarget is TargetShinyType.AnyShiny or TargetShinyType.StarOnly or TargetShinyType.SquareOnly && pk.IsShiny)
                     EmbedMon = (pk, false);
 
-                return true;
+                return true; //No match, return true to keep scanning
             }
 
             // no need to take a video clip of us receiving an egg.
@@ -349,11 +353,11 @@ namespace SysBot.Pokemon
                 if ((Species)pk.Species is Species.Dunsparce or Species.Tandemaus && pk.EncryptionConstant % 100 != 0)
                 {
                     EmbedMon = (pk, false);
-                    return true;
+                    return true; // 1/100 condition unsatisfied, continue scanning
                 }
             }
 
-            if (mode == ContinueAfterMatch.StopExit)
+            if (mode == ContinueAfterMatch.StopExit) // Stop & Exit: Condition satisfied.  Stop scanning and disconnect the bot
             {
                 EmbedMon = (pk, true);
                 return false;
@@ -362,6 +366,7 @@ namespace SysBot.Pokemon
             EmbedMon = (pk, true);
             EchoUtil.Echo(msg);
 
+            //Else; Pause: Condition satisfied.  Freeze execution until told otherwise
             IsWaiting = true;
             while (IsWaiting)
                 Task.Delay(1_000, CancellationToken.None).ConfigureAwait(false);
@@ -382,6 +387,12 @@ namespace SysBot.Pokemon
             return pk;
         }
 
+        private async Task<int> PicnicState(CancellationToken token)
+        {
+            var Data = await SwitchConnection.ReadBytesMainAsync(PicnicMenu, 1, token).ConfigureAwait(false);
+            return Data[0]; // 1 when in picnic, 2 in sandwich menu, 3 when eating, 2 when done eating
+        }
+
         private async Task<bool> IsInPicnic(CancellationToken token)
         {
             var Data = await SwitchConnection.ReadBytesMainAsync(PicnicMenu, 1, token).ConfigureAwait(false);
@@ -397,7 +408,7 @@ namespace SysBot.Pokemon
             await Click(A, 4_000, token).ConfigureAwait(false);
             await Click(X, 1_500, token).ConfigureAwait(false);
 
-            for (int i = 0; i < 0; i++)
+            for (int i = 0; i < 0; i++) // Select first ingredient
             {
                 if (Settings.Item1DUP == true)
                     await Click(DUP, 0_800, token).ConfigureAwait(false);
@@ -408,7 +419,7 @@ namespace SysBot.Pokemon
             await Click(A, 0_800, token).ConfigureAwait(false);
             await Click(PLUS, 0_800, token).ConfigureAwait(false);
 
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 4; i++) // Select second ingredient
             {
                 if (Settings.Item2DUP == true)
                     await Click(DUP, 0_800, token).ConfigureAwait(false);
@@ -418,7 +429,7 @@ namespace SysBot.Pokemon
 
             await Click(A, 0_800, token).ConfigureAwait(false);
 
-            for (int i = 0; i < 1; i++)
+            for (int i = 0; i < 1; i++) // Select third ingredient
             {
                 if (Settings.Item3DUP == true)
                     await Click(DUP, 0_800, token).ConfigureAwait(false);
@@ -429,24 +440,37 @@ namespace SysBot.Pokemon
             await Click(A, 0_800, token).ConfigureAwait(false);
             await Click(PLUS, 0_800, token).ConfigureAwait(false);
             await Click(A, 8_000, token).ConfigureAwait(false);
-            await SetStick(LEFT, 0, 30000, Settings.HoldUpToIngredients, token).ConfigureAwait(false); // Navigate to ingredients
+            await SetStick(LEFT, 0, 30000, Settings.HoldUpToIngredients, token).ConfigureAwait(false); // Scroll up to the lettuce
             await SetStick(LEFT, 0, 0, 0, token).ConfigureAwait(false);
+
+            for (int i = 0; i < 12; i++) // If everything is properly positioned
+                await Click(A, 0_800, token).ConfigureAwait(false);
+
+            // Sandwich failsafe
+            for (int i = 0; i < 5; i++) //Attempt this several times to ensure it goes through
+                await SetStick(LEFT, 0, 30000, 1_000, token).ConfigureAwait(false); // Scroll to the absolute top
+            await SetStick(LEFT, 0, 0, 0, token).ConfigureAwait(false);   
+
+            while (await PicnicState(token).ConfigureAwait(false) == 2) // Until we start eating the sandwich
+            {
+                await SetStick(LEFT, 0, -5000, 0_300, token).ConfigureAwait(false); // Scroll down slightly and press A a few times; repeat until un-stuck
+                await SetStick(LEFT, 0, 0, 0, token).ConfigureAwait(false);
+                        
+                for (int i = 0; i < 6; i++)
+                    await Click(A, 0_800, token).ConfigureAwait(false);
+            }
+
+            while (await PicnicState(token).ConfigureAwait(false) == 3)  // eating the sandwich
+                await Task.Delay(1_000, token).ConfigureAwait(false);
 
             sandwichcount++;
             Log($"Sandwiches Made: {sandwichcount}");
-            for (int i = 0; i < 5; i++)
-                await Click(A, 0_800, token).ConfigureAwait(false);
 
-            bool inPicnic = await IsInPicnic(token).ConfigureAwait(false);
-
-            while (!inPicnic)
+            while (!await IsInPicnic(token).ConfigureAwait(false)) // Acknowledge the sandwich and return to the picnic
             {
-                await Click(A, 3_000, token).ConfigureAwait(false);
-                inPicnic = await IsInPicnic(token).ConfigureAwait(false);
+                await Click(A, 5_000, token).ConfigureAwait(false); // Wait a long time to give the flag a chance to update and avoid sandwich re-entry
             }
 
-            if (inPicnic)
-            {
                 await Task.Delay(2_500, token).ConfigureAwait(false);
                 await SetStick(LEFT, 0, -10000, 0_500, token).ConfigureAwait(false); // Face down to basket
                 await SetStick(LEFT, 0, 0, 0, token).ConfigureAwait(false);
@@ -454,7 +478,6 @@ namespace SysBot.Pokemon
                 await SetStick(LEFT, 0, 5000, 0_200, token).ConfigureAwait(false); // Face up to basket
                 await SetStick(LEFT, 0, 0, 0, token).ConfigureAwait(false);
             }
-        }
 
         private async Task GrabValues(CancellationToken token)
         {
