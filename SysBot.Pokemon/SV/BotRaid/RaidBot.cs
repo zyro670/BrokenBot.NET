@@ -25,7 +25,7 @@ namespace SysBot.Pokemon
             Settings = hub.Config.RaidSV;
         }
 
-        private const string RaidBotVersion = "Version 0.3.0a";
+        private const string RaidBotVersion = "Version 0.3.0b";
         private int RaidsAtStart;
         private int RaidCount;
         private int WinCount;
@@ -139,6 +139,13 @@ namespace SysBot.Pokemon
                 {
                     // Should add overworld recovery with a game restart fallback.
                     await RegroupFromBannedUser(token).ConfigureAwait(false);
+
+                    if (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
+                    {
+                        Log("Something went wrong, attempting to recover.");
+                        await ReOpenGame(Hub.Config, token).ConfigureAwait(false);
+                        continue;
+                    }
 
                     // Clear trainer OTs.
                     Log("Clearing stored OTs");
@@ -494,11 +501,11 @@ namespace SysBot.Pokemon
 
         private async Task RegroupFromBannedUser(CancellationToken token)
         {
-            await Click(B, 1_250, token).ConfigureAwait(false);
+            Log("Attempting to remake lobby..");
+            await Click(B, 2_000, token).ConfigureAwait(false);
             await Click(A, 3_000, token).ConfigureAwait(false);
-            await Click(A, 1_500, token).ConfigureAwait(false);
-            while (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
-                await Click(B, 1_000, token).ConfigureAwait(false);
+            await Click(A, 3_000, token).ConfigureAwait(false);
+            await Click(B, 1_000, token).ConfigureAwait(false);
         }
 
         private async Task InitializeSessionOffsets(CancellationToken token)
