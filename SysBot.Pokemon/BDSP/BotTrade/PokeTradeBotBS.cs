@@ -933,7 +933,9 @@ namespace SysBot.Pokemon
             var ball = $"\n{(Ball)offered.Ball}";
             var extraInfo = $"OT: {name}{ball}{shiny}";
             var set = ShowdownParsing.GetShowdownText(offered).Split('\n').ToList();
-            set.Remove(set.Find(x => x.Contains("Shiny")));
+            var shinyRes = set.Find(x => x.Contains("Shiny"));
+            if (shinyRes != null)
+                set.Remove(shinyRes);
             set.InsertRange(1, extraInfo.Split('\n'));
 
             if (!laInit.Valid)
@@ -949,7 +951,7 @@ namespace SysBot.Pokemon
             if (clone.FatefulEncounter)
             {
                 clone.SetDefaultNickname(laInit);
-                var info = new SimpleTrainerInfo { Gender = clone.OT_Gender, Language = clone.Language, OT = name, TID = clone.TID, SID = clone.SID, Generation = 8 };
+                var info = new SimpleTrainerInfo { Gender = clone.OT_Gender, Language = clone.Language, OT = name, TID16 = clone.TID16, SID16 = clone.SID16, Generation = 8 };
                 var mg = EncounterEvent.GetAllEvents().Where(x => x.Species == clone.Species && x.Form == clone.Form && x.IsShiny == clone.IsShiny && x.OT_Name == clone.OT_Name).ToList();
                 if (mg.Count > 0)
                     clone = TradeExtensions<PB8>.CherishHandler(mg.First(), info);

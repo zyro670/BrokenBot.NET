@@ -241,7 +241,7 @@ namespace SysBot.Pokemon
             return pk;
         }
 
-        private int DittoSlot(ushort species1, ushort species2)
+        private static int DittoSlot(ushort species1, ushort species2)
         {
             if (species1 is 132 && species2 is not 132)
                 return 1;
@@ -289,7 +289,7 @@ namespace SysBot.Pokemon
             else return TimeOfDay.Night;
         }
 
-        private uint GetAlcremieDeco(TCItems item)
+        private static uint GetAlcremieDeco(TCItems item)
         {
             return item switch
             {
@@ -304,7 +304,7 @@ namespace SysBot.Pokemon
             };
         }
 
-        private T? ShedinjaGenerator(T pk, out string msg)
+        private static T? ShedinjaGenerator(T pk, out string msg)
         {
             T? shedinja = (T)pk.Clone();
             var index = shedinja.PersonalInfo.GetIndexOfAbility(shedinja.Ability);
@@ -358,7 +358,7 @@ namespace SysBot.Pokemon
             var result = EdgeCaseEvolutions(evoList, pk, (int)alcremie, form, (int)heldItem, tod);
             if (result != default && result.DayTime is not TimeOfDay.Any && result.DayTime != tod)
             {
-                msg = $"This Pokémon seems to like the {Enum.GetName(typeof(TimeOfDay), result.DayTime).ToLower()}.";
+                msg = $"This Pokémon seems to like the {Enum.GetName(typeof(TimeOfDay), result.DayTime)!.ToLower()}.";
                 return false;
             }
             else if (result == default)
@@ -451,7 +451,7 @@ namespace SysBot.Pokemon
             bool applyMoves = false;
             bool edgeEvos = (pk.Species is (ushort)Species.Koffing && result.EvolvedForm is 0) || ((pk.Species is (ushort)Species.Exeggcute || pk.Species is (ushort)Species.Pikachu || pk.Species is (ushort)Species.Cubone) && result.EvolvedForm > 0);
             var enc = new LegalityAnalysis(pk).EncounterMatch;
-            var sav = new SimpleTrainerInfo() { OT = pk.OT_Name, Gender = pk.OT_Gender, Generation = pk.Version, Language = pk.Language, SID = pk.TrainerSID7, TID = pk.TrainerID7, Context = Game is GameVersion.BDSP ? EntityContext.Gen8b : EntityContext.Gen8 };
+            var sav = new SimpleTrainerInfo() { OT = pk.OT_Name, Gender = pk.OT_Gender, Generation = pk.Version, Language = pk.Language, SID16 = pk.SID16, TID16 = pk.TID16, Context = Game is GameVersion.BDSP ? EntityContext.Gen8b : EntityContext.Gen8 };
 
             if (typeof(T) == typeof(PK8) && pk.Generation is 8 && edgeEvos)
             {
@@ -504,7 +504,7 @@ namespace SysBot.Pokemon
             return true;
         }
 
-        private void EdgeCaseRelearnMoves(T pk, LegalityAnalysis la)
+        private static void EdgeCaseRelearnMoves(T pk, LegalityAnalysis la)
         {
             if (typeof(T) == typeof(PK8) && (pk.Met_Location is 162 or 244))
                 return;
@@ -534,9 +534,9 @@ namespace SysBot.Pokemon
             pk.HealPP();
         }
 
-        private EvolutionTemplate EdgeCaseEvolutions(List<EvolutionTemplate> evoList, T pk, int alcremieForm, byte form, int item, TimeOfDay tod)
+        private static EvolutionTemplate EdgeCaseEvolutions(List<EvolutionTemplate> evoList, T pk, int alcremieForm, byte form, int item, TimeOfDay tod)
         {
-            EvolutionTemplate result = pk.Species switch
+            EvolutionTemplate? result = pk.Species switch
             {
                 (ushort)Species.Tyrogue => pk.Stat_ATK == pk.Stat_DEF ? evoList.Find(x => x.EvoType is EvolutionType.LevelUpAeqD) : pk.Stat_ATK > pk.Stat_DEF ? evoList.Find(x => x.EvoType is EvolutionType.LevelUpATK) : evoList.Find(x => x.EvoType is EvolutionType.LevelUpDEF),
                 (ushort)Species.Eevee when item > 0 => evoList.Find(x => x.Item == (TCItems)item),
@@ -557,16 +557,16 @@ namespace SysBot.Pokemon
                 (ushort)Species.Wurmple => GetWurmpleEvo(pk, evoList),
                 _ => evoList.Find(x => x.BaseForm == pk.Form),
             };
-            return result;
+            return result!;
         }
 
-        private EvolutionTemplate GetWurmpleEvo(PKM pkm, List<EvolutionTemplate> list)
+        private static EvolutionTemplate GetWurmpleEvo(PKM pkm, List<EvolutionTemplate> list)
         {
             var clone = pkm.Clone();
             clone.Species = (ushort)Species.Silcoon;
             if (WurmpleUtil.IsWurmpleEvoValid(clone))
-                return list.Find(x => x.EvolvesInto is (ushort)Species.Silcoon);
-            else return list.Find(x => x.EvolvesInto is (ushort)Species.Cascoon);
+                return list.Find(x => x.EvolvesInto is (ushort)Species.Silcoon)!;
+            else return list.Find(x => x.EvolvesInto is (ushort)Species.Cascoon)!;
         }
 
         protected string ListNameSanitize(string name)
@@ -575,7 +575,7 @@ namespace SysBot.Pokemon
                 return name;
 
             name = name[..1].ToUpper().Trim() + name[1..].ToLower().Trim();
-            if (name.Contains("'"))
+            if (name.Contains('\''))
                 name = name.Replace("'", "’");
             else if (name.Contains(" - "))
                 name = name.Replace(" - ", "-");
@@ -591,7 +591,7 @@ namespace SysBot.Pokemon
             {
                 var split = name.Split(' ');
                 name = split[0] + " " + split[1][..1].ToUpper() + split[1][1..].ToLower();
-                if (name.Contains("-"))
+                if (name.Contains('-'))
                     name = name.Split('-')[0] + "-" + name.Split('-')[1][..1].ToUpper() + name.Split('-')[1][1..];
             }
             return name;
@@ -639,24 +639,24 @@ namespace SysBot.Pokemon
             return true;
         }
 
-        private bool CanHatchTradeCord(ushort species) => Breeding.CanHatchAsEgg(species) || species is (ushort)Species.Ditto;
+        private static bool CanHatchTradeCord(ushort species) => Breeding.CanHatchAsEgg(species) || species is (ushort)Species.Ditto;
 
-        private bool SameEvoTree(PKM pkm1, PKM pkm2)
+        private static bool SameEvoTree(PKM pkm1, PKM pkm2)
         {
             var tree = EvolutionTree.GetEvolutionTree(pkm1.Context);
             var evos = tree.GetValidPreEvolutions(pkm1, 100, 8, true);
-            var encs = EncounterEggGenerator.GenerateEggs(pkm1, evos, 8, false).ToArray();
+            var encs = EncounterGenerator.GetGenerator(Game).GetPossible(pkm1, evos, Game, EncounterTypeGroup.Egg).ToArray();
             var base1 = encs.Length > 0 ? encs[^1].Species : -1;
 
             tree = EvolutionTree.GetEvolutionTree(pkm2.Context);
             evos = tree.GetValidPreEvolutions(pkm2, 100, 8, true);
-            encs = EncounterEggGenerator.GenerateEggs(pkm2, evos, 8, false).ToArray();
+            encs = EncounterGenerator.GetGenerator(Game).GetPossible(pkm2, evos, Game, EncounterTypeGroup.Egg).ToArray();
             var base2 = encs.Length > 0 ? encs[^1].Species : -2;
 
             return base1 == base2;
         }
 
-        private List<EvoCriteria> EggEvoCriteria(T pk1, T pk2)
+        private static List<EvoCriteria> EggEvoCriteria(T pk1, T pk2)
         {
             List<T> list = new() { pk1, pk2 };
             List<EvoCriteria> criteriaList = new();
@@ -760,7 +760,7 @@ namespace SysBot.Pokemon
             }
         }
 
-        private bool IsCottonCandy(ushort species, byte form)
+        private static bool IsCottonCandy(ushort species, byte form)
         {
             var color = (PersonalColor)(Game is GameVersion.SWSH ? PersonalTable.SWSH.GetFormEntry(species, form).Color : PersonalTable.BDSP.GetFormEntry(species, form).Color);
             return (ShinyMap[(Species)species] is PersonalColor.Blue or PersonalColor.Red or PersonalColor.Pink or PersonalColor.Purple or PersonalColor.Yellow) &&
@@ -806,7 +806,7 @@ namespace SysBot.Pokemon
 
         public static bool SelfBotScanner(ulong id, int cd)
         {
-            if (TradeCordHelper<T>.UserCommandTimestamps.TryGetValue(id, out List<DateTime> timeStamps))
+            if (TradeCordHelper<T>.UserCommandTimestamps.TryGetValue(id, out List<DateTime>? timeStamps))
             {
                 int[] delta = new int[timeStamps.Count - 1];
                 bool[] comp = new bool[delta.Length - 1];

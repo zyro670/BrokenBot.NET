@@ -81,7 +81,7 @@ namespace SysBot.Pokemon
 
                     var current = Process.GetCurrentProcess();
                     var all = Process.GetProcessesByName(current.ProcessName);
-                    bool sameExe = all.Count(x => x.MainModule.FileName == current.MainModule.FileName) > 1;
+                    bool sameExe = all.Count(x => x.MainModule?.FileName == current.MainModule?.FileName) > 1;
                     if (!sameExe)
                         TCInitialized = true;
                     else
@@ -290,7 +290,7 @@ namespace SysBot.Pokemon
                             Rng.SpeciesRNG = keys[Random.Next(Dex.Count)];
                     }
 
-                    DateTime.TryParse(Settings.EventEnd, out DateTime endTime);
+                    _ = DateTime.TryParse(Settings.EventEnd, out DateTime endTime);
                     bool ended = endTime != default && DateTime.Now > endTime;
                     bool boostProc = user.Perks.SpeciesBoost != 0 && Rng.SpeciesBoostRNG >= 99;
                     MysteryGift? mg = default;
@@ -307,9 +307,9 @@ namespace SysBot.Pokemon
                         var mgRng = mg == default ? MysteryGiftRng(Settings) : mg;
                         if (mgRng != default)
                         {
-                            Enum.TryParse(user.TrainerInfo.OTGender, out Gender gender);
-                            Enum.TryParse(user.TrainerInfo.Language, out LanguageID language);
-                            var info = new SimpleTrainerInfo { Gender = (int)gender, Language = (int)language, OT = user.TrainerInfo.OTName, TID = user.TrainerInfo.TID, SID = user.TrainerInfo.SID, Context = Game is GameVersion.BDSP ? EntityContext.Gen8b : EntityContext.Gen8, Generation = format };
+                            _ = Enum.TryParse(user.TrainerInfo.OTGender, out Gender gender);
+                            _ = Enum.TryParse(user.TrainerInfo.Language, out LanguageID language);
+                            var info = new SimpleTrainerInfo { Gender = (int)gender, Language = (int)language, OT = user.TrainerInfo.OTName, TID16 = (ushort)user.TrainerInfo.TID, SID16 = (ushort)user.TrainerInfo.SID, Context = Game is GameVersion.BDSP ? EntityContext.Gen8b : EntityContext.Gen8, Generation = format };
                             result.Poke = TradeExtensions<T>.CherishHandler(mgRng, info);
                         }
                     }
@@ -340,7 +340,7 @@ namespace SysBot.Pokemon
                         var vals = Enum.GetValues(typeof(TCItems));
                         do
                         {
-                            item = (TCItems)vals.GetValue(new Random().Next(vals.Length));
+                            item = (TCItems)vals.GetValue(new Random().Next(vals.Length))!;
                         } while (Game is GameVersion.BDSP ? (int)item <= 0 || (int)item >= 537 : (int)item <= 0 || (int)item == 226 || (int)item == 227);
                     }
                     else
@@ -413,8 +413,8 @@ namespace SysBot.Pokemon
                     return false;
                 }
 
-                var found = user.Catches.TryGetValue(id, out TCCatch match);
-                if (!found || match.Traded)
+                var found = user.Catches.TryGetValue(id, out TCCatch? match);
+                if (!found || match == null || match.Traded)
                 {
                     result.Message = "There is no Pokémon with this ID.";
                     return false;
@@ -464,7 +464,7 @@ namespace SysBot.Pokemon
 
             bool FuncList()
             {
-                List<string> filters = input.Contains("=") ? input.Split('=').ToList() : new();
+                List<string> filters = input.Contains('=') ? input.Split('=').ToList() : new();
                 if (filters.Count > 0)
                 {
                     filters.RemoveAt(0);
@@ -479,7 +479,7 @@ namespace SysBot.Pokemon
 
                 string nickname = input;
                 input = ListNameSanitize(input);
-                bool speciesAndForm = input.Contains("-");
+                bool speciesAndForm = input.Contains('-');
                 bool isSpecies = SpeciesName.GetSpeciesID(speciesAndForm ? input.Split('-')[0] : input) > 0;
                 bool isBall = Enum.TryParse(input, true, out Ball enumBall);
                 bool isShiny = filters.FirstOrDefault(x => x == "Shiny") != default;
@@ -560,8 +560,8 @@ namespace SysBot.Pokemon
                     return false;
                 }
 
-                var found = user.Catches.TryGetValue(id, out TCCatch match);
-                if (!found || match.Traded)
+                var found = user.Catches.TryGetValue(id, out TCCatch? match);
+                if (!found || match == null || match.Traded)
                 {
                     result.Message = "Could not find this ID.";
                     return false;
@@ -600,7 +600,7 @@ namespace SysBot.Pokemon
                     return false;
                 }
 
-                bool speciesAndForm = input.Contains("-");
+                bool speciesAndForm = input.Contains('-');
                 string tableJoin = "catches c inner join daycare d on c.user_id = d.user_id inner join buddy b on c.user_id = b.user_id";
                 string ballSearch = $"and c.is_favorite = 0 and c.was_traded = 0 and c.is_shiny = 0 and c.species != 'Ditto' and c.id != d.id1 and c.id != d.id2 and c.id != b.id and c.ball = '{ball}' and c.is_legendary = 0";
                 string shinySearch = "and c.is_favorite = 0 and c.was_traded = 0 and c.is_shiny = 1 and c.species != 'Ditto' and c.id != d.id1 and c.id != d.id2 and c.id != b.id and c.is_event = 0 and c.is_legendary = 0";
@@ -678,8 +678,8 @@ namespace SysBot.Pokemon
                     return false;
                 }
 
-                var found = user.Catches.TryGetValue(id, out TCCatch match);
-                if (!found || match.Traded)
+                var found = user.Catches.TryGetValue(id, out TCCatch? match);
+                if (!found || match == null || match.Traded)
                 {
                     result.Message = "Cannot find this Pokémon.";
                     return false;
@@ -755,8 +755,8 @@ namespace SysBot.Pokemon
                 string speciesString = string.Empty;
                 bool deposit = action == "d" || action == "deposit";
                 bool withdraw = action == "w" || action == "withdraw";
-                bool found = user.Catches.TryGetValue(_id, out TCCatch match);
-                if (deposit && (!found || match.Traded))
+                bool found = user.Catches.TryGetValue(_id, out TCCatch? match);
+                if (match == null || (deposit && (!found || match.Traded)))
                 {
                     result.Message = "There is no Pokémon with this ID.";
                     return false;
@@ -815,8 +815,8 @@ namespace SysBot.Pokemon
 
                     var speciesStr = string.Join("", match.Species.Split('-', ' ', '’', '.'));
                     speciesStr += match.Species + match.Form == "Nidoran-M" ? "M" : match.Species + match.Form == "Nidoran-F" ? "F" : "";
-                    Enum.TryParse(match.Ball, out Ball ball);
-                    Enum.TryParse(speciesStr, out Species species);
+                    _ = Enum.TryParse(match.Ball, out Ball ball);
+                    _ = Enum.TryParse(speciesStr, out Species species);
 
                     if ((user.Daycare.ID1 is 0 && user.Daycare.ID2 is 0) || (user.Daycare.ID1 is 0 && user.Daycare.ID2 != _id))
                         user.Daycare = new() { Ball1 = (int)ball, Form1 = match.Form, ID1 = match.ID, Shiny1 = match.Shiny, Species1 = (ushort)species, Ball2 = user.Daycare.Ball2, Form2 = user.Daycare.Form2, ID2 = user.Daycare.ID2, Shiny2 = user.Daycare.Shiny2, Species2 = user.Daycare.Species2 };
@@ -857,8 +857,8 @@ namespace SysBot.Pokemon
                     return false;
                 }
 
-                var found = user.Catches.TryGetValue(id, out TCCatch match);
-                if (!found || match.Traded)
+                var found = user.Catches.TryGetValue(id, out TCCatch? match);
+                if (!found || match == null || match.Traded)
                 {
                     result.Message = "Cannot find this Pokémon.";
                     return false;
@@ -939,7 +939,7 @@ namespace SysBot.Pokemon
             return result;
         }
 
-        private Results TrainerInfoHandler(TCUser user)
+        private static Results TrainerInfoHandler(TCUser user)
         {
             Results result = new();
             var sc = user.Items.FirstOrDefault(x => x.Item == TCItems.ShinyCharm);
@@ -956,7 +956,7 @@ namespace SysBot.Pokemon
             return result;
         }
 
-        private Results FavoritesInfoHandler(Dictionary<int, TCCatch> catches)
+        private static Results FavoritesInfoHandler(Dictionary<int, TCCatch> catches)
         {
             Results result = new();
             bool FuncFavoritesInfo()
@@ -1014,8 +1014,8 @@ namespace SysBot.Pokemon
                     return true;
                 }
 
-                var found = user.Catches.TryGetValue(id, out TCCatch match);
-                if (!found || match.Traded)
+                var found = user.Catches.TryGetValue(id, out TCCatch? match);
+                if (!found || match == null || match.Traded)
                 {
                     result.Message = "Cannot find this Pokémon.";
                     return false;
@@ -1237,8 +1237,8 @@ namespace SysBot.Pokemon
                     return false;
                 }
 
-                var found = user.Catches.TryGetValue(input != string.Empty ? id : user.Buddy.ID, out TCCatch match);
-                if (!found)
+                var found = user.Catches.TryGetValue(input != string.Empty ? id : user.Buddy.ID, out TCCatch? match);
+                if (!found || match == null)
                 {
                     if (input == string.Empty)
                     {
@@ -1312,8 +1312,8 @@ namespace SysBot.Pokemon
                     return false;
                 }
 
-                var found = user.Catches.TryGetValue(user.Buddy.ID, out TCCatch match);
-                if (!found || match.Traded)
+                var found = user.Catches.TryGetValue(user.Buddy.ID, out TCCatch? match);
+                if (!found || match == null || match.Traded)
                 {
                     result.Message = "Could not find this Pokémon.";
                     return false;
@@ -1396,8 +1396,8 @@ namespace SysBot.Pokemon
                     return false;
                 }
 
-                var found = user.Catches.TryGetValue(user.Buddy.ID, out TCCatch match);
-                if (!found || match.Traded)
+                var found = user.Catches.TryGetValue(user.Buddy.ID, out TCCatch? match);
+                if (!found || match == null || match.Traded)
                 {
                     result.Message = "Could not find this Pokémon.";
                     return false;
@@ -1504,8 +1504,8 @@ namespace SysBot.Pokemon
                     return false;
                 }
 
-                var found = user.Catches.TryGetValue(user.Buddy.ID, out TCCatch match);
-                if (!found || match.Traded)
+                var found = user.Catches.TryGetValue(user.Buddy.ID, out TCCatch? match);
+                if (!found || match == null || match.Traded)
                 {
                     result.Message = "Could not find this Pokémon.";
                     return false;
@@ -1671,8 +1671,8 @@ namespace SysBot.Pokemon
                     return false;
                 }
 
-                var found = user.Catches.TryGetValue(user.Buddy.ID, out TCCatch match);
-                if (!found || match.Traded)
+                var found = user.Catches.TryGetValue(user.Buddy.ID, out TCCatch? match);
+                if (!found || match == null || match.Traded)
                 {
                     result.Message = "Could not find this Pokémon.";
                     return false;
@@ -2088,8 +2088,8 @@ namespace SysBot.Pokemon
             buddyMsg = string.Empty;
             if (user.Buddy.ID is not 0)
             {
-                var found = user.Catches.TryGetValue(user.Buddy.ID, out TCCatch match);
-                if (!found || match.Traded)
+                var found = user.Catches.TryGetValue(user.Buddy.ID, out TCCatch? match);
+                if (!found || match == null || match.Traded)
                     return;
 
                 var pk = GetLookupAsClassObject<T>(user.UserInfo.UserID, "binary_catches", $"and id = {match.ID}");
@@ -2261,9 +2261,9 @@ namespace SysBot.Pokemon
 
         public string GetDexFlavorText(ushort species, byte form, bool gmax) => GetDexFlavorFromTable(species, form, gmax);
 
-        private bool ValidateOT(TCTrainerInfo info) => info.OTName.Length <= Legal.GetMaxLengthOT(8, (LanguageID)Enum.Parse(typeof(LanguageID), info.Language));
+        private static bool ValidateOT(TCTrainerInfo info) => info.OTName.Length <= Legal.GetMaxLengthOT(8, (LanguageID)Enum.Parse(typeof(LanguageID), info.Language));
 
-        private SQLCommand DBCommandConstructor(string table, string vals, string filter, string[] names, object[] values, SQLTableContext ctx)
+        private static SQLCommand DBCommandConstructor(string table, string vals, string filter, string[] names, object[] values, SQLTableContext ctx)
         {
             string cmd = ctx switch
             {

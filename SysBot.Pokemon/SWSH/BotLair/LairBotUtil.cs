@@ -55,7 +55,7 @@ namespace SysBot.Pokemon
             1592, 1604, 1606
         };
 
-        public double[] TypeDamageMultiplier(int[] types, int moveType)
+        private static double[] TypeDamageMultiplier(int[] types, int moveType)
         {
             double[] effectiveness = { -1, -1 };
             for (int i = 0; i < types.Length; i++)
@@ -112,9 +112,9 @@ namespace SysBot.Pokemon
             public MoveTarget Target { get; set; }
         }
 
-        public int CalculateEffectiveStat(int statIV, int statEV, int statBase, int level) => ((statIV + (2 * statBase) + (statEV / 4)) * level / 100) + 5; // Taken from PKHeX
+        public static int CalculateEffectiveStat(int statIV, int statEV, int statBase, int level) => ((statIV + (2 * statBase) + (statEV / 4)) * level / 100) + 5; // Taken from PKHeX
 
-        public int PriorityIndex(PK8 pk)
+        public static int PriorityIndex(PK8 pk)
         {
             int selectIndex = -1;
             for (int i = 0; i < pk.Moves.Length; i++)
@@ -128,7 +128,7 @@ namespace SysBot.Pokemon
             return selectIndex;
         }
 
-        private bool AbilityImmunity(int ourAbility, int encounterAbility, int[] encounterTypes, MoveType ourMoveType, int ourMoveID, PK8[]? party = default)
+        private static bool AbilityImmunity(int ourAbility, int encounterAbility, int[] encounterTypes, MoveType ourMoveType, int ourMoveID, PK8[]? party = default)
         {
             if (ourAbility == (int)Ability.Turboblaze || ourAbility == (int)Ability.Teravolt || ourAbility == (int)Ability.MoldBreaker)
                 return false;
@@ -174,7 +174,7 @@ namespace SysBot.Pokemon
             for (int i = 0; i < pk.Moves.Length; i++)
             {
                 double typeMultiplier = -1.0;
-                var move = root.Moves.FirstOrDefault(x => x.MoveID == pk.Moves[i]);
+                var move = root.Moves.FirstOrDefault(x => x.MoveID == pk.Moves[i])!;
                 var power = Convert.ToDouble(move.Power);
                 bool immune = AbilityImmunity(pk.Ability, lairPk.Ability, types, move.Type, move.MoveID, party);
 
@@ -299,9 +299,9 @@ namespace SysBot.Pokemon
             return dmgCalc;
         }
 
-        public PokeMoveInfo.MoveInfoRoot LoadMoves()
+        public static PokeMoveInfo.MoveInfoRoot LoadMoves()
         {
-            using Stream stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("SysBot.Pokemon.SWSH.BotLair.MoveInfo.json");
+            using Stream stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("SysBot.Pokemon.SWSH.BotLair.MoveInfo.json")!;
             using TextReader reader = new StreamReader(stream);
             JsonSerializer serializer = new();
             var root = (PokeMoveInfo.MoveInfoRoot?)serializer.Deserialize(reader, typeof(PokeMoveInfo.MoveInfoRoot));

@@ -966,7 +966,7 @@ namespace SysBot.Pokemon
             if (clone.FatefulEncounter)
             {
                 clone.SetDefaultNickname(laInit);
-                var info = new SimpleTrainerInfo { Gender = clone.OT_Gender, Language = clone.Language, OT = name, TID = clone.TID, SID = clone.SID, Generation = 8 };
+                var info = new SimpleTrainerInfo { Gender = clone.OT_Gender, Language = clone.Language, OT = name, TID16 = clone.TID16, SID16 = clone.SID16, Generation = 8 };
                 var mg = EncounterEvent.GetAllEvents().Where(x => x.Species == clone.Species && x.Form == clone.Form && x.IsShiny == clone.IsShiny && x.OT_Name == clone.OT_Name).ToList();
                 if (mg.Count > 0)
                     clone = TradeExtensions<PA8>.CherishHandler(mg.First(), info);

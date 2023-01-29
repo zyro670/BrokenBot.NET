@@ -116,11 +116,11 @@ namespace SysBot.Pokemon
 
         private sealed class LairScreenValueCategoryConverter : TypeConverter
         {
-            public override bool GetPropertiesSupported(ITypeDescriptorContext context) => true;
+            public override bool GetPropertiesSupported(ITypeDescriptorContext? context) => true;
 
-            public override PropertyDescriptorCollection GetProperties(ITypeDescriptorContext context, object value, Attribute[] attributes) => TypeDescriptor.GetProperties(typeof(LairScreenValueCategory));
+            public override PropertyDescriptorCollection GetProperties(ITypeDescriptorContext? context, object? value, Attribute[]? attributes) => TypeDescriptor.GetProperties(typeof(LairScreenValueCategory));
 
-            public override bool CanConvertTo(ITypeDescriptorContext context, Type destinationType) => destinationType != typeof(string) && base.CanConvertTo(context, destinationType);
+            public override bool CanConvertTo(ITypeDescriptorContext? context, Type? destinationType) => destinationType != typeof(string) && base.CanConvertTo(context, destinationType);
         }
     }
 }

@@ -69,7 +69,7 @@ namespace SysBot.Pokemon
             DumpSetting = Hub.Config.Folder;
             OffsetValues = ValueParse();
             LairUtils = new LairUtil();
-            MoveInfo = LairUtils.LoadMoves();
+            MoveInfo = LairBotUtil.LoadMoves();
             StopConditionSettings.InitializeTargetIVs(Hub.Config, out DesiredMinIVs, out DesiredMaxIVs);
         }
 
@@ -126,9 +126,9 @@ namespace SysBot.Pokemon
                 }
 
                 while (!await LairStatusCheck(OffsetValues.LairAdventurePath, CurrentScreenLairOffset, token).ConfigureAwait(false)) // Delay until in path select screen.
-                    await Task.Delay(2_000).ConfigureAwait(false);
+                    await Task.Delay(2_000, token).ConfigureAwait(false);
 
-                await Task.Delay(raidCount == 1 ? 11_000 : 6_000).ConfigureAwait(false); // Because map scroll is slow and random dialogue is annoying.
+                await Task.Delay(raidCount == 1 ? 11_000 : 6_000, token).ConfigureAwait(false); // Because map scroll is slow and random dialogue is annoying.
 
                 if (Settings.EnableOHKO) // Enable dirty OHKO.
                     await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0x7900E81F), MainNsoBase + DamageOutputOffset, token).ConfigureAwait(false);
@@ -153,8 +153,7 @@ namespace SysBot.Pokemon
                 }
 
                 var lairPk = await ReadUntilPresent(RaidPokemonOffset, 2_000, 0_200, 344, token).ConfigureAwait(false);
-                if (lairPk == null)
-                    lairPk = new();
+                lairPk ??= new();
 
 #pragma warning disable CS8601 // Possible null reference assignment.
                 var party = new PK8[3]
@@ -168,8 +167,7 @@ namespace SysBot.Pokemon
 
                 LairEncounterCount++;
                 Log($"Raid Battle {raidCount}. Encounter {LairEncounterCount}: {SpeciesName.GetSpeciesNameGeneration(lairPk.Species, 2, 8)}{TradeExtensions<PK8>.FormOutput(lairPk.Species, lairPk.Form, out _)}.");
-                if (PlayerPk == null)
-                    PlayerPk = new();
+                PlayerPk ??= new();
 
                 Log($"Sending out: {SpeciesName.GetSpeciesNameGeneration(PlayerPk.Species, 2, 8)}{TradeExtensions<PK8>.FormOutput(PlayerPk.Species, PlayerPk.Form, out _)}.");
                 await BattleRoutine(party, lairPk, token).ConfigureAwait(false);
@@ -230,7 +228,7 @@ namespace SysBot.Pokemon
                 }
 
                 pkList.Add(pk);
-                int moveIndex = LairUtils.PriorityIndex(pk);
+                int moveIndex = LairBotUtil.PriorityIndex(pk);
                 if (Settings.EnableOHKO)
                 {
                     if (moveIndex != -1) // Add Ditto override because Imposter is fun?
@@ -238,7 +236,7 @@ namespace SysBot.Pokemon
                         monIndex = i;
                         break;
                     }
-                    else speedStat.Add(LairUtils.CalculateEffectiveStat(pk.IV_SPE, pk.EV_SPE, pk.PersonalInfo.SPE, pk.CurrentLevel));
+                    else speedStat.Add(LairBotUtil.CalculateEffectiveStat(pk.IV_SPE, pk.EV_SPE, pk.PersonalInfo.SPE, pk.CurrentLevel));
                 }
                 else damage.Add(LairUtils.WeightedDamage(new PK8[] { new() }, pk, lairPk, MoveInfo, false).Max());
             }
@@ -263,7 +261,7 @@ namespace SysBot.Pokemon
             bool movePass = false;
             while (!movePass)
             {
-                var move = MoveInfo.Moves.FirstOrDefault(x => x.MoveID == PlayerPk.Moves[priority ? priorityMove : bestMove]);
+                var move = MoveInfo.Moves.FirstOrDefault(x => x.MoveID == PlayerPk.Moves[priority ? priorityMove : bestMove])!;
                 bool recoil = move.Recoil >= 206 && move.EffectSequence >= 48;
                 if ((stuck && (OldMoveIndex == (priority ? priorityMove : bestMove))) || (Settings.EnableOHKO && (recoil || move.Charge)) || move.MoveID == (int)Move.Belch)
                 {
@@ -278,7 +276,7 @@ namespace SysBot.Pokemon
                 movePass = true;
             }
 
-            var finalMove = MoveInfo.Moves.FirstOrDefault(x => x.MoveID == PlayerPk.Moves[bestMove]);
+            var finalMove = MoveInfo.Moves.FirstOrDefault(x => x.MoveID == PlayerPk.Moves[bestMove])!;
             int dmaxMove = finalMove.Category != MoveCategory.Status ? (int)finalMove.Type : 18;
             Log($"Turn {turn}: Selecting {(dmax ? (DmaxMoves)dmaxMove : (Move)PlayerPk.Moves[bestMove])}.");
             var index = bestMove - OldMoveIndex;
@@ -300,13 +298,13 @@ namespace SysBot.Pokemon
 
             if (Settings.EnableOHKO)
             {
-                var ourSpeed = LairUtils.CalculateEffectiveStat(PlayerPk.IV_SPE, PlayerPk.EV_SPE, PlayerPk.PersonalInfo.SPE, PlayerPk.CurrentLevel);
-                bool noPriority = LairUtils.PriorityIndex(PlayerPk) == -1;
-                var lairPkSpeed = LairUtils.CalculateEffectiveStat(lairPk.IV_SPE, lairPk.EV_SPE, lairPk.PersonalInfo.SPE, lairPk.CurrentLevel);
-                bool lairPkPriority = LairUtils.PriorityIndex(lairPk) != -1;
+                var ourSpeed = LairBotUtil.CalculateEffectiveStat(PlayerPk.IV_SPE, PlayerPk.EV_SPE, PlayerPk.PersonalInfo.SPE, PlayerPk.CurrentLevel);
+                bool noPriority = LairBotUtil.PriorityIndex(PlayerPk) == -1;
+                var lairPkSpeed = LairBotUtil.CalculateEffectiveStat(lairPk.IV_SPE, lairPk.EV_SPE, lairPk.PersonalInfo.SPE, lairPk.CurrentLevel);
+                bool lairPkPriority = LairBotUtil.PriorityIndex(lairPk) != -1;
 
                 var maxDmgMoveIndex = dmgWeightPlayer.ToList().IndexOf(dmgWeightPlayer.Max());
-                var move = MoveInfo.Moves.FirstOrDefault(x => x.MoveID == PlayerPk.Moves[maxDmgMoveIndex]);
+                var move = MoveInfo.Moves.FirstOrDefault(x => x.MoveID == PlayerPk.Moves[maxDmgMoveIndex])!;
 
                 if (move.Charge || move.MoveID == (int)Move.Belch)
                 {
@@ -430,12 +428,12 @@ namespace SysBot.Pokemon
             if (Settings.UpgradePokemon && raidCount != 4)
                 upgrade = CheckIfUpgrade(party, lairPk);
 
-            await Task.Delay(6_000).ConfigureAwait(false);
+            await Task.Delay(6_000, token).ConfigureAwait(false);
             if (Settings.CatchLairPokémon || upgrade || raidCount == 4) // We want to catch the legendary regardless of settings for catching.
             {
                 await SelectCatchingBall(token).ConfigureAwait(false); // Select ball to catch with.
                 Log($"Catching {(raidCount < 4 ? "encounter" : "legendary")}...");
-                await Task.Delay(raidCount == 4 ? 35_000 : 25_000).ConfigureAwait(false);
+                await Task.Delay(raidCount == 4 ? 35_000 : 25_000, token).ConfigureAwait(false);
                 if (raidCount < 4)
                 {
                     if (!upgrade)
@@ -460,7 +458,7 @@ namespace SysBot.Pokemon
             int index = -1;
 
             while (!await LairStatusCheck(OffsetValues.LairRewardsScreen, CurrentScreenLairOffset, token).ConfigureAwait(false))
-                await Task.Delay(4_000).ConfigureAwait(false);
+                await Task.Delay(4_000, token).ConfigureAwait(false);
 
             for (int i = 0; i < Caught; i++)
             {
@@ -581,7 +579,7 @@ namespace SysBot.Pokemon
             OtherItemsPouch = await Connection.ReadBytesAsync(OtherItemAddress, 2184, token).ConfigureAwait(false);
             var pouch = new InventoryPouch8(InventoryType.Items, LairBotUtil.Pouch_Regular_SWSH, 999, 0, 546);
             pouch.GetPouch(OtherItemsPouch);
-            return pouch.Items.FirstOrDefault(x => x.Index == 1604).Count;
+            return pouch.Items.FirstOrDefault(x => x.Index == 1604)!.Count;
         }
 
         private async Task<int> GetPokeBallCount(CancellationToken token)
@@ -618,7 +616,7 @@ namespace SysBot.Pokemon
             await Connection.WriteBytesAsync(new byte[1], GetFlagOffset(species), token).ConfigureAwait(false);
         }
 
-        private uint GetFlagOffset(int species)
+        private static uint GetFlagOffset(int species)
         {
             if (species == 0)
                 return 0;
@@ -719,7 +717,7 @@ namespace SysBot.Pokemon
             while (await LairStatusCheck(ofsVal, CurrentScreenLairOffset, token).ConfigureAwait(false))
                 await Click(A, 0_300, token).ConfigureAwait(false);
 
-            await Task.Delay(2_000).ConfigureAwait(false);
+            await Task.Delay(2_000, token).ConfigureAwait(false);
             await Click(DDOWN, 0_250, token).ConfigureAwait(false);
             await Click(A, 2_000, token).ConfigureAwait(false);
         }
@@ -787,7 +785,7 @@ namespace SysBot.Pokemon
                 var hexCur = string.Format("0x{0:X8}", valCur);
                 var hexMisc = string.Format("0x{0:X8}", valMisc);
                 Log($"\nCurrentScreen offset value: {hexCur}\nMiscScreen offset value: {hexMisc}");
-                await Task.Delay(2_000).ConfigureAwait(false);
+                await Task.Delay(2_000, token).ConfigureAwait(false);
             }
         }
 
