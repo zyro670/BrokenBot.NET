@@ -370,14 +370,19 @@ namespace SysBot.Pokemon
 
             EmbedMon = (pk, true);
             EchoUtil.Echo(msg);
-            await Click(HOME, 0_500, token).ConfigureAwait(false);
-            Log("Claim your egg before closing the picnic!");
 
-            IsWaiting = true;
-            while (IsWaiting)
-                await Task.Delay(1_000, token).ConfigureAwait(false);
+            if (mode == ContinueAfterMatch.PauseWaitAcknowledge)
+            {
+                await Click(HOME, 0_500, token).ConfigureAwait(false);
+                Log("Claim your egg before closing the picnic!");
 
-            await Click(HOME, 1_000, token).ConfigureAwait(false);
+                IsWaiting = true;
+                while (IsWaiting)
+                    await Task.Delay(1_000, token).ConfigureAwait(false);
+
+                await Click(HOME, 1_000, token).ConfigureAwait(false);
+            }
+
             return false;
         }
 
