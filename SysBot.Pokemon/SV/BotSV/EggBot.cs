@@ -88,8 +88,8 @@ namespace SysBot.Pokemon
 
             if (Hub.Config.EggSV.EggBotMode == EggMode.WaitAndClose && Settings.ContinueAfterMatch == ContinueAfterMatch.Continue)
             {
-                Log("The Continue setting is not recommended for this mode, attempting to change it to PauseWaitAcknowledge.");
-                Settings.ContinueAfterMatch = ContinueAfterMatch.PauseWaitAcknowledge;
+                Log("The Continue setting is not recommended for this mode, please change it to PauseWaitAcknowledge. Close and reopen exe to save changes.");
+                return false;
             }
 
             if (Hub.Config.EggSV.EggBotMode == EggMode.CollectAndDump)
@@ -190,9 +190,9 @@ namespace SysBot.Pokemon
                         waiting++;
                         await Task.Delay(1_500, token).ConfigureAwait(false);
                         pk = await ReadPokemonSV(EggData, 344, token).ConfigureAwait(false);
-                        if (waiting == 80)
+                        if (waiting == 120)
                         {
-                            Log("2 minutes have passed without an egg.  Attempting full recovery.");
+                            Log("3 minutes have passed without an egg.  Attempting full recovery.");
                             await ReopenPicnic(token).ConfigureAwait(false);
                             await MakeSandwich(token).ConfigureAwait(false);
                             await ReopenPicnic(token).ConfigureAwait(false);
@@ -209,7 +209,7 @@ namespace SysBot.Pokemon
                         }
                     }
 
-                    while (pk != null && (Species)pk.Species != Species.None && pkprev.EncryptionConstant != pk.EncryptionConstant)
+                    while (pk != null && pkprev.EncryptionConstant != pk.EncryptionConstant && (Species)pk.Species != Species.None)
                     {
                         waiting = 0;
                         eggcount++;
@@ -218,10 +218,12 @@ namespace SysBot.Pokemon
                         Settings.AddCompletedEggs();
                         TradeExtensions<PK9>.EncounterLogs(pk, "EncounterLogPretty_Egg.txt");
                         ctr++;
-                        bool match = !CheckEncounter(print, pk); 
-                        if (match)
+
+                        bool match = await CheckEncounter(print, pk).ConfigureAwait(false);
+                        if (!match && Settings.ContinueAfterMatch == ContinueAfterMatch.StopExit)
                         {
                             Log("Make sure to pick up your egg in the basket!");
+                            await Click(HOME, 0_500, token).ConfigureAwait(false);
                             return;
                         }
                         pkprev = pk;
@@ -237,7 +239,7 @@ namespace SysBot.Pokemon
                     }
                 }
                 Log("30 minutes have passed, remaking sandwich.");
-                if (reset == Settings.ResetGameAfterThisManySandwiches)
+                if (reset == Settings.ResetGameAfterThisManySandwiches && Settings.ResetGameAfterThisManySandwiches != 0)
                 {
                     reset = 0;
                     await RecoveryReset(token).ConfigureAwait(false);
@@ -278,7 +280,9 @@ namespace SysBot.Pokemon
                         pk = await ReadPokemonSV(EggData, 344, token).ConfigureAwait(false);
                     }
 
-                    while (pk != null && (Species)pk.Species != Species.None && pkprev.EncryptionConstant != pk.EncryptionConstant)
+                    await Task.Delay(1_000, token).ConfigureAwait(false);
+                    pk = await ReadPokemonSV(EggData, 344, token).ConfigureAwait(false);
+                    while (pk != null && pkprev.EncryptionConstant != pk.EncryptionConstant && (Species)pk.Species != Species.None)
                     {
                         eggcount++;
                         var print = Hub.Config.StopConditions.GetSpecialPrintName(pk);
@@ -286,15 +290,19 @@ namespace SysBot.Pokemon
                         Settings.AddCompletedEggs();
                         TradeExtensions<PK9>.EncounterLogs(pk, "EncounterLogPretty_Egg.txt");
 
-                        bool match = !CheckEncounter(print, pk);
+                        bool match = await CheckEncounter(print, pk).ConfigureAwait(false);
 
                         await Task.Delay(0_500, token).ConfigureAwait(false);
                         await Click(A, 2_500, token).ConfigureAwait(false);
                         await Click(A, 1_200, token).ConfigureAwait(false);
 
                         await RetrieveEgg(token).ConfigureAwait(false);
-                        if (match)
+                        if (!match && Settings.ContinueAfterMatch == ContinueAfterMatch.StopExit)
+                        {
+                            Log("Egg should be claimed!");
+                            await Click(HOME, 0_500, token).ConfigureAwait(false);
                             return;
+                        }
 
                         pkprev = pk;
                     }
@@ -304,7 +312,7 @@ namespace SysBot.Pokemon
                     Log("Waiting..");
                 }
                 Log("30 minutes have passed, remaking sandwich.");
-                if (reset == Settings.ResetGameAfterThisManySandwiches)
+                /*if (reset == Settings.ResetGameAfterThisManySandwiches && Settings.ResetGameAfterThisManySandwiches != 0) // Need to add navigation back to basket for this, commenting out for now.
                 {
                     reset = 0;
                     Log("Resetting game to rid us of any memory leak.");
@@ -316,16 +324,15 @@ namespace SysBot.Pokemon
                     await Click(DDOWN, 0_250, token).ConfigureAwait(false);
                     await Click(A, 7_000, token).ConfigureAwait(false);
                 }
-                reset++;
+                reset++;*/
                 await MakeSandwich(token).ConfigureAwait(false);
             }
         }
 
-        // CheckEncounter(): Should the scanning continue based on the given encounter?
-        // Returns true if there is no match or it should be ignored
-        // Returns false if the scanning should abort
-        private bool CheckEncounter(string print, PK9 pk)
+        private async Task<bool> CheckEncounter(string print, PK9 pk)
         {
+            var token = CancellationToken.None;
+
             if (!StopConditionSettings.EncounterFound(pk, DesiredMinIVs, DesiredMaxIVs, Hub.Config.StopConditions, null))
             {
                 if (Hub.Config.StopConditions.ShinyTarget is TargetShinyType.AnyShiny or TargetShinyType.StarOnly or TargetShinyType.SquareOnly && pk.IsShiny)
@@ -339,6 +346,7 @@ namespace SysBot.Pokemon
             var msg = $"Result found!\n{print}\n" + mode switch
             {
                 ContinueAfterMatch.PauseWaitAcknowledge => "Waiting for instructions to continue.",
+                ContinueAfterMatch.Continue => "Continuing..",
                 ContinueAfterMatch.StopExit => "Stopping routine execution; restart the bot to search again.",
                 _ => throw new ArgumentOutOfRangeException(),
             };
@@ -366,10 +374,18 @@ namespace SysBot.Pokemon
             EmbedMon = (pk, true);
             EchoUtil.Echo(msg);
 
-            //Else; Pause: Condition satisfied.  Freeze execution until told otherwise
-            IsWaiting = true;
-            while (IsWaiting)
-                Task.Delay(1_000, CancellationToken.None).ConfigureAwait(false);
+            if (mode == ContinueAfterMatch.PauseWaitAcknowledge)
+            {
+                await Click(HOME, 0_500, token).ConfigureAwait(false);
+                Log("Claim your egg before closing the picnic! Alternatively you can manually run to collect all present eggs, go back to the HOME screen, type $toss, and let it continue scanning from there.");
+
+                IsWaiting = true;
+                while (IsWaiting)
+                    await Task.Delay(1_000, token).ConfigureAwait(false);
+
+                await Click(HOME, 1_000, token).ConfigureAwait(false);
+            }
+
             return false;
         }
 
@@ -405,7 +421,7 @@ namespace SysBot.Pokemon
             await SetStick(LEFT, 0, 30000, 0_700, token).ConfigureAwait(false); // Face up to table
             await SetStick(LEFT, 0, 0, 0, token).ConfigureAwait(false);
             await Click(A, 1_500, token).ConfigureAwait(false);
-            await Click(A, 4_000, token).ConfigureAwait(false);
+            await Click(A, 5_000, token).ConfigureAwait(false);
             await Click(X, 1_500, token).ConfigureAwait(false);
 
             for (int i = 0; i < 0; i++) // Select first ingredient

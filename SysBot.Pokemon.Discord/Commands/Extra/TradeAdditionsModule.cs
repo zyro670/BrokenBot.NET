@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using Discord.WebSocket;
+using System.Collections;
 
 namespace SysBot.Pokemon.Discord
 {
@@ -241,7 +242,7 @@ namespace SysBot.Pokemon.Discord
             }
 
             var c = bot.Bot.Connection;
-            var bytes = await c.Screengrab(token).ConfigureAwait(false);
+            var bytes = await c.Screengrab(token).ConfigureAwait(false) ?? Array.Empty<byte>();
             if (bytes.Length == 1)
             {
                 await ReplyAsync($"Failed to take a screenshot for bot at {address}. Is the bot connected?").ConfigureAwait(false);
@@ -750,11 +751,31 @@ namespace SysBot.Pokemon.Discord
                 if (EggBotSV.EmbedMon.Item1 != null)
                 {
                     var url = TradeExtensions<PK9>.PokeImg(EggBotSV.EmbedMon.Item1, false, false);
+                    var is1of100 = (Species)EggBotSV.EmbedMon.Item1.Species is Species.Dunsparce or Species.Tandemaus;
+                    var spec = string.Empty;
+                    if (is1of100)
+                    {
+                        if (EggBotSV.EmbedMon.Item1.EncryptionConstant % 100 == 0)
+                        {
+                            if ((Species)EggBotSV.EmbedMon.Item1.Species is Species.Dunsparce)
+                                spec = "\n3 Segment";
+                            else
+                                spec = "\nFamily of 3";
+                        }
+                        if (EggBotSV.EmbedMon.Item1.EncryptionConstant % 100 != 0)
+                        {
+                            if ((Species)EggBotSV.EmbedMon.Item1.Species is Species.Dunsparce)
+                                spec = "\n2 Segment";
+                            else
+                                spec = "\nFamily of 4";
+                        }
+                    }
+
                     var gender = EggBotSV.EmbedMon.Item1.Gender == 0 ? " - (M)" : EggBotSV.EmbedMon.Item1.Gender == 1 ? " - (F)" : "";
 
-                    var description = $"{(EggBotSV.EmbedMon.Item1.ShinyXor == 0 ? "■ - " : EggBotSV.EmbedMon.Item1.ShinyXor <= 16 ? "★ - " : "")}{SpeciesName.GetSpeciesNameGeneration(EggBotSV.EmbedMon.Item1.Species, 2, 8)}{TradeExtensions<T>.FormOutput(EggBotSV.EmbedMon.Item1.Species, EggBotSV.EmbedMon.Item1.Form, out _)}{gender}\nIVs: {EggBotSV.EmbedMon.Item1.IV_HP}/{EggBotSV.EmbedMon.Item1.IV_ATK}/{EggBotSV.EmbedMon.Item1.IV_DEF}/{EggBotSV.EmbedMon.Item1.IV_SPA}/{EggBotSV.EmbedMon.Item1.IV_SPD}/{EggBotSV.EmbedMon.Item1.IV_SPE}";
+                    var description = $"{(EggBotSV.EmbedMon.Item1.ShinyXor == 0 ? "■ - " : EggBotSV.EmbedMon.Item1.ShinyXor <= 16 ? "★ - " : "")}{SpeciesName.GetSpeciesNameGeneration(EggBotSV.EmbedMon.Item1.Species, 2, 8)}{TradeExtensions<T>.FormOutput(EggBotSV.EmbedMon.Item1.Species, EggBotSV.EmbedMon.Item1.Form, out _)}{gender}{spec}\nIVs: {EggBotSV.EmbedMon.Item1.IV_HP}/{EggBotSV.EmbedMon.Item1.IV_ATK}/{EggBotSV.EmbedMon.Item1.IV_DEF}/{EggBotSV.EmbedMon.Item1.IV_SPA}/{EggBotSV.EmbedMon.Item1.IV_SPD}/{EggBotSV.EmbedMon.Item1.IV_SPE}";
                     if (SysCord<T>.Runner.Hub.Config.StopConditions.ShinyTarget == TargetShinyType.NonShiny)
-                        description = $"{SpeciesName.GetSpeciesNameGeneration(EggBotSV.EmbedMon.Item1.Species, 2, 8)}{TradeExtensions<T>.FormOutput(EggBotSV.EmbedMon.Item1.Species, EggBotSV.EmbedMon.Item1.Form, out _)}\nIVs: {EggBotSV.EmbedMon.Item1.IV_HP}/{EggBotSV.EmbedMon.Item1.IV_ATK}/{EggBotSV.EmbedMon.Item1.IV_DEF}/{EggBotSV.EmbedMon.Item1.IV_SPA}/{EggBotSV.EmbedMon.Item1.IV_SPD}/{EggBotSV.EmbedMon.Item1.IV_SPE}";
+                        description = $"{SpeciesName.GetSpeciesNameGeneration(EggBotSV.EmbedMon.Item1.Species, 2, 8)}{TradeExtensions<T>.FormOutput(EggBotSV.EmbedMon.Item1.Species, EggBotSV.EmbedMon.Item1.Form, out _)}{gender}{spec}\nIVs: {EggBotSV.EmbedMon.Item1.IV_HP}/{EggBotSV.EmbedMon.Item1.IV_ATK}/{EggBotSV.EmbedMon.Item1.IV_DEF}/{EggBotSV.EmbedMon.Item1.IV_SPA}/{EggBotSV.EmbedMon.Item1.IV_SPD}/{EggBotSV.EmbedMon.Item1.IV_SPE}";
 
                     var markurl = string.Empty;
                     if (EggBotSV.EmbedMon.Item2)
@@ -809,11 +830,35 @@ namespace SysBot.Pokemon.Discord
 
             var c = bot.Bot.Connection;
             c.Reset();
-            var bytes = Task.Run(async () => await c.Screengrab(token).ConfigureAwait(false)).Result;
+            var bytes = Task.Run(async () => await c.Screengrab(token).ConfigureAwait(false)).Result ?? Array.Empty<byte>();
             MemoryStream ms = new(bytes);
             var img = "cap.jpg";
             var embed = new EmbedBuilder { ImageUrl = $"attachment://{img}", Color = Color.Purple }.WithFooter(new EmbedFooterBuilder { Text = $"Captured image from bot at address {address}." });
             await Context.Channel.SendFileAsync(ms, img, "", false, embed: embed.Build());
         }
+
+        [Command("setCatchLimit")]
+        [Alias("scl")]
+        [Summary("Set the Catch Limit for Raids in SV.")]
+        [RequireSudo]
+        public async Task SetOffsetIncrement([Summary("Set the Catch Limit for Raids in SV.")] int limit)
+        {
+            int parse = SysCord<T>.Runner.Hub.Config.RaidSV.CatchLimit = limit;
+
+            var msg = $"{Context.User.Mention} Catch Limit for Raids has been set to {parse}.";
+            await ReplyAsync(msg).ConfigureAwait(false);
+        }
+
+        [Command("clearRaidSVBans")]
+        [Alias("crb")]
+        [Summary("Clears the RaidSV ban list.")]
+        [RequireSudo]
+        public async Task ClearRaidBansSV()
+        {
+            SysCord<T>.Runner.Hub.Config.RaidSV.RaiderBanList.Clear();
+            var msg = "RaidSV ban list has been cleared.";
+            await ReplyAsync(msg).ConfigureAwait(false);
+        }
+
     }
 }

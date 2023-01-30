@@ -12,7 +12,7 @@ namespace SysBot.Base
 
         Task<byte[]> ReadBytesAsync(uint offset, int length, CancellationToken token);
         Task WriteBytesAsync(byte[] data, uint offset, CancellationToken token);
-        Task<byte[]> Screengrab(CancellationToken token);
+        Task<byte[]?> Screengrab(CancellationToken token);
         Task<long> GetUnixTime(CancellationToken token);
     }
 }

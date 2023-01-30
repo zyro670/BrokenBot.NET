@@ -34,7 +34,7 @@ namespace SysBot.Pokemon
         public AlphaScanFiltersCategory AlphaScanConditions { get; set; } = new();
 
         [Category(Arceus), Description("When enabled, the screen will be turned off during normal bot loop operation to save power.")]
-        public bool ScreenOff { get; set; } = false;
+        public bool ScreenOff { get; set; }
 
         [Category(Arceus), Description("Enter Discord channel ID(s) to post Arceus embeds to. Feature has to be initialized via \"$arceusEmbed\" after every client restart.")]
         public string ArceusEmbedChannels { get; set; } = string.Empty;

@@ -234,7 +234,7 @@ namespace SysBot.Base
             }
         }
 
-        protected byte[] GetScreenshot()
+        protected byte[]? GetScreenshot()
         {
             Thread.Sleep(1);
             lock (_sync)

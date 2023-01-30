@@ -15,7 +15,7 @@ namespace SysBot.Pokemon
         public ContinueAfterMatch ContinueAfterMatch { get; set; } = ContinueAfterMatch.StopExit;
 
         [Category(FeatureToggle), Description("Choose your method of collecting eggs. CollectAndDump is traditional collect eggs from basket. WaitAndClose will watch for 10 eggs to spawn then close and reopen picnic to reset them. Make sure no bonus is active or any eggs are in basket if using WaitAndClose mode.")]
-        public EggMode EggBotMode { get; set; } = EggMode.CollectAndDump;
+        public EggMode EggBotMode { get; set; } = EggMode.WaitAndClose;
 
         [Category(FeatureToggle), Description("When enabled, the bot will make a sandwich on start.")]
         public bool EatFirst { get; set; } = true;
@@ -39,7 +39,7 @@ namespace SysBot.Pokemon
         public int ResetGameAfterThisManySandwiches { get; set; } = 4;
 
         [Category(FeatureToggle), Description("When enabled, the screen will be turned off during normal bot loop operation to save power.")]
-        public bool ScreenOff { get; set; } = false;
+        public bool ScreenOff { get; set; }
 
         private int _completedEggs;
 

@@ -118,19 +118,21 @@ namespace SysBot.Pokemon
                 }
                 catch (SocketException e)
                 {
-                    Log(e.Message);
-                    Connection.Reset();
+                    Connection.LogError(e.StackTrace);
+                    var attempts = Hub.Config.Timings.ReconnectAttempts;
+                    var delay = Hub.Config.Timings.ExtraReconnectDelay;
+                    var protocol = Config.Connection.Protocol;
+                    if (!await TryReconnect(attempts, delay, protocol, token).ConfigureAwait(false))
+                        return;
                 }
             }
         }
 
         private async Task DoNothing(CancellationToken token)
         {
+            Log("No task assigned. Waiting for new task assignment.");
             while (!token.IsCancellationRequested && Config.NextRoutineType == PokeRoutineType.Idle)
-            {
-                Log("No task assigned. Waiting for new task assignment.");
                 await Task.Delay(1_000, token).ConfigureAwait(false);
-            }
         }
 
         private async Task DoTrades(SAV9SV sav, CancellationToken token)

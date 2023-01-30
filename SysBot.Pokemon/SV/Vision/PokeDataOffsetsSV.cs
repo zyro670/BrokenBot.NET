@@ -2,7 +2,7 @@
 namespace SysBot.Pokemon
 {
     /// <summary>
-    /// Pokémon Legends: Arceus RAM offsets
+    /// Pokémon Scarlet/Violet RAM offsets
     /// </summary>
     public class PokeDataOffsetsSV
     {

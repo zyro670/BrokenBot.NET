@@ -131,7 +131,7 @@ namespace SysBot.Base
             }, token);
         }
 
-        public Task<byte[]> Screengrab(CancellationToken token)
+        public Task<byte[]?> Screengrab(CancellationToken token)
         {
             return Task.Run(() =>
             {

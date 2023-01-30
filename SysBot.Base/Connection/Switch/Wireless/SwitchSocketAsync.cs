@@ -224,7 +224,7 @@ namespace SysBot.Base
             return BitConverter.ToUInt64(offsetBytes, 0);
         }
 
-        public async Task<byte[]> Screengrab(CancellationToken token)
+        public async Task<byte[]?> Screengrab(CancellationToken token)
         {
             List<byte> flexBuffer = new();
             Connection.ReceiveTimeout = 1_000;
@@ -244,7 +244,7 @@ namespace SysBot.Base
                 catch (Exception ex)
                 {
                     LogError($"Socket exception thrown while receiving screenshot data:\n{ex.Message}");
-                    return Array.Empty<byte>();
+                    return null;
                 }
 
                 await Task.Delay(MaximumTransferSize / DelayFactor + BaseDelay, token).ConfigureAwait(false);
@@ -260,6 +260,7 @@ namespace SysBot.Base
             catch (Exception e)
             {
                 LogError($"Malformed screenshot data received:\n{e.Message}");
+                result = null;
             }
 
             return result;

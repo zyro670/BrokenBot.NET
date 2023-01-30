@@ -104,7 +104,7 @@ namespace SysBot.Pokemon
         public int ProfileNumber { get; set; } = 1;
 
         [Category(FeatureToggle), Description("When enabled, the screen will be turned off during normal bot loop operation to save power.")]
-        public bool ScreenOff { get; set; } = false;
+        public bool ScreenOff { get; set; }
 
         [Category(FeatureToggle), Description("When set, the bot will create a text file with current Raid Code for OBS.")]
         public bool RaidLog { get; set; } = false;

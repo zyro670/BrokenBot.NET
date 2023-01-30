@@ -41,7 +41,7 @@ namespace SysBot.Pokemon
         public int CurryChowCutscene { get; set; } = 19000;
 
         [Category(FeatureToggle), Description("When enabled, the screen will be turned off during normal bot loop operation to save power.")]
-        public bool ScreenOff { get; set; } = false;
+        public bool ScreenOff { get; set; }
 
         private int _completedCurries;
 
