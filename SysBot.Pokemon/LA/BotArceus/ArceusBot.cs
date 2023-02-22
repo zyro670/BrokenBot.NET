@@ -1716,7 +1716,11 @@ namespace SysBot.Pokemon
                     pk.Species = (ushort)geniename;
                     pk.EncryptionConstant = gen.EC;
                     pk.PID = gen.PID;
+
                     int[] pkIVList = gen.IVs;
+                    // Reorder the speed to be last.
+                    (pkIVList[5], pkIVList[3], pkIVList[4]) = (pkIVList[3], pkIVList[4], pkIVList[5]);
+
                     pk.IVs = pkIVList;
                     pk.Nature = (int)gen.nature;
                     Log($"\nAdvance: {i} - {geniename}\nEC: {pk.EncryptionConstant:X8}\nPID: {pk.PID:X8}\nIVs: {string.Join("/", pk.IVs)}\nNature: {(Nature)pk.Nature}\nGenerator Seed: {generator_seed:X16}");
