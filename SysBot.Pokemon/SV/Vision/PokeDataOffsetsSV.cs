@@ -22,6 +22,7 @@ namespace SysBot.Pokemon
         public IReadOnlyList<long> OverworldPointer { get; } = new long[] { 0x44CCAE8, 0x348, 0x10, 0xD8, 0x28 };
 
         public const int BoxFormatSlotSize = 0x158;
+        public const int BoxFormatSlotCount = 30;
         public const ulong LibAppletWeID = 0x010000000000100a; // One of the process IDs for the news.
 
         public IReadOnlyList<long> TeraRaidCodePointer { get; } = new long[] { 0x44C7730, 0x10, 0x78, 0x10, 0x1A9 };

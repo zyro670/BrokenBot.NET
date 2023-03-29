@@ -63,7 +63,7 @@ namespace SysBot.Pokemon
                 (fn, pk.DecryptedPartyData);
                     LogUtil.LogInfo($"Saved file: {fn}", "Dump");
                 }*/
-        public static void DumpPokemon(string folder, string subfolder, PKM pk)
+        public static void DumpPokemon(string folder, string subfolder, PKM pk, bool boxData = false)
         {
             string form = pk.Form > 0 ? $"-{pk.Form:00}" : string.Empty;
             string ballFormatted = string.Empty;
@@ -112,7 +112,13 @@ namespace SysBot.Pokemon
             var dir = Path.Combine(folder, subfolder);
             Directory.CreateDirectory(dir);
             var fn = Path.Combine(dir, filename + filetype);
-            File.WriteAllBytes(fn, pk.DecryptedPartyData);
+
+            var data = boxData 
+                ? pk.DecryptedBoxData 
+                : pk.DecryptedPartyData;
+
+            File.WriteAllBytes(fn, data);
+
             LogUtil.LogInfo($"Saved file: {fn}", "Dump");
         }
 

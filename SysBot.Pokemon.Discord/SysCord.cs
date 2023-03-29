@@ -313,6 +313,7 @@ namespace SysBot.Pokemon.Discord
 
             // Restore Logging
             LogModule.RestoreLogging(_client, Hub.Config.Discord);
+            EmbedModule<T>.RestoreEmbeds(_client, Hub.Config.Discord);
             TradeStartModule<T>.RestoreTradeStarting(_client);
 
             // Don't let it load more than once in case of Discord hiccups.

@@ -13,8 +13,6 @@ namespace SysBot.Pokemon
         private readonly PokeTradeHub<PK8> Hub;
         private readonly FossilSettings Settings;
         private readonly IDumper DumpSetting;
-        private readonly int[] DesiredMinIVs;
-        private readonly int[] DesiredMaxIVs;
         public ICountSettings Counts => Settings;
 
         public FossilBot(PokeBotState cfg, PokeTradeHub<PK8> hub) : base(cfg)
@@ -22,7 +20,6 @@ namespace SysBot.Pokemon
             Hub = hub;
             Settings = Hub.Config.FossilSWSH;
             DumpSetting = Hub.Config.Folder;
-            StopConditionSettings.InitializeTargetIVs(Hub.Config, out DesiredMinIVs, out DesiredMaxIVs);
         }
 
         private int encounterCount;
@@ -114,7 +111,7 @@ namespace SysBot.Pokemon
                 Settings.AddCompletedFossils();
                 TradeExtensions<PK8>.EncounterLogs(pk, "EncounterLogPretty_Fossil.txt");
 
-                if (!StopConditionSettings.EncounterFound(pk, DesiredMinIVs, DesiredMaxIVs, Hub.Config.StopConditions, null))
+                if (!StopConditionSettings.EncounterFound(pk, Hub.Config.StopConditions, null))
                     continue;
 
                 if (Hub.Config.StopConditions.CaptureVideoClip)

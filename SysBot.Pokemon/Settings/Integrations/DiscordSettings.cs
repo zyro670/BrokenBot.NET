@@ -98,6 +98,9 @@ namespace SysBot.Pokemon
         [Category(Channels), Description("Channel IDs where TradeCord commands are allowed.")]
         public RemoteControlAccessList TradeCordChannels { get; set; } = new();
 
+        [Category(Channels), Description("Channel IDs that will echo the (shiny) result embeds data.")]
+        public RemoteControlAccessList EmbedResultChannels { get; set; } = new();
+
         [Category(Operation), Description("Returns PKMs of Pokémon shown in the trade to the user.")]
         public bool ReturnPKMs { get; set; } = true;
 

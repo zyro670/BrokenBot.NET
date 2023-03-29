@@ -66,8 +66,8 @@ namespace SysBot.Pokemon.Discord
             }
 
             Action<string, string> l = Logger;
-            LogUtil.Forwarders.Add(l);
-            static string GetMessage(string msg, string identity) => $"> [{DateTime.Now:hh:mm:ss}] - {identity}: {msg}";
+            LogUtil.Forwarders.Add((l, nameof(LogModule)));
+            static string GetMessage(string msg, string identity) => $"> [{DateTime.Now:HH:mm:ss}] - {identity}: {msg}";
 
             var entry = new LogAction(cid, l, c.Name);
             Channels.Add(cid, entry);
@@ -93,7 +93,7 @@ namespace SysBot.Pokemon.Discord
                 await ReplyAsync("Not echoing in this channel.").ConfigureAwait(false);
                 return;
             }
-            LogUtil.Forwarders.Remove(log.Action);
+            LogUtil.Forwarders.Remove((log.Action, nameof(LogModule)));
             Channels.Remove(Context.Channel.Id);
             SysCordSettings.Settings.LoggingChannels.RemoveAll(z => z.ID == id);
             await ReplyAsync($"Logging cleared from channel: {Context.Channel.Name}").ConfigureAwait(false);
@@ -108,10 +108,10 @@ namespace SysBot.Pokemon.Discord
             {
                 var entry = l.Value;
                 await ReplyAsync($"Logging cleared from {entry.ChannelName} ({entry.ChannelID}!").ConfigureAwait(false);
-                LogUtil.Forwarders.Remove(entry.Action);
+                LogUtil.Forwarders.Remove((entry.Action, nameof(LogModule)));
             }
 
-            LogUtil.Forwarders.RemoveAll(y => Channels.Select(x => x.Value.Action).Contains(y));
+            LogUtil.Forwarders.RemoveAll(y => Channels.Select(x => x.Value.Action).Contains(y.Item1));
             Channels.Clear();
             SysCordSettings.Settings.LoggingChannels.Clear();
             await ReplyAsync("Logging cleared from all channels!").ConfigureAwait(false);

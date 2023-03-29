@@ -42,8 +42,15 @@ namespace SysBot.Pokemon.WinForms
                 Config.Hub.Folder.CreateDefaults(Program.WorkingDirectory);
             }
 
+            string build = string.Empty;
+#if DEBUG
+            var date = File.GetLastWriteTime(System.Reflection.Assembly.GetEntryAssembly()!.Location);
+            build = $" (dev-{date:yyyyMMdd})";
+#endif
+            var v = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version!;
+
             LoadControls();
-            Text = $"{Text} ({Config.Mode})";
+            Text = $"{Text} v{v}{build} ({Config.Mode})";
             Task.Run(BotMonitor);
             InitUtil.InitializeStubs(Config.Mode);
         }
@@ -95,7 +102,7 @@ namespace SysBot.Pokemon.WinForms
             CB_Protocol.DataSource = listP;
             CB_Protocol.SelectedIndex = (int)SwitchProtocol.WiFi; // default option
 
-            LogUtil.Forwarders.Add(AppendLog);
+            LogUtil.Forwarders.Add((AppendLog, nameof(Main)));
             if (Config.Mode is not ProgramMode.LA)
                 Tab_Results.Dispose();
             else ResultsUtil.Forwarders.Add(AppendResults);

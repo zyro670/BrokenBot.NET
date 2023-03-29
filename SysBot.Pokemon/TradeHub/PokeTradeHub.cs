@@ -1,6 +1,8 @@
 ﻿using PKHeX.Core;
 using SysBot.Base;
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 
 namespace SysBot.Pokemon
 {
@@ -33,6 +35,16 @@ namespace SysBot.Pokemon
 
         #region Distribution Queue
         public readonly LedyDistributor<T> Ledy;
+        #endregion
+
+        #region Embed logging
+        public readonly List<Action<T?, bool>> EmbedForwarders = new();
+
+        public void LogEmbed(T? pkm, bool success)
+        {
+            foreach (var f in EmbedForwarders)
+                f.Invoke(pkm, success);
+        }
         #endregion
     }
 }

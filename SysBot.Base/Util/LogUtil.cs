@@ -36,7 +36,7 @@ namespace SysBot.Base
         public static void LogText(string message) => Logger.Log(LogLevel.Info, message);
 
         // hook in here if you want to forward the message elsewhere???
-        public static readonly List<Action<string, string>> Forwarders = new();
+        public static readonly List<(Action<string, string>, string type)> Forwarders = new();
 
         public static DateTime LastLogged { get; private set; } = DateTime.Now;
 
@@ -46,19 +46,20 @@ namespace SysBot.Base
             Log(message, identity);
         }
 
-        public static void LogInfo(string message, string identity)
+        public static void LogInfo(string message, string identity, bool logAlways = true)
         {
             Logger.Log(LogLevel.Info, $"{identity} {message}");
-            Log(message, identity);
+            Log(message, identity, logAlways);
         }
 
-        private static void Log(string message, string identity)
+        private static void Log(string message, string identity, bool logAlways = true)
         {
-            foreach (var fwd in Forwarders)
+            foreach (var (fwd, type) in Forwarders)
             {
                 try
                 {
-                    fwd(message, identity);
+                    if (!"LogModule".Equals(type) || ("LogModule".Equals(type) && logAlways))
+                        fwd(message, identity);
                 }
 #pragma warning disable CA1031 // Do not catch general exception types
                 catch (Exception ex)

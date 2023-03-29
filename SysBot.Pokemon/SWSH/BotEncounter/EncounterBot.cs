@@ -14,8 +14,6 @@ namespace SysBot.Pokemon
         protected readonly PokeTradeHub<PK8> Hub;
         private readonly IDumper DumpSetting;
         private readonly EncounterSettings Settings;
-        private readonly int[] DesiredMinIVs;
-        private readonly int[] DesiredMaxIVs;
         protected readonly byte[] BattleMenuReady = { 0, 0, 0, 255 };
         public ICountSettings Counts => Settings;
         public readonly IReadOnlyList<string> UnwantedMarks;
@@ -25,7 +23,6 @@ namespace SysBot.Pokemon
             Hub = hub;
             Settings = Hub.Config.EncounterSWSH;
             DumpSetting = Hub.Config.Folder;
-            StopConditionSettings.InitializeTargetIVs(Hub.Config, out DesiredMinIVs, out DesiredMaxIVs);
             StopConditionSettings.ReadUnwantedMarks(Hub.Config.StopConditions, out UnwantedMarks);
         }
 
@@ -80,7 +77,7 @@ namespace SysBot.Pokemon
             if (DumpSetting.Dump && !string.IsNullOrEmpty(DumpSetting.DumpFolder))
                 DumpPokemon(DumpSetting.DumpFolder, legendary ? "legends" : "encounters", pk);
 
-            if (!StopConditionSettings.EncounterFound(pk, DesiredMinIVs, DesiredMaxIVs, Hub.Config.StopConditions, UnwantedMarks))
+            if (!StopConditionSettings.EncounterFound(pk, Hub.Config.StopConditions, UnwantedMarks))
                 return false;
 
             if (Hub.Config.StopConditions.CaptureVideoClip)
