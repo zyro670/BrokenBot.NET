@@ -23,8 +23,8 @@ namespace SysBot.Base
             Name = Label = $"USB-{port}";
         }
 
-        public void Log(string message) => LogInfo(message);
-        public void LogInfo(string message) => LogUtil.LogInfo(message, Label);
+        public void Log(string message, bool logAlways) => LogInfo(message, logAlways);
+        public void LogInfo(string message, bool logAlways) => LogUtil.LogInfo(message, Label, logAlways);
         public void LogError(string message) => LogUtil.LogError(message, Label);
 
         private UsbDevice? SwDevice;

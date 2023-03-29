@@ -49,9 +49,17 @@ namespace SysBot.Pokemon
 
         public override async Task<PK9> ReadBoxPokemon(int box, int slot, CancellationToken token)
         {
-            // Shouldn't be reading anything but box1slot1 here. Slots are not consecutive.
             var jumps = Offsets.BoxStartPokemonPointer.ToArray();
-            return await ReadPokemonPointer(jumps, BoxFormatSlotSize, token).ConfigureAwait(false);
+            var (valid, b1s1) = await ValidatePointerAll(jumps, token).ConfigureAwait(false);
+            if (!valid)
+                return new PK9();
+
+            const int boxSize = BoxFormatSlotCount * BoxFormatSlotSize;
+            var boxStart = b1s1 + (ulong)(box * boxSize);
+            var slotStart = boxStart + (ulong)(slot * BoxFormatSlotSize);
+
+            var data = await SwitchConnection.ReadBytesAbsoluteAsync(slotStart, BoxFormatSlotSize, token).ConfigureAwait(false);
+            return new PK9(data);
         }
 
         public async Task SetBoxPokemonAbsolute(ulong offset, PK9 pkm, CancellationToken token, ITrainerInfo? sav = null)
@@ -300,9 +308,16 @@ namespace SysBot.Pokemon
 
         public async Task SetBoxPokemonEgg(PK9 pkm, int box, int slot, CancellationToken token)
         {
-            var ofs = await GetPointerAddress("[[[main+44A98C8]+130]+9B0]", token).ConfigureAwait(false);
-            pkm.ResetPartyStats();
-            await SwitchConnection.WriteBytesAbsoluteAsync(pkm.EncryptedPartyData, ofs, token).ConfigureAwait(false);
+            var jumps = Offsets.BoxStartPokemonPointer.ToArray();
+            var (valid, b1s1) = await ValidatePointerAll(jumps, token).ConfigureAwait(false);
+            if (!valid)
+                return;
+
+            const int boxSize = BoxFormatSlotCount * BoxFormatSlotSize;
+            var boxStart = b1s1 + (ulong)(box * boxSize);
+            var slotStart = boxStart + (ulong)(slot * BoxFormatSlotSize);
+
+            await SwitchConnection.WriteBytesAbsoluteAsync(pkm.EncryptedPartyData, slotStart, token).ConfigureAwait(false);
         }
 
         public async Task SVSaveGameOverworld(CancellationToken token)

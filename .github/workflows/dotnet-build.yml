@@ -1,0 +1,72 @@
+name: .NET Core Desktop
+
+on:
+  push:
+    branches: [ "main" ]
+    tags-ignore: [ "**" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Install .NET Core
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 7.0.x
+
+    - name: Restore packages
+      run: dotnet restore
+
+    # Get current date for release naming
+    - name: Get current date
+      id: date
+      run: echo "DATE=$(date +'%y.%m.%d')" >> $ENV:GITHUB_OUTPUT
+
+    # Build applications
+    - name: Build Windows Forms
+      run: dotnet publish -c Release -r win-x64 --sc false -p:PublishSingleFile=true /p:Version=${{ steps.date.outputs.DATE }}.${{ github.run_number }} .\SysBot.Pokemon.WinForms\SysBot.Pokemon.WinForms.csproj
+
+    # Upload artifact
+    - name: Upload build Windows Forms artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: Windows-x64
+        path: .\SysBot.Pokemon.WinForms\bin\Release\net7.0-windows\win-x64\publish
+
+    # Compress application
+    - name: Compress Windows Forms
+      if: github.event_name != 'pull_request'
+      run: Compress-Archive .\SysBot.Pokemon.WinForms\bin\Release\net7.0-windows\win-x64\publish\* WindowsForms
+
+    # Create pre-release
+    - name: Pre-Release 
+      uses: softprops/action-gh-release@v1
+      if: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/develop' }}
+      with:
+        tag_name: ${{ steps.date.outputs.DATE }}.${{ github.run_number }}
+        prerelease: true
+        body: Pre-release, compare Git commits.
+        files: |
+          WindowsForms.zip
+
+    # Create release
+    - name: Release 
+      uses: softprops/action-gh-release@v1
+      if: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
+      with:
+        tag_name: ${{ steps.date.outputs.DATE }}.${{ github.run_number }}
+        prerelease: false
+        body: Release, compare Git commits.
+        files: |
+          WindowsForms.zip

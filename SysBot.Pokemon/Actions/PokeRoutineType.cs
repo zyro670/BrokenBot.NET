@@ -31,6 +31,12 @@
         /// <summary> Performs group battles as a host. </summary>
         RaidBot = 9,
 
+        /// <summary> Monitors captures, clears B1S1 when not matching stop condition. </summary>
+        EncounterCapture = 20,
+
+        /// <summary> Catches Ruinous until the criteria is satisfied.  </summary>
+        EncounterRuinous = 21,
+
         /// <summary> Triggers encounters until the criteria is satisfied. </summary>
         EncounterLine = 1_000,
 

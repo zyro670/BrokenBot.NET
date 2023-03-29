@@ -1,7 +1,5 @@
 ﻿using PKHeX.Core;
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace SysBot.Pokemon
 {
@@ -16,6 +14,8 @@ namespace SysBot.Pokemon
                 => new PokeTradeBotSV(Hub, cfg),
 
             PokeRoutineType.EggFetch => new EggBotSV(cfg, Hub),
+            PokeRoutineType.EncounterCapture => new EncounterCaptureSV(cfg, Hub),
+            PokeRoutineType.EncounterRuinous => new EncounterRuinousSV(cfg, Hub),
             PokeRoutineType.RaidBot => new RaidSV(cfg, Hub),
             PokeRoutineType.RemoteControl => new RemoteControlBotSV(cfg),
             _ => throw new ArgumentException(nameof(cfg.NextRoutineType)),
@@ -30,6 +30,8 @@ namespace SysBot.Pokemon
                 => true,
 
             PokeRoutineType.EggFetch => true,
+            PokeRoutineType.EncounterCapture => true,
+            PokeRoutineType.EncounterRuinous => true,
             PokeRoutineType.RaidBot => true,
             PokeRoutineType.RemoteControl => true,
 

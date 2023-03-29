@@ -19,8 +19,6 @@ namespace SysBot.Pokemon
         private readonly LairBotUtil.PokeMoveInfo.MoveInfoRoot MoveInfo;
         private readonly LairBotUtil LairUtils;
         private readonly IDumper DumpSetting;
-        private readonly int[] DesiredMinIVs;
-        private readonly int[] DesiredMaxIVs;
         private byte[] OtherItemsPouch = { 0 };
         private byte[] BallPouch = { 0 };
         private ulong MainNsoBase;
@@ -70,7 +68,6 @@ namespace SysBot.Pokemon
             OffsetValues = ValueParse();
             LairUtils = new LairUtil();
             MoveInfo = LairBotUtil.LoadMoves();
-            StopConditionSettings.InitializeTargetIVs(Hub.Config, out DesiredMinIVs, out DesiredMaxIVs);
         }
 
         private class LairUtil : LairBotUtil { }
@@ -479,7 +476,7 @@ namespace SysBot.Pokemon
                     }
 
                     bool caughtRegular = !caughtLegend && pk.IsShiny;
-                    if (caughtLegend && (Settings.UseStopConditionsPathReset && StopConditionSettings.EncounterFound(pk, DesiredMinIVs, DesiredMaxIVs, NewSCSettings, null) || Settings.StopOnLegendary))
+                    if (caughtLegend && (Settings.UseStopConditionsPathReset && StopConditionSettings.EncounterFound(pk, NewSCSettings, null) || Settings.StopOnLegendary))
                         StopBot = true;
 
                     TradeExtensions<PK8>.EncounterLogs(pk, "EncounterLogPretty_Lair.txt");
@@ -556,7 +553,7 @@ namespace SysBot.Pokemon
             TradeExtensions<PK8>.EncounterLogs(LairBoss);
             Log($"Reset {ResetCount} {Environment.NewLine}{ShowdownParsing.GetShowdownText(LairBoss)}{Environment.NewLine}");
 
-            if (!StopConditionSettings.EncounterFound(LairBoss, DesiredMinIVs, DesiredMaxIVs, NewSCSettings, null))
+            if (!StopConditionSettings.EncounterFound(LairBoss, NewSCSettings, null))
             {
                 Log("No match found, restarting the game...");
                 await GameRestart(token).ConfigureAwait(false);

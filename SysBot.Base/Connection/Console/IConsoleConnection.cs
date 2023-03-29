@@ -40,13 +40,13 @@
         /// Logs a message for the connection.
         /// </summary>
         /// <param name="message">Anything you want the bot to log.</param>
-        abstract void Log(string message);
+        abstract void Log(string message, bool logAlways = true);
 
         /// <summary>
         /// Logs an information message for the connection.
         /// </summary>
         /// <param name="message"></param>
-        abstract void LogInfo(string message);
+        abstract void LogInfo(string message, bool logAlways = true);
 
         /// <summary>
         /// Logs an error message for the connection.

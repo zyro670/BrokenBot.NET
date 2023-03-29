@@ -20,14 +20,8 @@ namespace SysBot.Pokemon
         [Category(StopConditions), Description("Stop only on Pokémon of the specified gender.")]
         public GenderType TargetGender { get; set; } = GenderType.Any;
 
-        [Category(StopConditions), Description("Stop only on Pokémon of the specified nature.")]
-        public Nature TargetNature { get; set; } = Nature.Random;
-
-        [Category(StopConditions), Description("Minimum accepted IVs in the format HP/Atk/Def/SpA/SpD/Spe. Use \"x\" for unchecked IVs and \"/\" as a separator.")]
-        public string TargetMinIVs { get; set; } = "";
-
-        [Category(StopConditions), Description("Maximum accepted IVs in the format HP/Atk/Def/SpA/SpD/Spe. Use \"x\" for unchecked IVs and \"/\" as a separator.")]
-        public string TargetMaxIVs { get; set; } = "";
+        [Category(StopConditions), Description("Desired spreads, search for nature and IVs. In the format HP/Atk/Def/SpA/SpD/Spe. Use \"x\" for unchecked IVs and \"/\" as a separator.")]
+        public List<SearchCondition> SearchConditions { get; set; } = new();
 
         [Category(StopConditions), Description("Selects the shiny type to stop on.")]
         public TargetShinyType ShinyTarget { get; set; } = TargetShinyType.DisableOption;
@@ -53,9 +47,27 @@ namespace SysBot.Pokemon
         [Category(StopConditions), Description("If not empty, the provided string will be prepended to the result found log message to Echo alerts for whomever you specify. For Discord, use <@userIDnumber> to mention.")]
         public string MatchFoundEchoMention { get; set; } = string.Empty;
 
-        public static bool EncounterFound<T>(T pk, int[] targetminIVs, int[] targetmaxIVs, StopConditionSettings settings, IReadOnlyList<string>? marklist) where T : PKM
+        [Category(StopConditions)]
+        public class SearchCondition
         {
-            // Match Nature and Species if they were specified.
+            public override string ToString() => $"{(!IsEnabled ? $"{Nature}, condition is disabled" : $"{Nature}, {TargetMinIVs} - {TargetMaxIVs}")}";
+
+            [Category(StopConditions), DisplayName("1. Enabled")]
+            public bool IsEnabled { get; set; } = true;
+
+            [Category(StopConditions), DisplayName("2. Nature")]
+            public Nature Nature { get; set; }
+
+            [Category(StopConditions), DisplayName("3. Minimum accepted IVs")]
+            public string TargetMinIVs { get; set; } = "";
+
+            [Category(StopConditions), DisplayName("4. Maximum accepted IVs")]
+            public string TargetMaxIVs { get; set; } = "";
+        }
+
+        public static bool EncounterFound<T>(T pk, StopConditionSettings settings, IReadOnlyList<string>? markList) where T : PKM
+        {
+            // Match Species if they were specified.
             if (settings.StopOnSpecies != Species.None && settings.StopOnSpecies != (Species)pk.Species)
                 return false;
 
@@ -65,18 +77,15 @@ namespace SysBot.Pokemon
             if (settings.TargetGender != GenderType.Any && (int)settings.TargetGender != pk.Gender)
                 return false;
 
-            if (settings.TargetNature != Nature.Random && settings.TargetNature != (Nature)pk.Nature)
-                return false;
-
             // Return if it doesn't have a mark or it has an unwanted mark.
             var unmarked = pk is IRibbonIndex m && !HasMark(m);
-            var unwanted = marklist is not null && pk is IRibbonIndex m2 && settings.IsUnwantedMark(GetMarkName(m2), marklist);
+            var unwanted = markList is not null && pk is IRibbonIndex m2 && settings.IsUnwantedMark(GetMarkName(m2), markList);
             if (settings.MarkOnly && (unmarked || unwanted))
                 return false;
 
             if (settings.ShinyTarget != TargetShinyType.DisableOption)
             {
-                bool shinymatch = settings.ShinyTarget switch
+                var shinymatch = settings.ShinyTarget switch
                 {
                     TargetShinyType.AnyShiny => pk.IsShiny,
                     TargetShinyType.NonShiny => !pk.IsShiny,
@@ -95,36 +104,45 @@ namespace SysBot.Pokemon
             }
 
             // Reorder the speed to be last.
-            Span<int> pkIVList = stackalloc int[6];
-            pk.GetIVs(pkIVList);
-            (pkIVList[5], pkIVList[3], pkIVList[4]) = (pkIVList[3], pkIVList[4], pkIVList[5]);
+            Span<int> pkIVs = stackalloc int[6];
+            pk.GetIVs(pkIVs);
+            (pkIVs[5], pkIVs[3], pkIVs[4]) = (pkIVs[3], pkIVs[4], pkIVs[5]);
+            var pkIVsArr = pkIVs.ToArray();
 
-            for (int i = 0; i < 6; i++)
+            // No search conditions to match
+            if (!settings.SearchConditions.Any(s => s.IsEnabled))
+                return true;
+
+            return settings.SearchConditions.Any(s =>
+                MatchIVs(pkIVsArr, s.TargetMinIVs, s.TargetMaxIVs) &&
+                (s.Nature == (Nature)pk.Nature || s.Nature == Nature.Random) &&
+                s.IsEnabled);
+        }
+
+        private static bool MatchIVs(IReadOnlyList<int> pkIVs, string targetMinIVsStr, string targetMaxIVsStr)
+        {
+            var targetMinIVs = ReadTargetIVs(targetMinIVsStr, true);
+            var targetMaxIVs = ReadTargetIVs(targetMaxIVsStr, false);
+
+            for (var i = 0; i < 6; i++)
             {
-                if (targetminIVs[i] > pkIVList[i] || targetmaxIVs[i] < pkIVList[i])
+                if (targetMinIVs[i] > pkIVs[i] || targetMaxIVs[i] < pkIVs[i])
                     return false;
             }
+
             return true;
         }
 
-        public static void InitializeTargetIVs(PokeTradeHubConfig config, out int[] min, out int[] max)
+        private static int[] ReadTargetIVs(string splitIVsStr, bool min)
         {
-            min = ReadTargetIVs(config.StopConditions, true);
-            max = ReadTargetIVs(config.StopConditions, false);
-        }
-
-        private static int[] ReadTargetIVs(StopConditionSettings settings, bool min)
-        {
-            int[] targetIVs = new int[6];
+            var targetIVs = new int[6];
             char[] split = { '/' };
 
-            string[] splitIVs = min
-                ? settings.TargetMinIVs.Split(split, StringSplitOptions.RemoveEmptyEntries)
-                : settings.TargetMaxIVs.Split(split, StringSplitOptions.RemoveEmptyEntries);
+            var splitIVs = splitIVsStr.Split(split, StringSplitOptions.RemoveEmptyEntries);
 
-            // Only accept up to 6 values.  Fill it in with default values if they don't provide 6.
+            // Only accept up to 6 values. Fill it in with default values if they don't provide 6.
             // Anything that isn't an integer will be a wild card.
-            for (int i = 0; i < 6; i++)
+            for (var i = 0; i < 6; i++)
             {
                 if (i < splitIVs.Length)
                 {
@@ -171,7 +189,7 @@ namespace SysBot.Pokemon
             {
                 var rstring = GetMarkName(r);
                 if (!string.IsNullOrEmpty(rstring))
-                    set += $"\nPokémon found to have **{GetMarkName(r)}**!";                
+                    set += $"\nPokémon found to have **{GetMarkName(r)}**!";
             }
             return set;
         }
@@ -207,7 +225,7 @@ namespace SysBot.Pokemon
         {
             string alpha = string.Empty;
             if (pk.IsAlpha) alpha = $"Alpha - ";
-            var set = $"\n{alpha}{(pk.ShinyXor == 0 ? "■ - " : pk.ShinyXor <= 16 ? "★ - " : "") }{SpeciesName.GetSpeciesNameGeneration(pk.Species, 2, 8)}{TradeExtensions<PK8>.FormOutput(pk.Species, pk.Form, out _)}\nNature: {(Nature)pk.Nature} | Gender: {(Gender)pk.Gender}\nEC: {pk.EncryptionConstant:X8} | PID: {pk.PID:X8}\nIVs: {pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}";
+            var set = $"\n{alpha}{(pk.ShinyXor == 0 ? "■ - " : pk.ShinyXor <= 16 ? "★ - " : "")}{SpeciesName.GetSpeciesNameGeneration(pk.Species, 2, 8)}{TradeExtensions<PK8>.FormOutput(pk.Species, pk.Form, out _)}\nNature: {(Nature)pk.Nature} | Gender: {(Gender)pk.Gender}\nEC: {pk.EncryptionConstant:X8} | PID: {pk.PID:X8}\nIVs: {pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}";
             return set;
         }
     }

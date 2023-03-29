@@ -20,6 +20,7 @@ namespace SysBot.Pokemon.Discord
         private const string repo = "https://github.com/kwsch/SysBot.NET";
         private const string fork = "https://github.com/Koi-3088/ForkBot.NET";
         private const string notfork = "https://github.com/zyro670/NotForkBot.NET";
+        private const string notnotfork = "https://github.com/Eppin/VileBot.NET";
 
         [Command("info")]
         [Alias("about", "whoami", "owner")]
@@ -37,6 +38,7 @@ namespace SysBot.Pokemon.Discord
                 $"- [Original Source Code]({repo})\n" +
                 $"- [This Fork's Source Code]({fork})\n" +
                 $"- [This Fork's Fork Source Code]({notfork})\n" +
+                $"- [This Fork's Fork's Fork Source Code]({notnotfork})\n" +
                 $"- {Format.Bold("Owner")}: {app.Owner} ({app.Owner.Id})\n" +
                 $"- {Format.Bold("Library")}: Discord.Net ({DiscordConfig.Version})\n" +
                 $"- {Format.Bold("Uptime")}: {GetUptime()}\n" +

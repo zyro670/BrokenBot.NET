@@ -30,7 +30,6 @@ namespace SysBot.Pokemon
             Hub = hub;
             Settings = Hub.Config.ArceusLA;
             DumpSetting = Hub.Config.Folder;
-            StopConditionSettings.InitializeTargetIVs(Hub.Config, out DesiredMinIVs, out DesiredMaxIVs);
         }
 
         private ulong MainNsoBase;
@@ -1240,19 +1239,19 @@ namespace SysBot.Pokemon
                 if (!isSpawner)
                 {
                     groupID--;
-                    Log($"Bad SpawnerID {bytes:X16}\nTrying again with SpawnerID: {groupID}.");
+                    Log($"Bad SpawnerID {bytes:X16}\nTrying again with SpawnerID: {groupID}.", false);
                     continue;
                 }
-                Log($"Checking SpawnerID: {groupID}...");
+                Log($"Checking SpawnerID: {groupID}...", false);
                 var SpawnerOffpoint = new long[] { 0x42a6ee0, 0x330, 0x70 + groupID * 0x440 + 0x20 };
                 var SpawnerOff = await SwitchConnection.PointerAll(SpawnerOffpoint, token).ConfigureAwait(false);
                 var GeneratorSeed = await SwitchConnection.ReadBytesAbsoluteAsync(SpawnerOff, 8, token).ConfigureAwait(false);
 
-                Log($"SpawnerID {bytes:X16} - Generator Seed: {BitConverter.ToString(GeneratorSeed).Replace("-", "")}");
+                Log($"SpawnerID {bytes:X16} - Generator Seed: {BitConverter.ToString(GeneratorSeed).Replace("-", "")}", false);
                 var group_seed = (BitConverter.ToUInt64(GeneratorSeed, 0) - 0x82A2B175229D6A5B) & 0xFFFFFFFFFFFFFFFF;
                 GenerateNextShiny(0, group_seed);
             }
-        }        
+        }
 
         private async Task ManaphyReset(CancellationToken token)
         {
@@ -1664,12 +1663,14 @@ namespace SysBot.Pokemon
                     pk.Species = (ushort)Species.Phione;
                 pk.EncryptionConstant = gen.EC;
                 pk.PID = gen.PID;
-                int[] pkIVList = gen.IVs;
-                pk.IVs = pkIVList;
+
+                // Reorder the speed to be 3rd.
+                pk.IVs = new[] { gen.IVs[0], gen.IVs[1], gen.IVs[2], gen.IVs[5], gen.IVs[3], gen.IVs[4] };
+
                 pk.Nature = (int)gen.nature;
                 Log($"\n{(Species)pk.Species}\nEC: {pk.EncryptionConstant:X8}\nPID: {pk.PID:X8}\nIVs: {string.Join("/", pk.IVs)}\nNature: {(Nature)pk.Nature}\nGenerator Seed: {generator_seed:X16}");
 
-                if (StopConditionSettings.EncounterFound(pk, DesiredMinIVs, DesiredMaxIVs, Hub.Config.StopConditions, null))
+                if (StopConditionSettings.EncounterFound(pk, Hub.Config.StopConditions, null))
                 {
                     Settings.AlphaScanConditions.StopOnMatch = true;
                     EmbedMons.Add((pk, true));
@@ -1693,7 +1694,7 @@ namespace SysBot.Pokemon
                 mainrng.Next();
                 mainrng = new Xoroshiro128Plus(mainrng.Next());
             }
-            
+
             if (Settings.BotType == ArceusMode.GenieScanner)
             {
                 for (int i = 0; i < Settings.SpecialConditions.MaxAdvancesToSearch; i++)
@@ -1716,16 +1717,15 @@ namespace SysBot.Pokemon
                     pk.Species = (ushort)geniename;
                     pk.EncryptionConstant = gen.EC;
                     pk.PID = gen.PID;
-
-                    int[] pkIVList = gen.IVs;
-                    // Reorder the speed to be last.
-                    (pkIVList[5], pkIVList[3], pkIVList[4]) = (pkIVList[3], pkIVList[4], pkIVList[5]);
-
-                    pk.IVs = pkIVList;
                     pk.Nature = (int)gen.nature;
-                    Log($"\nAdvance: {i} - {geniename}\nEC: {pk.EncryptionConstant:X8}\nPID: {pk.PID:X8}\nIVs: {string.Join("/", pk.IVs)}\nNature: {(Nature)pk.Nature}\nGenerator Seed: {generator_seed:X16}");
 
-                    if (StopConditionSettings.EncounterFound(pk, DesiredMinIVs, DesiredMaxIVs, Hub.Config.StopConditions, null))
+                    // Reorder the speed to be 3rd.
+                    pk.IVs = new[] { gen.IVs[0], gen.IVs[1], gen.IVs[2], gen.IVs[5], gen.IVs[3], gen.IVs[4] };
+
+                    var print = Hub.Config.StopConditions.GetSpecialPrintName(pk);
+                    Log($"\nAdvance: {i}\n{print}\nGenerator Seed: {generator_seed:X16}", false);
+
+                    if (StopConditionSettings.EncounterFound(pk, Hub.Config.StopConditions, null))
                     {
                         Settings.AlphaScanConditions.StopOnMatch = true;
                         EmbedMons.Add((pk, true));
@@ -1755,15 +1755,24 @@ namespace SysBot.Pokemon
                     rng.Next();
 
                     var gen = GenerateFromSeed(rng.Next(), (int)Settings.AlphaScanConditions.StaticAlphaShinyRolls, givs, 0);
-                    Log($"\nAdvances: {i}\nAlpha: {species} - {gen.shinyXor} | SpawnerID: {spawnerid}\nEC: {gen.EC:X8}\nPID: {gen.PID:X8}\nIVs: {string.Join("/", gen.IVs)}\nNature: {gen.Item8}\nSeed: {gen.Item9:X16}");
+                    pk.EncryptionConstant = gen.EC;
+                    pk.PID = gen.PID;
+                    pk.Nature = (int)gen.nature;
+
+                    // Reorder the speed to be 3rd.
+                    pk.IVs = new[] { gen.IVs[0], gen.IVs[1], gen.IVs[2], gen.IVs[5], gen.IVs[3], gen.IVs[4] };
+
+                    var print = Hub.Config.StopConditions.GetSpecialPrintName(pk);
+                    Log($"\nAdvance: {i} - Alpha: {species} | SpawnerID: {spawnerid}\n{print}\nSeed: {gen.newseed:X16}", false);
+
                     if (gen.shiny)
                     {
                         if (Settings.SpeciesToHunt.Length != 0 && !Settings.SpeciesToHunt.Contains(species))
                             break;
 
-                        if (StopConditionSettings.EncounterFound(pk, DesiredMinIVs, DesiredMaxIVs, Hub.Config.StopConditions, null))
+                        if (StopConditionSettings.EncounterFound(pk, Hub.Config.StopConditions, null))
                         {
-                            Log($"\nAdvances: {i}\nAlpha: {species} - {gen.shinyXor} | SpawnerID: {spawnerid}\nEC: {gen.EC:X8}\nPID: {gen.PID:X8}\nIVs: {string.Join("/", gen.IVs)}\nNature: {gen.Item8}\nSeed: {gen.Item9:X16}");
+                            Log($"\nAdvances: {i}\nAlpha: {species} | SpawnerID: {spawnerid}\n{print}\nSeed: {gen.newseed:X16}", false);
                             newseed = generator_seed;
                             Settings.AlphaScanConditions.StopOnMatch = true;
                             hits++;
@@ -2479,7 +2488,7 @@ namespace SysBot.Pokemon
                 Log("No match found, resetting.");
                 await Click(B, 1_000, token).ConfigureAwait(false);
                 await CloseGame(Hub.Config, token).ConfigureAwait(false);
-                await StartGame(Hub.Config, token).ConfigureAwait(false);                
+                await StartGame(Hub.Config, token).ConfigureAwait(false);
                 attempts++;
             }
         }
