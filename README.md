@@ -7,7 +7,8 @@ This is a fork of a fork with some QoL improvements and/or new bots (I mainly fo
 
 For support on setting up your own instance of SysBot.NET, feel free to check the wiki (which is under construction)
 
-- [official Discord support server](https://discord.gg/tDMvSRv) (please, beaware this is a fork and you might not get help!)
+- [VileTung#6635](https://discordapp.com/users/367614335431868417) on Discord, just send me a message
+- ~[official Discord support server](https://discord.gg/tDMvSRv)~ (please, beaware this is a fork and you might not get help!)
 - [sys-botbase](https://github.com/olliz0r/sys-botbase) client for remote control automation of Nintendo Switch consoles.
 - [Hybrid sys-botbase](https://github.com/Koi-3088/sys-usb-botbase) client for remote control using a hybrid connection (USB or WiFi)
 - [USB-Botbase](https://github.com/Koi-3088/USB-Botbase) client for remote USB control.
