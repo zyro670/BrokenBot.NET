@@ -52,18 +52,34 @@ namespace SysBot.Pokemon
             return (solved != 0, solved);
         }
 
-        /*public static void DumpPokemon(string folder, string subfolder, T pk)
-                {
-                    if (!Directory.Exists(folder))
-                        return;
-                    var dir = Path.Combine(folder, subfolder);
-                    Directory.CreateDirectory(dir);
-                    var fn = Path.Combine(dir, Util.CleanFileName(pk.FileName));
-                    File.
-                (fn, pk.DecryptedPartyData);
-                    LogUtil.LogInfo($"Saved file: {fn}", "Dump");
-                }*/
         public static void DumpPokemon(string folder, string subfolder, PKM pk, bool boxData = false)
+        {
+            var fn = DumpPokemonPath(folder, subfolder, pk);
+
+            if (string.IsNullOrWhiteSpace(fn))
+                return;
+
+            var data = boxData
+                ? pk.DecryptedBoxData
+                : pk.DecryptedPartyData;
+
+            File.WriteAllBytes(fn, data);
+
+            LogUtil.LogInfo($"Saved file: {fn}", "Dump");
+        }
+
+        public static void DumpPokemon(string folder, string subfolder, PKM pk, byte[] bytes)
+        {
+            var fn = DumpPokemonPath(folder, subfolder, pk, true);
+
+            if (string.IsNullOrWhiteSpace(fn))
+                return;
+
+            File.WriteAllBytes(fn, bytes);
+            LogUtil.LogInfo($"Saved raw file: {fn}", "Dump");
+        }
+
+        private static string? DumpPokemonPath(string folder, string subfolder, PKM pk, bool isEncrypted = false)
         {
             string form = pk.Form > 0 ? $"-{pk.Form:00}" : string.Empty;
             string ballFormatted = string.Empty;
@@ -90,7 +106,7 @@ namespace SysBot.Pokemon
 
             string OTInfo = string.IsNullOrEmpty(pk.OT_Name) ? "" : $" - {pk.OT_Name} - {TIDFormatted}{ballFormatted}";
 
-            if (pk is PK8 || pk is PK9)
+            if (pk is PK8 or PK9)
             {
                 bool hasMark = StopConditionSettings.HasMark((PK9)pk, out RibbonIndex mark);
                 if (hasMark)
@@ -98,28 +114,23 @@ namespace SysBot.Pokemon
             }
 
             string filename = $"{pk.Species:000}{form}{shinytype} - {speciesName} - {marktype}{IVList}{OTInfo} - {pk.EncryptionConstant:X8}";
-            string filetype = "";
+            string filetype = $".{(isEncrypted ? "e" : "")}";
             if (pk is PK8)
-                filetype = ".pk8";
+                filetype += "pk8";
             if (pk is PB8)
-                filetype = ".pb8";
+                filetype += "pb8";
             if (pk is PA8)
-                filetype = ".pa8";
+                filetype += "pa8";
             if (pk is PK9)
-                filetype = ".pk9";
+                filetype += "pk9";
+
             if (!Directory.Exists(folder))
-                return;
+                return null;
+
             var dir = Path.Combine(folder, subfolder);
             Directory.CreateDirectory(dir);
-            var fn = Path.Combine(dir, filename + filetype);
-
-            var data = boxData 
-                ? pk.DecryptedBoxData 
-                : pk.DecryptedPartyData;
-
-            File.WriteAllBytes(fn, data);
-
-            LogUtil.LogInfo($"Saved file: {fn}", "Dump");
+            
+            return Path.Combine(dir, filename + filetype);
         }
 
         public async Task<bool> TryReconnect(int attempts, int extraDelay, SwitchProtocol protocol, CancellationToken token)

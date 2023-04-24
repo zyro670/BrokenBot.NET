@@ -47,19 +47,32 @@ namespace SysBot.Pokemon
             return !result.SequenceEqual(original);
         }
 
-        public override async Task<PK9> ReadBoxPokemon(int box, int slot, CancellationToken token)
+        public async Task<(PK9, byte[]?)> ReadRawBoxPokemon(int box, int slot, CancellationToken token)
         {
             var jumps = Offsets.BoxStartPokemonPointer.ToArray();
             var (valid, b1s1) = await ValidatePointerAll(jumps, token).ConfigureAwait(false);
             if (!valid)
-                return new PK9();
+                return (new PK9(), null);
 
             const int boxSize = BoxFormatSlotCount * BoxFormatSlotSize;
             var boxStart = b1s1 + (ulong)(box * boxSize);
             var slotStart = boxStart + (ulong)(slot * BoxFormatSlotSize);
 
+            var copiedData = new byte[BoxFormatSlotSize];
             var data = await SwitchConnection.ReadBytesAbsoluteAsync(slotStart, BoxFormatSlotSize, token).ConfigureAwait(false);
-            return new PK9(data);
+
+            data.CopyTo(copiedData, 0);
+
+            if (!data.SequenceEqual(copiedData))
+                throw new InvalidOperationException("Raw data is not copied correctly");
+
+            return (new PK9(data), copiedData);
+        }
+
+        public override async Task<PK9> ReadBoxPokemon(int box, int slot, CancellationToken token)
+        {
+            var (pk9, _) = await ReadRawBoxPokemon(box,slot, token).ConfigureAwait(false);
+            return pk9;
         }
 
         public async Task SetBoxPokemonAbsolute(ulong offset, PK9 pkm, CancellationToken token, ITrainerInfo? sav = null)

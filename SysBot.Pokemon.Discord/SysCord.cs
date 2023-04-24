@@ -313,8 +313,8 @@ namespace SysBot.Pokemon.Discord
 
             // Restore Logging
             LogModule.RestoreLogging(_client, Hub.Config.Discord);
-            EmbedModule<T>.RestoreEmbeds(_client, Hub.Config.Discord);
             TradeStartModule<T>.RestoreTradeStarting(_client);
+            EmbedModule<T>.RestoreEmbeds(_client, Hub.Config.Discord);
 
             // Don't let it load more than once in case of Discord hiccups.
             await Log(new LogMessage(LogSeverity.Info, "LoadLoggingAndEcho()", "Logging and Echo channels loaded!")).ConfigureAwait(false);
