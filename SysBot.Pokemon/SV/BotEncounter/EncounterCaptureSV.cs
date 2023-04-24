@@ -30,7 +30,7 @@ namespace SysBot.Pokemon
 
                 while (b1s1 == null || (Species)b1s1.Species == Species.None)
                 {
-                    b1s1 = await ReadBoxPokemon(InjectBox, InjectSlot, token).ConfigureAwait(false);
+                    (b1s1,  bytes) = await ReadRawBoxPokemon(InjectBox, InjectSlot, token).ConfigureAwait(false);
                     
                     if (b1s1 != null && b1s1.EncryptionConstant != null && (Species)b1s1.Species != Species.None)
                     {
@@ -44,7 +44,10 @@ namespace SysBot.Pokemon
                         TradeExtensions<PK9>.EncounterScaleLogs(b1s1, "EncounterLogScalePretty.txt");
 
                         if (_dumpSetting.Dump)
-                            DumpPokemon(_dumpSetting.DumpFolder, "wild", b1s1, true);
+                            DumpPokemon(_dumpSetting.DumpFolder, "wild", b1s1);
+
+                        if (_dumpSetting.DumpRaw && bytes != null)
+                            DumpPokemon(_dumpSetting.DumpFolder, "wild", b1s1, bytes);
 
                         if (!await CheckEncounter(print, b1s1).ConfigureAwait(false))
                             return false;

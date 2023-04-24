@@ -31,12 +31,6 @@
         /// <summary> Performs group battles as a host. </summary>
         RaidBot = 9,
 
-        /// <summary> Monitors captures, clears B1S1 when not matching stop condition. </summary>
-        EncounterCapture = 20,
-
-        /// <summary> Catches Ruinous until the criteria is satisfied.  </summary>
-        EncounterRuinous = 21,
-
         /// <summary> Triggers encounters until the criteria is satisfied. </summary>
         EncounterLine = 1_000,
 
@@ -50,6 +44,15 @@
         RemoteControl = 6_000,
 
         // Add your own custom bots here so they don't clash for future main-branch bot releases.
+
+        /// <summary> Retrieves eggs from the Day Care, but faster (with a mod). </summary>
+        EggFetchV2 = 5000,
+
+        /// <summary> Monitors captures, clears B1S1 when not matching stop condition and uses 100% catch cheat. </summary>
+        EncounterCapture = 5001,
+
+        /// <summary> Catches Ruinous until the criteria is satisfied, using 100% catch cheat.  </summary>
+        EncounterRuinous = 5002,
 
         /// <summary> Searches, injects, or skips to den seeds. </summary>
         DenBot = 6001,

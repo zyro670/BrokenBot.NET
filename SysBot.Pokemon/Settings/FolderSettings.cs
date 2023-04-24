@@ -12,6 +12,12 @@ namespace SysBot.Pokemon
         [Category(FeatureToggle), Description("When enabled, dumps any received PKM files (trade results) to the DumpFolder.")]
         public bool Dump { get; set; }
 
+        [Category(FeatureToggle), Description("When enabled, dumps any raw/encrypted received PKM files (trade results) to the DumpFolder.")]
+        public bool DumpRaw { get; set; }
+
+        [Category(FeatureToggle), Description("When enabled with previous option, dumps only any received Shiny PKM files (trade results) to the DumpFolder.")]
+        public bool DumpShinyOnly { get; set; }
+
         [Category(Files), Description("Source folder: where PKM files to distribute are selected from.")]
         public string DistributeFolder { get; set; } = string.Empty;
 
@@ -24,6 +30,7 @@ namespace SysBot.Pokemon
             Directory.CreateDirectory(dump);
             DumpFolder = dump;
             Dump = true;
+            DumpShinyOnly = false;
 
             var distribute = Path.Combine(path, "distribute");
             Directory.CreateDirectory(distribute);

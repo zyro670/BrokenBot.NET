@@ -14,6 +14,7 @@ namespace SysBot.Pokemon
                 => new PokeTradeBotSV(Hub, cfg),
 
             PokeRoutineType.EggFetch => new EggBotSV(cfg, Hub),
+            PokeRoutineType.EggFetchV2 => new EggBotSVV2(cfg, Hub),
             PokeRoutineType.EncounterCapture => new EncounterCaptureSV(cfg, Hub),
             PokeRoutineType.EncounterRuinous => new EncounterRuinousSV(cfg, Hub),
             PokeRoutineType.RaidBot => new RaidSV(cfg, Hub),
@@ -30,6 +31,7 @@ namespace SysBot.Pokemon
                 => true,
 
             PokeRoutineType.EggFetch => true,
+            PokeRoutineType.EggFetchV2 => true,
             PokeRoutineType.EncounterCapture => true,
             PokeRoutineType.EncounterRuinous => true,
             PokeRoutineType.RaidBot => true,
