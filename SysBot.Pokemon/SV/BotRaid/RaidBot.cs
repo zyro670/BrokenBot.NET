@@ -52,7 +52,8 @@ namespace SysBot.Pokemon
         private int StoryProgress;
         private int EventProgress;
         private RaidContainer? container;
-        private string[] baseDescription = Array.Empty<string>();
+        private string[] PresetDescription = Array.Empty<string>();
+        private string BaseDescription = string.Empty;
 
         public override async Task MainLoop(CancellationToken token)
         {
@@ -126,11 +127,11 @@ namespace SysBot.Pokemon
             var filepath = "preset.txt";
             if (File.Exists(filepath))
             {
-                baseDescription = File.ReadAllLines(filepath);
+                PresetDescription = File.ReadAllLines(filepath);
             }
             else
             {
-                baseDescription = Array.Empty<string>();
+                PresetDescription = Array.Empty<string>();
             }
         }
 
@@ -1126,7 +1127,7 @@ namespace SysBot.Pokemon
 
                         if(Settings.UsePresetFile){
                             string tera = $"{(MoveType)raids[i].TeraType}";
-                            string[] newDescription = baseDescription;
+                            string[] newDescription = PresetDescription;
 
                             if (!string.IsNullOrEmpty(Settings.RaidEmbedParameters[a].Title))
                             {
