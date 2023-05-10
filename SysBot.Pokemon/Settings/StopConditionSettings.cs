@@ -1,4 +1,4 @@
-﻿using PKHeX.Core;
+﻿﻿using PKHeX.Core;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -244,6 +244,100 @@ namespace SysBot.Pokemon
                 set += $"\nScale: {PokeSizeDetailedUtil.GetSizeRating(pk9.Scale)}";
             }
             return set;
+        }
+
+        public (string[] raidDescription, string raidTitle) processRaidPlaceholders(string[] description, PKM pk)
+        {
+            string raidTitle = "";
+            string[] raidDescription = new string[] { };
+
+            if (description.Length > 0)
+            {
+                raidTitle = description[0];
+                raidDescription = description.Skip(1).ToArray(); // Skip the first element and create a new array with the rest of the lines
+            }
+
+            string markEntryText = "";
+            string markTitle = "";
+            string scaleText = "";
+            string scaleNumber = "";
+            string shinySymbol = pk.ShinyXor == 0 ? "■" : pk.ShinyXor <= 16 ? "★" : "";
+            string shinySymbolText = pk.ShinyXor == 0 ? "Square Shiny" : pk.ShinyXor <= 16 ? "Star Shiny" : "";
+            string shiny = pk.ShinyXor <= 16 ? "Shiny" : "";
+            string species = SpeciesName.GetSpeciesNameGeneration(pk.Species, 2, 9);
+            string IVList = $"{pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}";
+            string HP = pk.IV_HP.ToString();
+            string ATK = pk.IV_ATK.ToString();
+            string DEF = pk.IV_DEF.ToString();
+            string SPA = pk.IV_SPA.ToString();
+            string SPD = pk.IV_SPD.ToString();
+            string SPE = pk.IV_SPE.ToString();
+            string nature = $"{(Nature)pk.Nature}";
+            string genderSymbol = pk.Gender == 0 ? "♀" : pk.Gender == 1 ? "♂" : "⚥";
+            string genderText = $"{(Gender)pk.Gender}";
+
+            HasMark((IRibbonIndex)pk, out RibbonIndex mark);
+            if (mark == RibbonIndex.MarkMightiest)
+                markEntryText = "the Unrivaled";
+            if (pk is PK9 pkl)
+            {
+                scaleText = $"{PokeSizeDetailedUtil.GetSizeRating(pkl.Scale)}";
+                scaleNumber = pkl.Scale.ToString();
+                if (pkl.Scale == 0)
+                {
+                    markEntryText = "The Teeny";
+                    markTitle = "Teeny";
+                }
+                if (pkl.Scale == 255)
+                {
+                    markEntryText = "The Great";
+                    markTitle = "Jumbo";
+                }
+            }
+            
+            for (int i = 0; i < raidDescription.Length; i++)
+                {
+                    raidDescription[i] = raidDescription[i]
+                    .Replace("{markEntryText}", markEntryText)
+                    .Replace("{markTitle}", markTitle)
+                    .Replace("{scaleText}", scaleText)
+                    .Replace("{scaleNumber}", scaleNumber)
+                    .Replace("{shinySymbol}", shinySymbol)
+                    .Replace("{shinySymbolText}", shinySymbolText)
+                    .Replace("{shinyText}", shiny)
+                    .Replace("{species}", species)
+                    .Replace("{IVList}", IVList)
+                    .Replace("{HP}", HP)
+                    .Replace("{ATK}", ATK)
+                    .Replace("{DEF}", DEF)
+                    .Replace("{SPA}", SPA)
+                    .Replace("{SPD}", SPD)
+                    .Replace("{SPE}", SPE)
+                    .Replace("{nature}", nature)
+                    .Replace("{genderSymbol}", genderSymbol)
+                    .Replace("{genderText}", genderText); // Replace placeholder with Variable
+                }
+
+            raidTitle = raidTitle
+                    .Replace("{markEntryText}", markEntryText)
+                    .Replace("{markTitle}", markTitle)
+                    .Replace("{scaleText}", scaleText)
+                    .Replace("{shinySymbol}", shinySymbol)
+                    .Replace("{shinySymbolText}", shinySymbolText)
+                    .Replace("{shinyText}", shiny)
+                    .Replace("{species}", species)
+                    .Replace("{IVList}", IVList)
+                    .Replace("{HP}", HP)
+                    .Replace("{ATK}", ATK)
+                    .Replace("{DEF}", DEF)
+                    .Replace("{SPA}", SPA)
+                    .Replace("{SPD}", SPD)
+                    .Replace("{SPE}", SPE)
+                    .Replace("{nature}", nature)
+                    .Replace("{genderSymbol}", genderSymbol)
+                    .Replace("{genderText}", genderText);
+
+            return (raidDescription, raidTitle);
         }
     }
 

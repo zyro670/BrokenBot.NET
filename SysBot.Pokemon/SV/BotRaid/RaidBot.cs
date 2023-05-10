@@ -52,7 +52,9 @@ namespace SysBot.Pokemon
         private int StoryProgress;
         private int EventProgress;
         private RaidContainer? container;
+        private string[] PresetDescription = Array.Empty<string>();
         private string BaseDescription = string.Empty;
+        private string[] newDescription;
 
         public override async Task MainLoop(CancellationToken token)
         {
@@ -72,6 +74,12 @@ namespace SysBot.Pokemon
             {
                 GenerateSeedsFromFile();
                 Log("Done.");
+            }
+
+            if (Settings.UsePresetFile)
+            {
+                LoadDefaultFile();
+                Log("Using Preset.");
             }
 
             if (Settings.ConfigureRolloverCorrection)
@@ -113,6 +121,20 @@ namespace SysBot.Pokemon
 
             Log($"Ending {nameof(RaidBotSV)} loop.");
             await HardStop().ConfigureAwait(false);
+        }
+
+        private void LoadDefaultFile()
+        {
+            var filepath = "preset.txt";
+            if (File.Exists(filepath))
+            {
+                PresetDescription = File.ReadAllLines(filepath);
+                newDescription = PresetDescription;
+            }
+            else
+            {
+                PresetDescription = Array.Empty<string>();
+            }
         }
 
         private void GenerateSeedsFromFile()
@@ -1057,6 +1079,7 @@ namespace SysBot.Pokemon
             var rewards = container.Rewards;
             bool done = false;
 
+            
             for (int i = 0; i < raids.Count; i++)
             {
                 if (done is true)
@@ -1065,6 +1088,7 @@ namespace SysBot.Pokemon
                 var (pk, seed) = IsSeedReturned(encounters[i], raids[i]);
                 for (int a = 0; a < Settings.RaidEmbedParameters.Count; a++)
                 {
+                    newDescription = (string[])PresetDescription.Clone();
                     if (done is true)
                         continue;
 
@@ -1090,11 +1114,12 @@ namespace SysBot.Pokemon
                             case 6: starcount = "☆☆☆☆☆☆"; break;
                             case 7: starcount = "☆☆☆☆☆☆☆"; break;
                         }
-                        Settings.RaidEmbedParameters[a].Title = $"{(Species)pk.Species} {starcount} - {(MoveType)raids[i].TeraType}";
+                        
                         Settings.RaidEmbedParameters[a].IsShiny = raids[i].IsShiny;
                         Settings.RaidEmbedParameters[a].CrystalType = raids[i].IsBlack ? TeraCrystalType.Black : raids[i].IsEvent ? TeraCrystalType.Might : TeraCrystalType.Base;
                         Settings.RaidEmbedParameters[a].Species = (Species)pk.Species;
                         Settings.RaidEmbedParameters[a].SpeciesForm = pk.Form;
+
                         var pkinfo = Hub.Config.StopConditions.GetRaidPrintName(pk);
                         var strings = GameInfo.GetStrings(1);
                         var moves = new ushort[4] { encounters[i].Move1, encounters[i].Move2, encounters[i].Move3, encounters[i].Move4 };
@@ -1103,9 +1128,56 @@ namespace SysBot.Pokemon
                         var des = string.Empty;
                         if (encounters[i].ExtraMoves.Length != 0)
                             extramoves = "\n**Extra Moves:**\n" + string.Concat(encounters[i].ExtraMoves.Where(z => z != 0).Select(z => $"{strings.Move[z]}ㅤ\n")).Trim();
-                        Settings.RaidEmbedParameters[a].Description = new[] { "\n**Raid Info:**", pkinfo, "\n**Moveset:**", movestr, extramoves, BaseDescription, res };
-                        Settings.RaidEmbedParameters[a].IsSet = true;
-                        done = true;
+
+                        if(Settings.UsePresetFile){
+                            string tera = $"{(MoveType)raids[i].TeraType}";
+
+                            if (!string.IsNullOrEmpty(Settings.RaidEmbedParameters[a].Title))
+                            {
+                                newDescription[0] = Settings.RaidEmbedParameters[a].Title;
+                            }
+
+                            if (Settings.RaidEmbedParameters[a].Description.Length > 0)
+                            {
+                                string[] presetOverwrite = new string[Settings.RaidEmbedParameters[a].Description.Length + 1];
+                                presetOverwrite[0] = newDescription[0];
+                                for (int l = 0; l < Settings.RaidEmbedParameters[a].Description.Length; l++)
+                                {
+                                    presetOverwrite[l + 1] = Settings.RaidEmbedParameters[a].Description[l];
+                                }
+                                newDescription = presetOverwrite;
+                            }
+
+                            (string[] raidDescription, string raidTitle) = Hub.Config.StopConditions.processRaidPlaceholders(newDescription, pk);
+
+                            for (int j = 0; j < raidDescription.Length; j++)
+                            {
+                                raidDescription[j] = raidDescription[j]
+                                .Replace("{tera}", tera)
+                                .Replace("{difficulty}", $"{stars}")
+                                .Replace("{stars}", starcount) // Replace placeholder with Variable
+                                .Trim();
+                            }
+                            
+                            raidTitle = raidTitle
+                                .Replace("{tera}", tera)
+                                .Replace("{difficulty}", $"{stars}")
+                                .Replace("{stars}", starcount) // Replace placeholder with Variable
+                                .Trim();
+
+                            Settings.RaidEmbedParameters[a].Title = raidTitle;
+                            Settings.RaidEmbedParameters[a].Description = raidDescription;
+                            Settings.RaidEmbedParameters[a].IsSet = true;
+                            done = true;
+                        } 
+                        else 
+                        {
+                            Settings.RaidEmbedParameters[a].Title = $"{(Species)pk.Species} {starcount} - {(MoveType)raids[i].TeraType}";
+                            Settings.RaidEmbedParameters[a].Description = new[] { "\n**Raid Info:**", pkinfo, "\n**Moveset:**", movestr, extramoves, BaseDescription, res };
+                            Settings.RaidEmbedParameters[a].IsSet = true;
+                            done = true;                            
+                        }
+
                     }
                 }
             }
