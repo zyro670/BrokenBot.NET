@@ -52,7 +52,7 @@ namespace SysBot.Pokemon
         private int StoryProgress;
         private int EventProgress;
         private RaidContainer? container;
-        private string[] BaseDescription = Array.Empty<string>();
+        private string[] baseDescription = Array.Empty<string>();
 
         public override async Task MainLoop(CancellationToken token)
         {
@@ -70,15 +70,7 @@ namespace SysBot.Pokemon
 
             if (Settings.GenerateParametersFromFile)
             {
-                var filepath = "bodyparam.txt";
-                if (File.Exists(filepath))
-                {
-                    BaseDescription = File.ReadAllLines(filepath);
-                }
-                else
-                {
-                    BaseDescription = Array.Empty<string>();
-                }
+
                 Log("Done.");
             }
 
@@ -121,6 +113,20 @@ namespace SysBot.Pokemon
 
             Log($"Ending {nameof(RaidBotSV)} loop.");
             await HardStop().ConfigureAwait(false);
+        }
+
+        private void LoadDefaultFile()
+        {
+            var filepath = "bodyparam.txt";
+            if (File.Exists(filepath))
+            {
+                baseDescription = File.ReadAllLines(filepath);
+                string[] newDescription = baseDescription;
+            }
+            else
+            {
+                baseDescription = Array.Empty<string>();
+            }
         }
 
         private void GenerateSeedsFromFile()
@@ -1095,18 +1101,19 @@ namespace SysBot.Pokemon
                             case 7: starcount = "☆☆☆☆☆☆☆"; break;
                         }
 
+                        newDescription = baseDescription;
                         if (!string.IsNullOrEmpty(Settings.RaidEmbedParameters[a].Title))
                         {
-                            BaseDescription[0] = Settings.RaidEmbedParameters[a].Title;
+                            newDescription[0] = Settings.RaidEmbedParameters[a].Title;
                         }
 
                         Log($"Base Description: ");
-                        foreach (string line in BaseDescription)
+                        foreach (string line in newDescription)
                         {
                             Log(line);
                         }
 
-                        (string[] raidDescription, string raidTitle) = Hub.Config.StopConditions.GetRaidPrintName(BaseDescription, pk);
+                        (string[] raidDescription, string raidTitle) = Hub.Config.StopConditions.GetRaidPrintName(newDescription, pk);
                         Log($"Title: {raidTitle}  Description: ");
 
                         foreach (string line in raidDescription)
@@ -1127,6 +1134,15 @@ namespace SysBot.Pokemon
                         var des = string.Empty;
                         if (encounters[i].ExtraMoves.Length != 0)
                             extramoves = "\n**Extra Moves:**\n" + string.Concat(encounters[i].ExtraMoves.Where(z => z != 0).Select(z => $"{strings.Move[z]}ㅤ\n")).Trim();
+
+                        for (int i = 0; i < raidDescription.Length; i++)
+                        {
+                            raidDescription[i] = raidDescription[i]
+                            .Replace("{tera}", markEntryText)
+                            .Replace("{difficulty}", stars)
+                            .Replace("{starSymbol}", starcount); // Replace placeholder with Variable
+                        }
+
                         Settings.RaidEmbedParameters[a].Description = raidDescription;
                         Settings.RaidEmbedParameters[a].IsSet = true;
                         
