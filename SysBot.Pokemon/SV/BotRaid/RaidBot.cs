@@ -1085,6 +1085,7 @@ namespace SysBot.Pokemon
                 var (pk, seed) = IsSeedReturned(encounters[i], raids[i]);
                 for (int a = 0; a < Settings.RaidEmbedParameters.Count; a++)
                 {
+                    string[] newDescription = PresetDescription;
                     if (done is true)
                         continue;
 
