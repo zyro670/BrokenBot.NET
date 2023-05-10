@@ -108,7 +108,7 @@ namespace SysBot.Pokemon
             }
             catch (Exception e)
             {
-                Log(e);
+                Log(e.Message);
             }
 
             Log($"Ending {nameof(RaidBotSV)} loop.");
@@ -1092,7 +1092,9 @@ namespace SysBot.Pokemon
                             case 7: starcount = "☆☆☆☆☆☆☆"; break;
                         }
 
+                        Log($"{BaseDescription} {pk}")
                         (string[] raidDescription, string raidTitle) = Hub.Config.StopConditions.GetRaidPrintName(BaseDescription, pk);
+                        Log($"{raidTitle} {raidDescription}")
 
                         Settings.RaidEmbedParameters[a].Title = raidTitle;
                         Settings.RaidEmbedParameters[a].IsShiny = raids[i].IsShiny;
