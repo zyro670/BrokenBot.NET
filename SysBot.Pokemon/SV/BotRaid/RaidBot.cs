@@ -108,7 +108,7 @@ namespace SysBot.Pokemon
             }
             catch (Exception e)
             {
-                Log(e.Message);
+                Log(e);
             }
 
             Log($"Ending {nameof(RaidBotSV)} loop.");
