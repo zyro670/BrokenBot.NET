@@ -1120,7 +1120,7 @@ namespace SysBot.Pokemon
                             Log(line);
                         }
 
-                        Settings.RaidEmbedParameters[a].Title = raidTitle.Trim();
+                        
                         Settings.RaidEmbedParameters[a].IsShiny = raids[i].IsShiny;
                         Settings.RaidEmbedParameters[a].CrystalType = raids[i].IsBlack ? TeraCrystalType.Black : raids[i].IsEvent ? TeraCrystalType.Might : TeraCrystalType.Base;
                         Settings.RaidEmbedParameters[a].Species = (Species)pk.Species;
@@ -1140,9 +1140,16 @@ namespace SysBot.Pokemon
                             .Replace("{tera}", tera)
                             .Replace("{difficulty}", $"{stars}")
                             .Replace("{starSymbol}", starcount) // Replace placeholder with Variable
+                            .Replace("{moves}", moves)
                             .Trim();
                         }
-
+                        Settings.RaidEmbedParameters[a].Title = raidTitle
+                            .Replace("{tera}", tera)
+                            .Replace("{difficulty}", $"{stars}")
+                            .Replace("{starSymbol}", starcount) // Replace placeholder with Variable
+                            .Replace("{moves}", moves)
+                            .Trim();
+                            
                         Settings.RaidEmbedParameters[a].Description = raidDescription;
                         Settings.RaidEmbedParameters[a].IsSet = true;
                         
