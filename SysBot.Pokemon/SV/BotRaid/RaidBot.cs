@@ -77,7 +77,7 @@ namespace SysBot.Pokemon
             if (Settings.UsePresetFile)
             {
                 LoadDefaultFile();
-                Log("Using Preset.")
+                Log("Using Preset.");
             }
 
             if (Settings.ConfigureRolloverCorrection)
@@ -1138,7 +1138,7 @@ namespace SysBot.Pokemon
                                 presetOverwrite[0] = newDescription[0];
                                 for (int l = 0; l < presetOverwrite.Length; l++)
                                 {
-                                    presetOverwrite[l + 1] = Settings.RaidEmbedParameters[a].Description[l]
+                                    presetOverwrite[l + 1] = Settings.RaidEmbedParameters[a].Description[l];
                                 }
                                 newDescription = presetOverwrite;
                             }
@@ -1153,13 +1153,15 @@ namespace SysBot.Pokemon
                                 .Replace("{stars}", starcount) // Replace placeholder with Variable
                                 .Trim();
                             }
+                            
                             raidTitle = raidTitle
                                 .Replace("{tera}", tera)
                                 .Replace("{difficulty}", $"{stars}")
                                 .Replace("{stars}", starcount) // Replace placeholder with Variable
                                 .Trim();
 
-                            Settings.RaidEmbedParameters[a].Title = raidTitle
+                            Settings.RaidEmbedParameters[a].Title = raidTitle;
+                            Settings.RaidEmbedParameters[a].Description = raidDescription
                             Settings.RaidEmbedParameters[a].IsSet = true;
                             done = true;
                         } 
