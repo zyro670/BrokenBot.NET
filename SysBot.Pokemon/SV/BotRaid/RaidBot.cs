@@ -1161,7 +1161,7 @@ namespace SysBot.Pokemon
                                 .Trim();
 
                             Settings.RaidEmbedParameters[a].Title = raidTitle;
-                            Settings.RaidEmbedParameters[a].Description = raidDescription
+                            Settings.RaidEmbedParameters[a].Description = raidDescription;
                             Settings.RaidEmbedParameters[a].IsSet = true;
                             done = true;
                         } 
