@@ -52,7 +52,7 @@ namespace SysBot.Pokemon
         private int StoryProgress;
         private int EventProgress;
         private RaidContainer? container;
-        private string BaseDescription = string.Empty;
+        private string[] BaseDescription;
 
         public override async Task MainLoop(CancellationToken token)
         {
@@ -121,10 +121,10 @@ namespace SysBot.Pokemon
             if (!File.Exists(rotationpath))
                 File.Create(rotationpath);
 
-            BaseDescription = string.Empty;
+            string[] BaseDescription;
             var filepath = "bodyparam.txt";
             if (File.Exists(filepath))
-                BaseDescription = File.ReadAllText(filepath);
+                BaseDescription = File.ReadAllLines(filepath);
 
             var data = string.Empty;
             var pkpath = "pkparam.txt";
@@ -1078,6 +1078,7 @@ namespace SysBot.Pokemon
                             res = Environment.NewLine + "Special Rewards:" + Environment.NewLine + res;
                         Log($"Seed {seed:X8} found for {(Species)pk.Species}");
                         Settings.RaidEmbedParameters[a].Seed = $"{seed:X8}";
+                        string tera = (MoveType)raids[i].TeraType
                         var stars = RaidExtensions.GetStarCount(raids[i], raids[i].Difficulty, StoryProgress, raids[i].IsBlack);
                         string starcount = string.Empty;
                         switch (stars)
@@ -1090,12 +1091,15 @@ namespace SysBot.Pokemon
                             case 6: starcount = "☆☆☆☆☆☆"; break;
                             case 7: starcount = "☆☆☆☆☆☆☆"; break;
                         }
-                        Settings.RaidEmbedParameters[a].Title = $"{(Species)pk.Species} {starcount} - {(MoveType)raids[i].TeraType}";
+
+                        (string[] raidDescription, string raidTitle) = yourClassInstance.GetRaidPrintName(BaseDescription, pk);
+
+                        Settings.RaidEmbedParameters[a].Title = raidTitle
                         Settings.RaidEmbedParameters[a].IsShiny = raids[i].IsShiny;
                         Settings.RaidEmbedParameters[a].CrystalType = raids[i].IsBlack ? TeraCrystalType.Black : raids[i].IsEvent ? TeraCrystalType.Might : TeraCrystalType.Base;
                         Settings.RaidEmbedParameters[a].Species = (Species)pk.Species;
                         Settings.RaidEmbedParameters[a].SpeciesForm = pk.Form;
-                        var pkinfo = Hub.Config.StopConditions.GetRaidPrintName(pk);
+                        
                         var strings = GameInfo.GetStrings(1);
                         var moves = new ushort[4] { encounters[i].Move1, encounters[i].Move2, encounters[i].Move3, encounters[i].Move4 };
                         var movestr = string.Concat(moves.Where(z => z != 0).Select(z => $"{strings.Move[z]}ㅤ\n")).Trim();
@@ -1103,8 +1107,9 @@ namespace SysBot.Pokemon
                         var des = string.Empty;
                         if (encounters[i].ExtraMoves.Length != 0)
                             extramoves = "\n**Extra Moves:**\n" + string.Concat(encounters[i].ExtraMoves.Where(z => z != 0).Select(z => $"{strings.Move[z]}ㅤ\n")).Trim();
-                        Settings.RaidEmbedParameters[a].Description = new[] { "\n**Raid Info:**", pkinfo, "\n**Moveset:**", movestr, extramoves, BaseDescription, res };
+                        Settings.RaidEmbedParameters[a].Description = new[] { raidDescription };
                         Settings.RaidEmbedParameters[a].IsSet = true;
+                        
                         done = true;
                     }
                 }
