@@ -1092,9 +1092,9 @@ namespace SysBot.Pokemon
                             case 7: starcount = "☆☆☆☆☆☆☆"; break;
                         }
 
-                        Log($"{BaseDescription} {pk}")
+                        Log($"{BaseDescription} {pk}");
                         (string[] raidDescription, string raidTitle) = Hub.Config.StopConditions.GetRaidPrintName(BaseDescription, pk);
-                        Log($"{raidTitle} {raidDescription}")
+                        Log($"{raidTitle} {raidDescription}");
 
                         Settings.RaidEmbedParameters[a].Title = raidTitle;
                         Settings.RaidEmbedParameters[a].IsShiny = raids[i].IsShiny;
