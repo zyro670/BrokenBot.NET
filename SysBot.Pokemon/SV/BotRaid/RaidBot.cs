@@ -1141,8 +1141,8 @@ namespace SysBot.Pokemon
                             raidDescription[j] = raidDescription[j]
                             .Replace("{tera}", markEntryText)
                             .Replace("{difficulty}", stars)
-                            .Replace("{starSymbol}", starcount); // Replace placeholder with Variable
-                            .Trim()
+                            .Replace("{starSymbol}", starcount) // Replace placeholder with Variable
+                            .Trim();
                         }
 
                         Settings.RaidEmbedParameters[a].Description = raidDescription;
