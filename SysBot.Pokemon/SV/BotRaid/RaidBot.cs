@@ -52,7 +52,7 @@ namespace SysBot.Pokemon
         private int StoryProgress;
         private int EventProgress;
         private RaidContainer? container;
-        private string[] BaseDescription;
+        private string[] BaseDescription = Array.Empty<string>();;
 
         public override async Task MainLoop(CancellationToken token)
         {
