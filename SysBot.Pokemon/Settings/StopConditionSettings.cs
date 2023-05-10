@@ -1,4 +1,4 @@
-﻿using PKHeX.Core;
+﻿﻿using PKHeX.Core;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -225,7 +225,28 @@ namespace SysBot.Pokemon
             return set;
         }
 
-        public (string[] raidDescription, string raidTitle) GetRaidPrintName(string[] description, PKM pk)
+        public string GetRaidPrintName(PKM pk)
+        {
+            string markEntryText = "";
+            HasMark((IRibbonIndex)pk, out RibbonIndex mark);
+            if (mark == RibbonIndex.MarkMightiest)
+                markEntryText = "the Unrivaled";
+            if (pk is PK9 pkl)
+            {
+                if (pkl.Scale == 0)
+                    markEntryText = " the Teeny";
+                if (pkl.Scale == 255)
+                    markEntryText = " the Great";
+            }
+            var set = $"{(pk.ShinyXor == 0 ? "■ - " : pk.ShinyXor <= 16 ? "★ - " : "")}{SpeciesName.GetSpeciesNameGeneration(pk.Species, 2, 9)}{TradeExtensions<PK9>.FormOutput(pk.Species, pk.Form, out _)}{markEntryText}\nIVs: {pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}\nNature: {(Nature)pk.Nature} | Gender: {(Gender)pk.Gender}";
+            if (pk is PK9 pk9)
+            {
+                set += $"\nScale: {PokeSizeDetailedUtil.GetSizeRating(pk9.Scale)}";
+            }
+            return set;
+        }
+
+        public (string[] raidDescription, string raidTitle) processRaidPlaceholders(string[] description, PKM pk)
         {
             string raidTitle = "";
             string[] raidDescription = new string[] { };

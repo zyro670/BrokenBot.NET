@@ -26,6 +26,9 @@ namespace SysBot.Pokemon
         [Category(Hosting), Description("If true, the bot will attempt to auto-generate Raid Parameters from the \"raidsv\" folder on botstart.")]
         public bool GenerateParametersFromFile { get; set; } = true;
 
+        [Category(Hosting), Description("If true, the bot will attempt to auto-generate Raid Embeds based on the\"preset.txt\" file.")]
+        public bool UsePresetFile { get; set; } = true;
+
         [Category(Hosting), Description("Raid embed parameters.")]
         public List<RaidParameters> RaidEmbedParameters { get; set; } = new();
 

@@ -70,8 +70,14 @@ namespace SysBot.Pokemon
 
             if (Settings.GenerateParametersFromFile)
             {
-                LoadDefaultFile();
+                GenerateSeedsFromFile();
                 Log("Done.");
+            }
+
+            if (Settings.UsePresetFile)
+            {
+                LoadDefaultFile();
+                Log("Using Preset.")
             }
 
             if (Settings.ConfigureRolloverCorrection)
@@ -117,7 +123,7 @@ namespace SysBot.Pokemon
 
         private void LoadDefaultFile()
         {
-            var filepath = "bodyparam.txt";
+            var filepath = "preset.txt";
             if (File.Exists(filepath))
             {
                 baseDescription = File.ReadAllLines(filepath);
@@ -133,6 +139,11 @@ namespace SysBot.Pokemon
             var rotationpath = "raidsv.txt";
             if (!File.Exists(rotationpath))
                 File.Create(rotationpath);
+
+            BaseDescription = string.Empty;
+            var filepath = "bodyparam.txt";
+            if (File.Exists(filepath))
+                BaseDescription = File.ReadAllText(filepath);
 
             var data = string.Empty;
             var pkpath = "pkparam.txt";
@@ -1086,10 +1097,8 @@ namespace SysBot.Pokemon
                             res = Environment.NewLine + "Special Rewards:" + Environment.NewLine + res;
                         Log($"Seed {seed:X8} found for {(Species)pk.Species}");
                         Settings.RaidEmbedParameters[a].Seed = $"{seed:X8}";
-                        string tera = $"{(MoveType)raids[i].TeraType}";
                         var stars = RaidExtensions.GetStarCount(raids[i], raids[i].Difficulty, StoryProgress, raids[i].IsBlack);
                         string starcount = string.Empty;
-                        string[] newDescription = baseDescription;
                         switch (stars)
                         {
                             case 1: starcount = "☆"; break;
@@ -1100,32 +1109,13 @@ namespace SysBot.Pokemon
                             case 6: starcount = "☆☆☆☆☆☆"; break;
                             case 7: starcount = "☆☆☆☆☆☆☆"; break;
                         }
-
-                        if (!string.IsNullOrEmpty(Settings.RaidEmbedParameters[a].Title))
-                        {
-                            newDescription[0] = Settings.RaidEmbedParameters[a].Title;
-                        }
-
-                        Log($"Base Description: ");
-                        foreach (string line in newDescription)
-                        {
-                            Log(line);
-                        }
-
-                        (string[] raidDescription, string raidTitle) = Hub.Config.StopConditions.GetRaidPrintName(newDescription, pk);
-                        Log($"Title: {raidTitle}  Description: ");
-
-                        foreach (string line in raidDescription)
-                        {
-                            Log(line);
-                        }
-
                         
                         Settings.RaidEmbedParameters[a].IsShiny = raids[i].IsShiny;
                         Settings.RaidEmbedParameters[a].CrystalType = raids[i].IsBlack ? TeraCrystalType.Black : raids[i].IsEvent ? TeraCrystalType.Might : TeraCrystalType.Base;
                         Settings.RaidEmbedParameters[a].Species = (Species)pk.Species;
                         Settings.RaidEmbedParameters[a].SpeciesForm = pk.Form;
-                        
+
+                        var pkinfo = Hub.Config.StopConditions.GetRaidPrintName(pk);
                         var strings = GameInfo.GetStrings(1);
                         var moves = new ushort[4] { encounters[i].Move1, encounters[i].Move2, encounters[i].Move3, encounters[i].Move4 };
                         var movestr = string.Concat(moves.Where(z => z != 0).Select(z => $"{strings.Move[z]}ㅤ\n")).Trim();
@@ -1134,26 +1124,53 @@ namespace SysBot.Pokemon
                         if (encounters[i].ExtraMoves.Length != 0)
                             extramoves = "\n**Extra Moves:**\n" + string.Concat(encounters[i].ExtraMoves.Where(z => z != 0).Select(z => $"{strings.Move[z]}ㅤ\n")).Trim();
 
-                        for (int j = 0; j < raidDescription.Length; j++)
-                        {
-                            raidDescription[j] = raidDescription[j]
-                            .Replace("{tera}", tera)
-                            .Replace("{difficulty}", $"{stars}")
-                            .Replace("{starSymbol}", starcount) // Replace placeholder with Variable
-                            .Replace("{moves}", $"{moves}")
-                            .Trim();
-                        }
-                        Settings.RaidEmbedParameters[a].Title = raidTitle
-                            .Replace("{tera}", tera)
-                            .Replace("{difficulty}", $"{stars}")
-                            .Replace("{starSymbol}", starcount) // Replace placeholder with Variable
-                            .Replace("{moves}", $"{moves}")
-                            .Trim();
+                        if(Settings.UsePresetFile){
+                            string tera = $"{(MoveType)raids[i].TeraType}";
+                            string[] newDescription = baseDescription;
 
-                        Settings.RaidEmbedParameters[a].Description = raidDescription;
-                        Settings.RaidEmbedParameters[a].IsSet = true;
-                        
-                        done = true;
+                            if (!string.IsNullOrEmpty(Settings.RaidEmbedParameters[a].Title))
+                            {
+                                newDescription[0] = Settings.RaidEmbedParameters[a].Title;
+                            }
+
+                            if (Settings.RaidEmbedParameters[a].Description.Length > 0){
+                                string[] presetOverwrite = new string[Settings.RaidEmbedParameters[a].Description + 1];
+                                presetOverwrite[0] = newDescription[0];
+                                for (int l = 0; l < presetOverwrite.Length; l++)
+                                {
+                                    presetOverwrite[l + 1] = Settings.RaidEmbedParameters[a].Description[l]
+                                }
+                                newDescription = presetOverwrite;
+                            }
+
+                            (string[] raidDescription, string raidTitle) = Hub.Config.StopConditions.processRaidPlaceholders(newDescription, pk);
+
+                            for (int j = 0; j < raidDescription.Length; j++)
+                            {
+                                raidDescription[j] = raidDescription[j]
+                                .Replace("{tera}", tera)
+                                .Replace("{difficulty}", $"{stars}")
+                                .Replace("{stars}", starcount) // Replace placeholder with Variable
+                                .Trim();
+                            }
+                            raidTitle = raidTitle
+                                .Replace("{tera}", tera)
+                                .Replace("{difficulty}", $"{stars}")
+                                .Replace("{stars}", starcount) // Replace placeholder with Variable
+                                .Trim();
+
+                            Settings.RaidEmbedParameters[a].Title = raidTitle
+                            Settings.RaidEmbedParameters[a].IsSet = true;
+                            done = true;
+                        } 
+                        else 
+                        {
+                            Settings.RaidEmbedParameters[a].Title = $"{(Species)pk.Species} {starcount} - {(MoveType)raids[i].TeraType}";
+                            Settings.RaidEmbedParameters[a].Description = new[] { "\n**Raid Info:**", pkinfo, "\n**Moveset:**", movestr, extramoves, BaseDescription, res };
+                            Settings.RaidEmbedParameters[a].IsSet = true;
+                            done = true;                            
+                        }
+
                     }
                 }
             }
