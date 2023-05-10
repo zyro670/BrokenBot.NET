@@ -1140,16 +1140,16 @@ namespace SysBot.Pokemon
                             .Replace("{tera}", tera)
                             .Replace("{difficulty}", $"{stars}")
                             .Replace("{starSymbol}", starcount) // Replace placeholder with Variable
-                            .Replace("{moves}", moves)
+                            .Replace("{moves}", $"{moves}")
                             .Trim();
                         }
                         Settings.RaidEmbedParameters[a].Title = raidTitle
                             .Replace("{tera}", tera)
                             .Replace("{difficulty}", $"{stars}")
                             .Replace("{starSymbol}", starcount) // Replace placeholder with Variable
-                            .Replace("{moves}", moves)
+                            .Replace("{moves}", $"{moves}")
                             .Trim();
-                            
+
                         Settings.RaidEmbedParameters[a].Description = raidDescription;
                         Settings.RaidEmbedParameters[a].IsSet = true;
                         
