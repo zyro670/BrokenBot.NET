@@ -79,8 +79,6 @@ namespace SysBot.Pokemon
                 {
                     BaseDescription = Array.Empty<string>();
                 }
-
-                GenerateSeedsFromFile();
                 Log("Done.");
             }
 
