@@ -1095,11 +1095,7 @@ namespace SysBot.Pokemon
                             case 7: starcount = "☆☆☆☆☆☆☆"; break;
                         }
 
-                        if (!string.IsNullOrEmpty(Settings.RaidEmbedParameters[a].Title))
-                        {
-                            BaseDescription[0] = Settings.RaidEmbedParameters[a].Title;
-                        }
-                        
+
                         Log($"Base Description: ");
                         foreach (string line in BaseDescription)
                         {
