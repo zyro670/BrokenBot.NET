@@ -1078,7 +1078,7 @@ namespace SysBot.Pokemon
                             res = Environment.NewLine + "Special Rewards:" + Environment.NewLine + res;
                         Log($"Seed {seed:X8} found for {(Species)pk.Species}");
                         Settings.RaidEmbedParameters[a].Seed = $"{seed:X8}";
-                        string tera = (MoveType)raids[i].TeraType;
+                        string tera = $"{(MoveType)raids[i].TeraType";
                         var stars = RaidExtensions.GetStarCount(raids[i], raids[i].Difficulty, StoryProgress, raids[i].IsBlack);
                         string starcount = string.Empty;
                         switch (stars)
