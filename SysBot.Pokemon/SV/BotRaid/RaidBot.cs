@@ -1107,7 +1107,7 @@ namespace SysBot.Pokemon
                         var des = string.Empty;
                         if (encounters[i].ExtraMoves.Length != 0)
                             extramoves = "\n**Extra Moves:**\n" + string.Concat(encounters[i].ExtraMoves.Where(z => z != 0).Select(z => $"{strings.Move[z]}ㅤ\n")).Trim();
-                        Settings.RaidEmbedParameters[a].Description = new[] { raidDescription };
+                        Settings.RaidEmbedParameters[a].Description = raidDescription;
                         Settings.RaidEmbedParameters[a].IsSet = true;
                         
                         done = true;

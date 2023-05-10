@@ -245,22 +245,22 @@ namespace SysBot.Pokemon
             string shiny = pk.ShinyXor <= 16 ? "Shiny" : "";
             string species = SpeciesName.GetSpeciesNameGeneration(pk.Species, 2, 9);
             string IVList = $"{pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}";
-            string HP = pk.IV_HP.toString();
-            string ATK = pk.IV_ATK.toString();
-            string DEF = pk.IV_DEF.toString();
-            string SPA = pk.IV_SPA.toString();
-            string SPD = pk.IV_SPD.toString();
-            string SPE = pk.IV_SPE.toString();
-            string nature = (Nature)pk.Nature.toString();
+            string HP = pk.IV_HP.ToString();
+            string ATK = pk.IV_ATK.ToString();
+            string DEF = pk.IV_DEF.ToString();
+            string SPA = pk.IV_SPA.ToString();
+            string SPD = pk.IV_SPD.ToString();
+            string SPE = pk.IV_SPE.ToString();
+            string nature = (Nature)pk.Nature.ToString();
             string genderSymbol = pk.Gender == 0 ? "♀" : pk.Gender <= 16 ? "♂" : "⚥";
-            string genderText = (Gender)pk.Gender.toString();
+            string genderText = (Gender)pk.Gender.ToString();
 
             HasMark((IRibbonIndex)pk, out RibbonIndex mark);
             if (mark == RibbonIndex.MarkMightiest)
                 markEntryText = "the Unrivaled";
             if (pk is PK9 pkl)
             {
-                scaleText = PokeSizeDetailedUtil.GetSizeRating(pkl.Scale);
+                scaleText = $"{PokeSizeDetailedUtil.GetSizeRating(pkl.Scale)}";
                 scaleNumber = pkl.Scale.ToString();
                 if (pkl.Scale == 0)
                 {
