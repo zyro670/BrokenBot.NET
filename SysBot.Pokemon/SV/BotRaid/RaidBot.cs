@@ -1100,7 +1100,7 @@ namespace SysBot.Pokemon
                         {
                             Log(line);
                         }
-
+                        BaseDescription = new string[] { Settings.RaidEmbedParameters[a].Title }.Concat(BaseDescription).ToArray();
                         Log($"{BaseDescription} {pk}");
                         (string[] raidDescription, string raidTitle) = Hub.Config.StopConditions.GetRaidPrintName(BaseDescription, pk);
                         Log($"Title: {raidTitle}  Description: ");
@@ -1110,7 +1110,7 @@ namespace SysBot.Pokemon
                             Log(line);
                         }
 
-                        Settings.RaidEmbedParameters[a].Title = raidTitle;
+                        Settings.RaidEmbedParameters[a].Title = raidTitle.Trim();
                         Settings.RaidEmbedParameters[a].IsShiny = raids[i].IsShiny;
                         Settings.RaidEmbedParameters[a].CrystalType = raids[i].IsBlack ? TeraCrystalType.Black : raids[i].IsEvent ? TeraCrystalType.Might : TeraCrystalType.Base;
                         Settings.RaidEmbedParameters[a].Species = (Species)pk.Species;
