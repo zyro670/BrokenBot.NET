@@ -70,6 +70,16 @@ namespace SysBot.Pokemon
 
             if (Settings.GenerateParametersFromFile)
             {
+                var filepath = "bodyparam.txt";
+                if (File.Exists(filepath))
+                {
+                    BaseDescription = File.ReadAllLines(filepath);
+                }
+                else
+                {
+                    BaseDescription = Array.Empty<string>();
+                }
+
                 GenerateSeedsFromFile();
                 Log("Done.");
             }
@@ -120,11 +130,6 @@ namespace SysBot.Pokemon
             var rotationpath = "raidsv.txt";
             if (!File.Exists(rotationpath))
                 File.Create(rotationpath);
-
-            string[] BaseDescription;
-            var filepath = "bodyparam.txt";
-            if (File.Exists(filepath))
-                BaseDescription = File.ReadAllLines(filepath);
 
             var data = string.Empty;
             var pkpath = "pkparam.txt";
