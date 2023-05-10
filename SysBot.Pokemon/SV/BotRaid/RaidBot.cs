@@ -53,7 +53,6 @@ namespace SysBot.Pokemon
         private int EventProgress;
         private RaidContainer? container;
         private string[] baseDescription = Array.Empty<string>();
-        private string[] newDescription = baseDescription;
 
         public override async Task MainLoop(CancellationToken token)
         {
@@ -71,7 +70,7 @@ namespace SysBot.Pokemon
 
             if (Settings.GenerateParametersFromFile)
             {
-
+                LoadDefaultFile()
                 Log("Done.");
             }
 
@@ -122,7 +121,6 @@ namespace SysBot.Pokemon
             if (File.Exists(filepath))
             {
                 baseDescription = File.ReadAllLines(filepath);
-                newDescription = baseDescription;
             }
             else
             {
@@ -1091,6 +1089,7 @@ namespace SysBot.Pokemon
                         string tera = $"{(MoveType)raids[i].TeraType}";
                         var stars = RaidExtensions.GetStarCount(raids[i], raids[i].Difficulty, StoryProgress, raids[i].IsBlack);
                         string starcount = string.Empty;
+                        string[] newDescription = baseDescription;
                         switch (stars)
                         {
                             case 1: starcount = "☆"; break;
@@ -1102,7 +1101,6 @@ namespace SysBot.Pokemon
                             case 7: starcount = "☆☆☆☆☆☆☆"; break;
                         }
 
-                        newDescription = baseDescription;
                         if (!string.IsNullOrEmpty(Settings.RaidEmbedParameters[a].Title))
                         {
                             newDescription[0] = Settings.RaidEmbedParameters[a].Title;
