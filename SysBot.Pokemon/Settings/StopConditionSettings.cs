@@ -253,7 +253,7 @@ namespace SysBot.Pokemon
             string SPE = pk.IV_SPE.ToString();
             string nature = (Nature)pk.Nature.ToString();
             string genderSymbol = pk.Gender == 0 ? "♀" : pk.Gender <= 16 ? "♂" : "⚥";
-            string genderText = $"{(Gender)pk.Gender";
+            string genderText = $"{(Gender)pk.Gender}";
 
             HasMark((IRibbonIndex)pk, out RibbonIndex mark);
             if (mark == RibbonIndex.MarkMightiest)
