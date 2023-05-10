@@ -251,7 +251,7 @@ namespace SysBot.Pokemon
             string SPA = pk.IV_SPA.ToString();
             string SPD = pk.IV_SPD.ToString();
             string SPE = pk.IV_SPE.ToString();
-            string nature = $"{(Nature)pk.Nature.ToString()}";
+            string nature = $"{(Nature)pk.Nature}";
             string genderSymbol = pk.Gender == 0 ? "♀" : pk.Gender <= 16 ? "♂" : "⚥";
             string genderText = $"{(Gender)pk.Gender}";
 
