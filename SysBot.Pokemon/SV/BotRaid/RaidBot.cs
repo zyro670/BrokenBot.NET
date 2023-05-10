@@ -1095,13 +1095,17 @@ namespace SysBot.Pokemon
                             case 7: starcount = "☆☆☆☆☆☆☆"; break;
                         }
 
+                        if (!string.IsNullOrEmpty(Settings.RaidEmbedParameters[a].Title))
+                        {
+                            BaseDescription[0] = Settings.RaidEmbedParameters[a].Title;
+                        }
+                        
                         Log($"Base Description: ");
                         foreach (string line in BaseDescription)
                         {
                             Log(line);
                         }
-                        BaseDescription = new string[] { Settings.RaidEmbedParameters[a].Title }.Concat(BaseDescription).ToArray();
-                        Log($"{BaseDescription} {pk}");
+
                         (string[] raidDescription, string raidTitle) = Hub.Config.StopConditions.GetRaidPrintName(BaseDescription, pk);
                         Log($"Title: {raidTitle}  Description: ");
 
