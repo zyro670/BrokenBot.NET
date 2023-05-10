@@ -1135,7 +1135,7 @@ namespace SysBot.Pokemon
                             }
 
                             if (Settings.RaidEmbedParameters[a].Description.Length > 0){
-                                string[] presetOverwrite = new string[Settings.RaidEmbedParameters[a].Description + 1];
+                                string[] presetOverwrite = new string[Settings.RaidEmbedParameters[a].Description[l + 1];
                                 presetOverwrite[0] = newDescription[0];
                                 for (int l = 0; l < presetOverwrite.Length; l++)
                                 {
