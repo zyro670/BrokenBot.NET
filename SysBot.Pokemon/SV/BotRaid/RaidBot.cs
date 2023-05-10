@@ -1137,7 +1137,7 @@ namespace SysBot.Pokemon
                         for (int j = 0; j < raidDescription.Length; j++)
                         {
                             raidDescription[j] = raidDescription[j]
-                            .Replace("{tera}", markEntryText)
+                            .Replace("{tera}", tera)
                             .Replace("{difficulty}", stars)
                             .Replace("{starSymbol}", starcount) // Replace placeholder with Variable
                             .Trim();
