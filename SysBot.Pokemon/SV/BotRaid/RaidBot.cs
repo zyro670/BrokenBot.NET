@@ -1138,7 +1138,7 @@ namespace SysBot.Pokemon
                         {
                             raidDescription[j] = raidDescription[j]
                             .Replace("{tera}", tera)
-                            .Replace("{difficulty}", stars)
+                            .Replace("{difficulty}", $"{stars}")
                             .Replace("{starSymbol}", starcount) // Replace placeholder with Variable
                             .Trim();
                         }
