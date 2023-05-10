@@ -122,7 +122,7 @@ namespace SysBot.Pokemon
             if (File.Exists(filepath))
             {
                 baseDescription = File.ReadAllLines(filepath);
-                string[] newDescription = baseDescription;
+                newDescription = baseDescription;
             }
             else
             {
@@ -1136,12 +1136,13 @@ namespace SysBot.Pokemon
                         if (encounters[i].ExtraMoves.Length != 0)
                             extramoves = "\n**Extra Moves:**\n" + string.Concat(encounters[i].ExtraMoves.Where(z => z != 0).Select(z => $"{strings.Move[z]}ㅤ\n")).Trim();
 
-                        for (int i = 0; i < raidDescription.Length; i++)
+                        for (int i = 0; j < raidDescription.Length; j++)
                         {
-                            raidDescription[i] = raidDescription[i]
+                            raidDescription[j] = raidDescription[j]
                             .Replace("{tera}", markEntryText)
                             .Replace("{difficulty}", stars)
                             .Replace("{starSymbol}", starcount); // Replace placeholder with Variable
+                            .Trim()
                         }
 
                         Settings.RaidEmbedParameters[a].Description = raidDescription;
