@@ -70,7 +70,7 @@ namespace SysBot.Pokemon
 
             if (Settings.GenerateParametersFromFile)
             {
-                LoadDefaultFile()
+                LoadDefaultFile();
                 Log("Done.");
             }
 
