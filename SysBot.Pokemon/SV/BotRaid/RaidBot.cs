@@ -1130,7 +1130,7 @@ namespace SysBot.Pokemon
 
                         if(Settings.UsePresetFile){
                             string tera = $"{(MoveType)raids[i].TeraType}";
-                            string[] newDescription = PresetDescription;
+                            newDescription = PresetDescription;
 
                             if (!string.IsNullOrEmpty(Settings.RaidEmbedParameters[a].Title))
                             {
