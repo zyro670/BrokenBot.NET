@@ -1165,12 +1165,12 @@ namespace SysBot.Pokemon
                                 .Replace("{stars}", starcount) // Replace placeholder with Variable
                                 .Trim();
 
-                            Log("PresetDescriptionBefore")
+                            Log("PresetDescriptionBefore");
                             foreach (string line in PresetDescription)
                             {
                                 Log(line);
                             }
-                            Log("PresetDescriptionBefore")
+                            Log("PresetDescriptionBefore");
                             foreach (string line in newDescription)
                             {
                                 Log(line);
@@ -1179,12 +1179,12 @@ namespace SysBot.Pokemon
                             Settings.RaidEmbedParameters[a].Description = raidDescription;
                             Settings.RaidEmbedParameters[a].IsSet = true;
                             newDescription = PresetDescription;
-                            Log("PresetDescriptionBefore")
+                            Log("PresetDescriptionAfter");
                             foreach (string line in PresetDescription)
                             {
                                 Log(line);
                             }
-                            Log("PresetDescriptionBefore")
+                            Log("PresetDescriptionAfter");
                             foreach (string line in newDescription)
                             {
                                 Lo
