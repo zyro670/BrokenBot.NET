@@ -1077,6 +1077,7 @@ namespace SysBot.Pokemon
             var rewards = container.Rewards;
             bool done = false;
 
+            string[] newDescription;
             for (int i = 0; i < raids.Count; i++)
             {
                 if (done is true)
