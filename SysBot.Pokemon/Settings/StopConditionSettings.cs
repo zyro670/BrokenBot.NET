@@ -273,7 +273,7 @@ namespace SysBot.Pokemon
             string SPD = pk.IV_SPD.ToString();
             string SPE = pk.IV_SPE.ToString();
             string nature = $"{(Nature)pk.Nature}";
-            string genderSymbol = pk.Gender == 0 ? "♀" : pk.Gender <= 16 ? "♂" : "⚥";
+            string genderSymbol = pk.Gender == 0 ? "♀" : pk.Gender == 1 ? "♂" : "⚥";
             string genderText = $"{(Gender)pk.Gender}";
 
             HasMark((IRibbonIndex)pk, out RibbonIndex mark);
@@ -302,7 +302,6 @@ namespace SysBot.Pokemon
                     .Replace("{markTitle}", markTitle)
                     .Replace("{scaleText}", scaleText)
                     .Replace("{scaleNumber}", scaleNumber)
-                    .Replace("{markEntryText}", markEntryText)
                     .Replace("{shinySymbol}", shinySymbol)
                     .Replace("{shinySymbolText}", shinySymbolText)
                     .Replace("{shinyText}", shiny)
@@ -323,8 +322,6 @@ namespace SysBot.Pokemon
                     .Replace("{markEntryText}", markEntryText)
                     .Replace("{markTitle}", markTitle)
                     .Replace("{scaleText}", scaleText)
-                    .Replace("{scaleNumber}", scaleNumber)
-                    .Replace("{markEntryText}", markEntryText)
                     .Replace("{shinySymbol}", shinySymbol)
                     .Replace("{shinySymbolText}", shinySymbolText)
                     .Replace("{shinyText}", shiny)
