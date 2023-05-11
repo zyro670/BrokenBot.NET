@@ -1088,7 +1088,7 @@ namespace SysBot.Pokemon
                 var (pk, seed) = IsSeedReturned(encounters[i], raids[i]);
                 for (int a = 0; a < Settings.RaidEmbedParameters.Count; a++)
                 {
-                    newDescription = PresetDescription;
+                    newDescription = (string[])PresetDescription.Clone();
                     if (done is true)
                         continue;
 
@@ -1178,7 +1178,6 @@ namespace SysBot.Pokemon
                             Settings.RaidEmbedParameters[a].Title = raidTitle;
                             Settings.RaidEmbedParameters[a].Description = raidDescription;
                             Settings.RaidEmbedParameters[a].IsSet = true;
-                            newDescription = PresetDescription;
                             Log("PresetDescriptionAfter");
                             foreach (string line in PresetDescription)
                             {
