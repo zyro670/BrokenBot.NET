@@ -1187,7 +1187,8 @@ namespace SysBot.Pokemon
                             Log("PresetDescriptionAfter");
                             foreach (string line in newDescription)
                             {
-                                Lo
+                                Log(line);
+                            }
                             done = true;
                         } 
                         else 
