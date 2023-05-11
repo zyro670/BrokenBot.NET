@@ -129,6 +129,7 @@ namespace SysBot.Pokemon
             if (File.Exists(filepath))
             {
                 PresetDescription = File.ReadAllLines(filepath);
+                newDescription = PresetDescription;
             }
             else
             {
@@ -1130,7 +1131,6 @@ namespace SysBot.Pokemon
 
                         if(Settings.UsePresetFile){
                             string tera = $"{(MoveType)raids[i].TeraType}";
-                            newDescription = PresetDescription;
 
                             if (!string.IsNullOrEmpty(Settings.RaidEmbedParameters[a].Title))
                             {
@@ -1165,10 +1165,29 @@ namespace SysBot.Pokemon
                                 .Replace("{stars}", starcount) // Replace placeholder with Variable
                                 .Trim();
 
+                            Log("PresetDescriptionBefore")
+                            foreach (string line in PresetDescription)
+                            {
+                                Log(line);
+                            }
+                            Log("PresetDescriptionBefore")
+                            foreach (string line in newDescription)
+                            {
+                                Log(line);
+                            }
                             Settings.RaidEmbedParameters[a].Title = raidTitle;
                             Settings.RaidEmbedParameters[a].Description = raidDescription;
                             Settings.RaidEmbedParameters[a].IsSet = true;
                             newDescription = PresetDescription;
+                            Log("PresetDescriptionBefore")
+                            foreach (string line in PresetDescription)
+                            {
+                                Log(line);
+                            }
+                            Log("PresetDescriptionBefore")
+                            foreach (string line in newDescription)
+                            {
+                                Lo
                             done = true;
                         } 
                         else 
