@@ -54,6 +54,7 @@ namespace SysBot.Pokemon
         private RaidContainer? container;
         private string[] PresetDescription = Array.Empty<string>();
         private string BaseDescription = string.Empty;
+        private string[] newDescription;
 
         public override async Task MainLoop(CancellationToken token)
         {
@@ -1077,7 +1078,7 @@ namespace SysBot.Pokemon
             var rewards = container.Rewards;
             bool done = false;
 
-            string[] newDescription;
+            
             for (int i = 0; i < raids.Count; i++)
             {
                 if (done is true)
