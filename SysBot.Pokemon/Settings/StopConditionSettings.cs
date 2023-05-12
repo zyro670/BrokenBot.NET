@@ -275,6 +275,7 @@ namespace SysBot.Pokemon
             string nature = $"{(Nature)pk.Nature}";
             string genderSymbol = pk.Gender == 0 ? "♀" : pk.Gender == 1 ? "♂" : "⚥";
             string genderText = $"{(Gender)pk.Gender}";
+            string ability = $"{(Ability)pk.Ability}";
 
             HasMark((IRibbonIndex)pk, out RibbonIndex mark);
             if (mark == RibbonIndex.MarkMightiest)
@@ -314,6 +315,7 @@ namespace SysBot.Pokemon
                     .Replace("{SPD}", SPD)
                     .Replace("{SPE}", SPE)
                     .Replace("{nature}", nature)
+                    .Replace("{ability}", ability)
                     .Replace("{genderSymbol}", genderSymbol)
                     .Replace("{genderText}", genderText); // Replace placeholder with Variable
                 }
