@@ -116,17 +116,17 @@ namespace SysBot.Pokemon
 
         private void GenerateSeedsFromFile()
         {
-            var rotationpath = "raidsv.txt";
+            var rotationpath = "RaidFilesSV\\raidsv.txt";
             if (!File.Exists(rotationpath))
                 Log("raidsv.txt not present, skipping parameter generation.");
 
             BaseDescription = string.Empty;
-            var filepath = "bodyparam.txt";
+            var filepath = "RaidFilesSV\\bodyparam.txt";
             if (File.Exists(filepath))
                 BaseDescription = File.ReadAllText(filepath);
 
             var data = string.Empty;
-            var pkpath = "pkparam.txt";
+            var pkpath = "RaidFilesSV\\pkparam.txt";
             if (File.Exists(pkpath))
                 data = File.ReadAllText(pkpath);
 
