@@ -665,7 +665,7 @@ namespace SysBot.Pokemon.Discord
             int type = int.Parse(content);
 
             var description = string.Empty;
-            var title = string.empty;
+            var title = string.Empty;
             var filepath = "bodyparam.txt";
             if (File.Exists(filepath))
                 description = File.ReadAllText(filepath);
