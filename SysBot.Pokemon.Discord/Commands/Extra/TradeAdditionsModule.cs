@@ -656,6 +656,57 @@ namespace SysBot.Pokemon.Discord
             await ReplyAsync(msg).ConfigureAwait(false);
         }
 
+        [Command("replaceRaidParams")]
+        [Alias("rrp")]
+        [Summary("Replaces the first raid parameter with a new one.")]
+        [RequireSudo]
+        public async Task ReplaceRaidParam([Summary("Seed")] string seed, [Summary("Species Type")] string species, [Summary("Content Type")] string content)
+        {
+            int type = int.Parse(content);
+
+            var description = string.Empty;
+            var title = string.empty;
+            var filepath = "bodyparam.txt";
+            if (File.Exists(filepath))
+                description = File.ReadAllText(filepath);
+
+            var data = string.Empty;
+            var pkpath = "pkparam.txt";
+            if (File.Exists(pkpath))
+                data = File.ReadAllText(pkpath);
+
+            var parse = TradeExtensions<T>.EnumParse<Species>(species);
+            if (parse == default)
+            {
+                await ReplyAsync($"{species} is not a valid Species.").ConfigureAwait(false);
+                return;
+            }
+
+            RaidSettingsSV.RaidParameters newparam = new()
+            {
+                CrystalType = (RaidSettingsSV.TeraCrystalType)type,                
+                Description = new[] { description },
+                PartyPK = new[] { data },
+                Species = parse,
+                SpeciesForm = 0,
+                Seed = seed,
+                IsCoded = true,
+                Title = title,
+            };
+
+            // Check if there is at least one raid parameter to remove.
+            if (SysCord<T>.Runner.Hub.Config.RaidSV.RaidEmbedParameters.Count > 0)
+            {
+                SysCord<T>.Runner.Hub.Config.RaidSV.RaidEmbedParameters.RemoveAt(0);
+            }
+
+            // Add the new raid parameter to the end.
+            SysCord<T>.Runner.Hub.Config.RaidSV.RaidEmbedParameters.Add(newparam);
+
+            var msg = $"A new raid for {newparam.Species} has been added and the first raid has been removed!";
+            await ReplyAsync(msg).ConfigureAwait(false);
+        }
+
         [Command("addRaidParams")]
         [Alias("arp")]
         [Summary("Adds new raid parameter.")]
