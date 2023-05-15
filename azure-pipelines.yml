@@ -9,8 +9,7 @@ trigger:
 pr: none
 
 pool:
-  name: Azure Pipelines
-  vmImage: 'windows-2022'
+  name: KuroPC
   demands:
   - msbuild
   - visualstudio

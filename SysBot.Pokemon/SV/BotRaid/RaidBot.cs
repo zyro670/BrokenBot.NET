@@ -460,7 +460,7 @@ namespace SysBot.Pokemon
 
                     if (RotationCount < Settings.RaidEmbedParameters.Count - 1 && Settings.RaidEmbedParameters.Count > 1)
                         RotationCount++;
-                    if (RotationCount >= Settings.RaidEmbedParameters.Count - 1)
+                    if (RotationCount >= Settings.RaidEmbedParameters.Count)
                     {
                         RotationCount = 0;
                         Log($"Resetting Rotation Count to {RotationCount}");
