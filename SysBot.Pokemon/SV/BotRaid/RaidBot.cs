@@ -478,9 +478,12 @@ namespace SysBot.Pokemon
                 }
             }
             
-            if {!trainers}{
+            if (trainers is null)
+            {
+                // No one joined the raid
                 TemporaryLossCount++; // increment the loss count
             }
+
 
             if (rotate && Settings.RaidEmbedParameters.Count > 1)
             {
