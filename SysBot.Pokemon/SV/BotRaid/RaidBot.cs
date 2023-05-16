@@ -459,6 +459,16 @@ namespace SysBot.Pokemon
                     WinCount++;
                     if (trainers.Count > 0 && Settings.CatchLimit != 0 || TodaySeed != BitConverter.ToUInt64(data.Slice(0, 8)) && RaidsAtStart == seeds.Count && Settings.CatchLimit != 0)
                         ApplyPenalty(trainers);
+
+                    if (RotationCount < Settings.RaidEmbedParameters.Count - 1 && Settings.RaidEmbedParameters.Count > 1)
+                        RotationCount++;
+                    if (RotationCount >= Settings.RaidEmbedParameters.Count)
+                    {
+                        RotationCount = 0;
+                        Log($"Resetting Rotation Count to {RotationCount}");
+                        await EnqueueEmbed(null, "", false, false, true, token).ConfigureAwait(false);
+                        return true;
+                    }
                 }
                 else
                 {
@@ -473,16 +483,6 @@ namespace SysBot.Pokemon
                 TemporaryLossCount++;
             }
 
-            if (RotationCount < Settings.RaidEmbedParameters.Count && Settings.RaidEmbedParameters.Count > 1)
-                RotationCount++;
-            if (RotationCount >= Settings.RaidEmbedParameters.Count)
-            {
-                RotationCount = 0;
-                Log($"Resetting Rotation Count to {RotationCount}");
-                await EnqueueEmbed(null, "", false, false, true, token).ConfigureAwait(false);
-                return true;
-            }
-
             if (rotate && Settings.RaidEmbedParameters.Count > 1)
             {
                 Log($"Replacing seed at location {SeedIndexToReplace}.");
@@ -492,9 +492,11 @@ namespace SysBot.Pokemon
                     Log($"{Settings.RaidEmbedParameters[RotationCount].Species} is disabled. Moving to next active raid in rotation.");
                     for (int i = RotationCount; i < Settings.RaidEmbedParameters.Count; i++)
                     {
-                        RotationCount++;
-                        if (RotationCount >= Settings.RaidEmbedParameters.Count || Settings.RaidEmbedParameters[RotationCount].ActiveInRotation == true)
+                        if (Settings.RaidEmbedParameters[i].ActiveInRotation == true || i == Settings.RaidEmbedParameters.Count - 1)
+                        {
+                            RotationCount = i;
                             break;
+                        }
                     }
                     if (RotationCount >= Settings.RaidEmbedParameters.Count)
                     {
@@ -504,8 +506,10 @@ namespace SysBot.Pokemon
                 }
                 await EnqueueEmbed(null, "", false, false, true, token).ConfigureAwait(false);
             }
+
             return false;
         }
+
 
 
         private async void InjectPartyPk(string battlepk)
