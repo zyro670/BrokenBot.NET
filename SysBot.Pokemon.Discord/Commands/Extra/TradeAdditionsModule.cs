@@ -660,34 +660,20 @@ namespace SysBot.Pokemon.Discord
         [Alias("rrp")]
         [Summary("Replaces the first raid parameter with a new one.")]
         [RequireSudo]
-        public async Task ReplaceRaidParam([Summary("Seed")] string seed, [Summary("Species Type")] string species, [Summary("Content Type")] string content)
+        public async Task ReplaceRaidParam([Summary("Seed")] string seed, [Summary("Content Type")] string content)
         {
             int type = int.Parse(content);
 
             var description = string.Empty;
             var title = string.Empty;
-            var filepath = "bodyparam.txt";
-            if (File.Exists(filepath))
-                description = File.ReadAllText(filepath);
-
             var data = string.Empty;
-            var pkpath = "pkparam.txt";
-            if (File.Exists(pkpath))
-                data = File.ReadAllText(pkpath);
-
-            var parse = TradeExtensions<T>.EnumParse<Species>(species);
-            if (parse == default)
-            {
-                await ReplyAsync($"{species} is not a valid Species.").ConfigureAwait(false);
-                return;
-            }
 
             RaidSettingsSV.RaidParameters newparam = new()
             {
                 CrystalType = (RaidSettingsSV.TeraCrystalType)type,                
                 Description = new[] { description },
                 PartyPK = new[] { data },
-                Species = parse,
+                Species = 0,
                 SpeciesForm = 0,
                 Seed = seed,
                 IsCoded = true,
@@ -703,7 +689,7 @@ namespace SysBot.Pokemon.Discord
             // Add the new raid parameter to the end.
             SysCord<T>.Runner.Hub.Config.RaidSV.RaidEmbedParameters.Add(newparam);
 
-            var msg = $"A new raid for {newparam.Species} has been added and the first raid has been removed!";
+            var msg = $"The raids has been updated, please remember to update the list command!";
             await ReplyAsync(msg).ConfigureAwait(false);
         }
 
