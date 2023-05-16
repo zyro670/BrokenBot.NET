@@ -457,47 +457,48 @@ namespace SysBot.Pokemon
                     WinCount++;
                     if (trainers.Count > 0 && Settings.CatchLimit != 0 || TodaySeed != BitConverter.ToUInt64(data.Slice(0, 8)) && RaidsAtStart == seeds.Count && Settings.CatchLimit != 0)
                         ApplyPenalty(trainers);
+                }
+                else
+                {
+                    Log("We lost the raid...");
+                    LossCount++;
+                }
+            }
 
-                    if (RotationCount < Settings.RaidEmbedParameters.Count - 1 && Settings.RaidEmbedParameters.Count > 1)
+            if (RotationCount < Settings.RaidEmbedParameters.Count && Settings.RaidEmbedParameters.Count > 1)
+                RotationCount++;
+            if (RotationCount >= Settings.RaidEmbedParameters.Count)
+            {
+                RotationCount = 0;
+                Log($"Resetting Rotation Count to {RotationCount}");
+                await EnqueueEmbed(null, "", false, false, true, token).ConfigureAwait(false);
+                return true;
+            }
+
+            if (rotate && Settings.RaidEmbedParameters.Count > 1)
+            {
+                Log($"Replacing seed at location {SeedIndexToReplace}.");
+                Log($"Next raid in the list: {Settings.RaidEmbedParameters[RotationCount].Species}.");
+                if (Settings.RaidEmbedParameters[RotationCount].ActiveInRotation == false && RotationCount < Settings.RaidEmbedParameters.Count)
+                {
+                    Log($"{Settings.RaidEmbedParameters[RotationCount].Species} is disabled. Moving to next active raid in rotation.");
+                    for (int i = RotationCount; i < Settings.RaidEmbedParameters.Count; i++)
+                    {
                         RotationCount++;
+                        if (RotationCount >= Settings.RaidEmbedParameters.Count || Settings.RaidEmbedParameters[RotationCount].ActiveInRotation == true)
+                            break;
+                    }
                     if (RotationCount >= Settings.RaidEmbedParameters.Count)
                     {
                         RotationCount = 0;
                         Log($"Resetting Rotation Count to {RotationCount}");
-                        await EnqueueEmbed(null, "", false, false, true, token).ConfigureAwait(false);
-                        return true;
                     }
-
-                    if (rotate && Settings.RaidEmbedParameters.Count > 1)
-                    {
-                        Log($"Replacing seed at location {SeedIndexToReplace}.");
-                        Log($"Next raid in the list: {Settings.RaidEmbedParameters[RotationCount].Species}.");
-                        if (Settings.RaidEmbedParameters[RotationCount].ActiveInRotation == false && RotationCount <= Settings.RaidEmbedParameters.Count)
-                        {
-                            Log($"{Settings.RaidEmbedParameters[RotationCount].Species} is disabled. Moving to next active raid in rotation.");
-                            for (int i = RotationCount; i <= Settings.RaidEmbedParameters.Count; i++)
-                            {
-                                RotationCount++;
-                                if (Settings.RaidEmbedParameters[RotationCount].ActiveInRotation == true || RotationCount >= Settings.RaidEmbedParameters.Count)
-                                    break;
-                            }
-                            if (RotationCount >= Settings.RaidEmbedParameters.Count)
-                            {
-                                RotationCount = 0;
-                                Log($"Resetting Rotation Count to {RotationCount}");
-                            }
-                        }
-                    }
-                    await EnqueueEmbed(null, "", false, false, true, token).ConfigureAwait(false);
-                    return true;
                 }
-
-                Log("We lost the raid...");
-                LossCount++;
-
+                await EnqueueEmbed(null, "", false, false, true, token).ConfigureAwait(false);
             }
             return false;
         }
+
 
         private async void InjectPartyPk(string battlepk)
         {
