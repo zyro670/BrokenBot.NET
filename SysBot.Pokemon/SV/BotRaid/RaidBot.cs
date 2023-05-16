@@ -472,8 +472,9 @@ namespace SysBot.Pokemon
                 }
 
 
-                if (rotate && Settings.RaidEmbedParameters.Count > 1)
+                if (rotate && Settings.RaidEmbedParameters.Count > 1 || TemporaryLossCount >= 3))
                 {
+                    TemporaryLossCount = 0; // reset the loss count
                     Log($"Replacing seed at location {SeedIndexToReplace}.");
                     Log($"Next raid in the list: {Settings.RaidEmbedParameters[RotationCount].Species}.");
                     if (Settings.RaidEmbedParameters[RotationCount].ActiveInRotation == false && RotationCount < Settings.RaidEmbedParameters.Count)
