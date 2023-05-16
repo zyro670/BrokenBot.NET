@@ -470,46 +470,48 @@ namespace SysBot.Pokemon
                         return true;
                     }
                 }
-                
+
+
+                if (rotate && Settings.RaidEmbedParameters.Count > 1)
+                {
+                    Log($"Replacing seed at location {SeedIndexToReplace}.");
+                    Log($"Next raid in the list: {Settings.RaidEmbedParameters[RotationCount].Species}.");
+                    if (Settings.RaidEmbedParameters[RotationCount].ActiveInRotation == false && RotationCount < Settings.RaidEmbedParameters.Count)
+                    {
+                        Log($"{Settings.RaidEmbedParameters[RotationCount].Species} is disabled. Moving to next active raid in rotation.");
+                        for (int i = RotationCount; i < Settings.RaidEmbedParameters.Count; i++)
+                        {
+                            if (Settings.RaidEmbedParameters[i].ActiveInRotation == true || i == Settings.RaidEmbedParameters.Count - 1)
+                            {
+                                RotationCount = i;
+                                break;
+                            }
+                        }
+                        if (RotationCount >= Settings.RaidEmbedParameters.Count)
+                        {
+                            RotationCount = 0;
+                            Log($"Resetting Rotation Count to {RotationCount}");
+                        }
+                    }
+                    await EnqueueEmbed(null, "", false, false, true, token).ConfigureAwait(false);
+                    return true;
+                }
+                Log("We lost the raid...");
+                LossCount++;
+                TemporaryLossCount++; // increment the loss count
+                Log($"Loss Counter is at {TemporaryLossCount}/3");
+            }
             
             if (trainers is null)
             {
                 TemporaryLossCount++; // increment the loss count
                 Log($"No one joined Loss Counter is at {TemporaryLossCount}/3");
+                return false;
             }
-
-
-            if (rotate && Settings.RaidEmbedParameters.Count > 1)
-            {
-                Log($"Replacing seed at location {SeedIndexToReplace}.");
-                Log($"Next raid in the list: {Settings.RaidEmbedParameters[RotationCount].Species}.");
-                if (Settings.RaidEmbedParameters[RotationCount].ActiveInRotation == false && RotationCount < Settings.RaidEmbedParameters.Count)
-                {
-                    Log($"{Settings.RaidEmbedParameters[RotationCount].Species} is disabled. Moving to next active raid in rotation.");
-                    for (int i = RotationCount; i < Settings.RaidEmbedParameters.Count; i++)
-                    {
-                        if (Settings.RaidEmbedParameters[i].ActiveInRotation == true || i == Settings.RaidEmbedParameters.Count - 1)
-                        {
-                            RotationCount = i;
-                            break;
-                        }
-                    }
-                    if (RotationCount >= Settings.RaidEmbedParameters.Count)
-                    {
-                        RotationCount = 0;
-                        Log($"Resetting Rotation Count to {RotationCount}");
-                    }
-                }
-                await EnqueueEmbed(null, "", false, false, true, token).ConfigureAwait(false);
-                return true;
-            }
-            Log("We lost the raid...");
-            LossCount++;
-            TemporaryLossCount++; // increment the loss count
-            Log($"Loss Counter is at {TemporaryLossCount}/3");
 
             return false;
         }
+
 
 
 
