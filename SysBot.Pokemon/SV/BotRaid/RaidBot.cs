@@ -475,13 +475,14 @@ namespace SysBot.Pokemon
                     Log("We lost the raid...");
                     LossCount++;
                     TemporaryLossCount++; // increment the loss count
+                    Log($"Loss Counter is at {TemporaryLossCount}/3");
                 }
             }
             
             if (trainers is null)
             {
-                // No one joined the raid
                 TemporaryLossCount++; // increment the loss count
+                Log($"No one joined Loss Counter is at {TemporaryLossCount}/3");
             }
 
 
@@ -723,7 +724,7 @@ namespace SysBot.Pokemon
             if (lobbyTrainers.Count == 0)
             {
                 Log("Nobody joined the raid, recovering...");
-                return (false, lobbyTrainers);
+                return (true, lobbyTrainers);
             }
             Log($"Raid #{RaidCount} is starting!");
             return (true, lobbyTrainers);
