@@ -470,14 +470,7 @@ namespace SysBot.Pokemon
                         return true;
                     }
                 }
-                else
-                {
-                    Log("We lost the raid...");
-                    LossCount++;
-                    TemporaryLossCount++; // increment the loss count
-                    Log($"Loss Counter is at {TemporaryLossCount}/3");
-                }
-            }
+                
             
             if (trainers is null)
             {
@@ -508,7 +501,12 @@ namespace SysBot.Pokemon
                     }
                 }
                 await EnqueueEmbed(null, "", false, false, true, token).ConfigureAwait(false);
+                return true;
             }
+            Log("We lost the raid...");
+            LossCount++;
+            TemporaryLossCount++; // increment the loss count
+            Log($"Loss Counter is at {TemporaryLossCount}/3");
 
             return false;
         }
@@ -724,7 +722,7 @@ namespace SysBot.Pokemon
             if (lobbyTrainers.Count == 0)
             {
                 Log("Nobody joined the raid, recovering...");
-                return (true, lobbyTrainers);
+                return (false, lobbyTrainers);
             }
             Log($"Raid #{RaidCount} is starting!");
             return (true, lobbyTrainers);
