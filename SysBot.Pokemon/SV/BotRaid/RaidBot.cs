@@ -55,6 +55,7 @@ namespace SysBot.Pokemon
         private string[] PresetDescription = Array.Empty<string>();
         private string BaseDescription = string.Empty;
         private string[] newDescription;
+        private int TemporaryLossCount = 0;
 
         public override async Task MainLoop(CancellationToken token)
         {
@@ -451,9 +452,10 @@ namespace SysBot.Pokemon
             {
                 Log("Back in the overworld, checking if we won or lost.");
                 Settings.AddCompletedRaids();
-                if (RaidsAtStart > seeds.Count)
+                if (RaidsAtStart > seeds.Count || TemporaryLossCount >= 3) // wins or 3 consecutive losses
                 {
-                    Log("We defeated the raid boss!");
+                    TemporaryLossCount = 0; // reset the loss count
+                    Log("We defeated the raid boss or lost 3 times in a row!");
                     WinCount++;
                     if (trainers.Count > 0 && Settings.CatchLimit != 0 || TodaySeed != BitConverter.ToUInt64(data.Slice(0, 8)) && RaidsAtStart == seeds.Count && Settings.CatchLimit != 0)
                         ApplyPenalty(trainers);
@@ -462,7 +464,13 @@ namespace SysBot.Pokemon
                 {
                     Log("We lost the raid...");
                     LossCount++;
+                    TemporaryLossCount++; // increment the loss count
                 }
+            }
+            else
+            {
+                // No one joined the raid
+                TemporaryLossCount++;
             }
 
             if (RotationCount < Settings.RaidEmbedParameters.Count && Settings.RaidEmbedParameters.Count > 1)
