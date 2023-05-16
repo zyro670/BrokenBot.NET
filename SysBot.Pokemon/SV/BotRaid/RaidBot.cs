@@ -455,14 +455,14 @@ namespace SysBot.Pokemon
                 if (RaidsAtStart > seeds.Count || TemporaryLossCount >= 3) // wins or 3 consecutive losses
                 {
                     TemporaryLossCount = 0; // reset the loss count
-                    Log("We defeated the raid boss or lost 3 times in a row!");
+                    Log("We defeated the raid boss or lost 3 times in a row.");
                     WinCount++;
                     if (trainers.Count > 0 && Settings.CatchLimit != 0 || TodaySeed != BitConverter.ToUInt64(data.Slice(0, 8)) && RaidsAtStart == seeds.Count && Settings.CatchLimit != 0)
                         ApplyPenalty(trainers);
 
-                    if (RotationCount < Settings.RaidEmbedParameters.Count - 1 && Settings.RaidEmbedParameters.Count > 1)
+                    if (RotationCount < Settings.RaidEmbedParameters.Count && Settings.RaidEmbedParameters.Count > 1)
                         RotationCount++;
-                    if (RotationCount >= Settings.RaidEmbedParameters.Count)
+                    if (RotationCount >= Settings.RaidEmbedParameters.Count && Settings.RaidEmbedParameters.Count > 1)
                     {
                         RotationCount = 0;
                         Log($"Resetting Rotation Count to {RotationCount}");
@@ -477,10 +477,9 @@ namespace SysBot.Pokemon
                     TemporaryLossCount++; // increment the loss count
                 }
             }
-            else
-            {
-                // No one joined the raid
-                TemporaryLossCount++;
+            
+            if {!trainers}{
+                TemporaryLossCount++; // increment the loss count
             }
 
             if (rotate && Settings.RaidEmbedParameters.Count > 1)
