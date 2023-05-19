@@ -714,9 +714,9 @@ namespace SysBot.Pokemon.Discord
             };
 
             // Check if there is at least one raid parameter to remove.
-            if (SysCord<T>.Runner.Hub.Config.RaidSV.RaidEmbedParameters.Count > 0)
+            if (SysCord<T>.Runner.Hub.Config.RaidSV.RaidEmbedParameters.Count > 2)
             {
-                SysCord<T>.Runner.Hub.Config.RaidSV.RaidEmbedParameters.RemoveAt(0);
+                SysCord<T>.Runner.Hub.Config.RaidSV.RaidEmbedParameters.RemoveAt(1);
             }
 
             // Add the new raid parameter to the end.
