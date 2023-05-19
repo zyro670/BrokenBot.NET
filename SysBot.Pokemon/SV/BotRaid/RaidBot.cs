@@ -472,7 +472,7 @@ namespace SysBot.Pokemon
                 }
 
 
-                if (rotate && Settings.RaidEmbedParameters.Count > 1 || TemporaryLossCount >= 3))
+                if (rotate && Settings.RaidEmbedParameters.Count > 1 || TemporaryLossCount >= 3)
                 {
                     TemporaryLossCount = 0; // reset the loss count
                     Log($"Replacing seed at location {SeedIndexToReplace}.");
@@ -503,11 +503,17 @@ namespace SysBot.Pokemon
                 Log($"Loss Counter is at {TemporaryLossCount}/3");
             }
             
+
+
             if (trainers is null)
             {
+                if (TemporaryLossCount >= 3){
+                    return true;
+                } else {
                 TemporaryLossCount++; // increment the loss count
                 Log($"No one joined Loss Counter is at {TemporaryLossCount}/3");
                 return false;
+                }
             }
 
             return false;
