@@ -509,6 +509,7 @@ namespace SysBot.Pokemon
             {
                 if (TemporaryLossCount >= 3){
                     Log($"Loss Counter is past 3, attempting to move on");
+                    TemporaryLossCount = 0; // reset the loss count
                     return true;
                 } else {
                 TemporaryLossCount++; // increment the loss count
