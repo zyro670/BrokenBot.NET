@@ -452,11 +452,11 @@ namespace SysBot.Pokemon
             {
                 Log("Back in the overworld, checking if we won or lost.");
                 Settings.AddCompletedRaids();
-                if (RaidsAtStart > seeds.Count || TemporaryLossCount >= 3) // wins or 3 consecutive losses
+                if (RaidsAtStart > seeds.Count)
                 {
-                    TemporaryLossCount = 0; // reset the loss count
-                    Log("We defeated the raid boss or lost 3 times in a row.");
+                    Log("We defeated the raid boss!");
                     WinCount++;
+                    TemporaryLossCount = 0; // reset the loss count
                     if (trainers.Count > 0 && Settings.CatchLimit != 0 || TodaySeed != BitConverter.ToUInt64(data.Slice(0, 8)) && RaidsAtStart == seeds.Count && Settings.CatchLimit != 0)
                         ApplyPenalty(trainers);
 
@@ -469,46 +469,48 @@ namespace SysBot.Pokemon
                         await EnqueueEmbed(null, "", false, false, true, token).ConfigureAwait(false);
                         return true;
                     }
-                }
 
-
-                if (rotate && Settings.RaidEmbedParameters.Count > 1 || TemporaryLossCount >= 3)
-                {
-                    Log($"Replacing seed at location {SeedIndexToReplace}.");
-                    Log($"Next raid in the list: {Settings.RaidEmbedParameters[RotationCount].Species}.");
-                    if (Settings.RaidEmbedParameters[RotationCount].ActiveInRotation == false && RotationCount < Settings.RaidEmbedParameters.Count)
+                    if (rotate && Settings.RaidEmbedParameters.Count > 1)
                     {
-                        Log($"{Settings.RaidEmbedParameters[RotationCount].Species} is disabled. Moving to next active raid in rotation.");
-                        for (int i = RotationCount; i < Settings.RaidEmbedParameters.Count; i++)
+                        Log($"Replacing seed at location {SeedIndexToReplace}.");
+                        Log($"Next raid in the list: {Settings.RaidEmbedParameters[RotationCount].Species}.");
+                        if (Settings.RaidEmbedParameters[RotationCount].ActiveInRotation == false && RotationCount <= Settings.RaidEmbedParameters.Count)
                         {
-                            if (Settings.RaidEmbedParameters[i].ActiveInRotation == true || i == Settings.RaidEmbedParameters.Count - 1)
+                            Log($"{Settings.RaidEmbedParameters[RotationCount].Species} is disabled. Moving to next active raid in rotation.");
+                            for (int i = RotationCount; i <= Settings.RaidEmbedParameters.Count; i++)
                             {
-                                RotationCount = i;
-                                break;
+                                RotationCount++;
+                                if (Settings.RaidEmbedParameters[RotationCount].ActiveInRotation == true || RotationCount >= Settings.RaidEmbedParameters.Count)
+                                    break;
+                            }
+                            if (RotationCount >= Settings.RaidEmbedParameters.Count)
+                            {
+                                RotationCount = 0;
+                                Log($"Resetting Rotation Count to {RotationCount}");
                             }
                         }
-                        if (RotationCount >= Settings.RaidEmbedParameters.Count)
-                        {
-                            RotationCount = 0;
-                            Log($"Resetting Rotation Count to {RotationCount}");
-                        }
+                        await EnqueueEmbed(null, "", false, false, true, token).ConfigureAwait(false);
+                        return true;
                     }
-                    await EnqueueEmbed(null, "", false, false, true, token).ConfigureAwait(false);
-                    TemporaryLossCount = 0; // reset the loss count
-                    return true;
                 }
-                Log("We lost the raid...");
-                LossCount++;
-                TemporaryLossCount++; // increment the loss count
-                Log($"Loss Counter is at {TemporaryLossCount}/3");
-            }
-            
-
-
-            if (trainers is null)
+                else
+                {
+                    Log("We lost the raid...");
+                    LossCount++;
+                    TemporaryLossCount++; // increment the loss count
+                    if (TemporaryLossCount >= 3)
+                    {
+                        Log("We lost 3 times in a row");
+                        TemporaryLossCount = 0; // reset the loss count
+                        return true;
+                    }
+                }
+            } 
+            else 
             {
                 if (TemporaryLossCount >= 3){
                     Log($"Loss Counter is past 3, attempting to move on");
+                    RotationCount++;
                     TemporaryLossCount = 0; // reset the loss count
                     return true;
                 } else {
