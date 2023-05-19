@@ -663,15 +663,48 @@ namespace SysBot.Pokemon.Discord
         public async Task ReplaceRaidParam([Summary("Seed")] string seed, [Summary("Content Type")] string content)
         {
             int type = int.Parse(content);
-
-            var description = string.Empty;
             var title = string.Empty;
             var data = string.Empty;
 
             RaidSettingsSV.RaidParameters newparam = new()
             {
                 CrystalType = (RaidSettingsSV.TeraCrystalType)type,                
-                Description = new[] { description },
+                Description = new string[0],
+                PartyPK = new[] { data },
+                Species = 0,
+                SpeciesForm = 0,
+                Seed = seed,
+                IsCoded = true,
+                Title = title,
+            };
+
+            // Check if there is at least one raid parameter to remove.
+            if (SysCord<T>.Runner.Hub.Config.RaidSV.RaidEmbedParameters.Count > 0)
+            {
+                SysCord<T>.Runner.Hub.Config.RaidSV.RaidEmbedParameters.RemoveAt(0);
+            }
+
+            // Add the new raid parameter to the end.
+            SysCord<T>.Runner.Hub.Config.RaidSV.RaidEmbedParameters.Add(newparam);
+
+            var msg = $"The raids has been updated, please remember to update the list command!";
+            await ReplyAsync(msg).ConfigureAwait(false);
+        }
+
+        [Command("eventReplaceRaidParams")]  
+        [Alias("errp")]
+        [Summary("Skips replacing the first raid in line, adding on the new one at the end.")]
+        [RequireSudo]
+        public async Task ReplaceRaidParam([Summary("Seed")] string seed, [Summary("Content Type")] string content)
+        {
+            int type = int.Parse(content);
+            var title = string.Empty;
+            var data = string.Empty;
+
+            RaidSettingsSV.RaidParameters newparam = new()
+            {
+                CrystalType = (RaidSettingsSV.TeraCrystalType)type,                
+                Description = new string[0],
                 PartyPK = new[] { data },
                 Species = 0,
                 SpeciesForm = 0,
@@ -700,12 +733,6 @@ namespace SysBot.Pokemon.Discord
         public async Task AddNewRaidParam([Summary("Seed")] string seed, [Summary("Species Type")] string species, [Summary("Content Type")] string content)
         {
             int type = int.Parse(content);
-
-            var description = string.Empty;
-            var filepath = "bodyparam.txt";
-            if (File.Exists(filepath))
-                description = File.ReadAllText(filepath);
-
             var data = string.Empty;
             var pkpath = "pkparam.txt";
             if (File.Exists(pkpath))
@@ -721,7 +748,7 @@ namespace SysBot.Pokemon.Discord
             RaidSettingsSV.RaidParameters newparam = new()
             {
                 CrystalType = (RaidSettingsSV.TeraCrystalType)type,                
-                Description = new[] { description },
+                Description = new string[0],
                 PartyPK = new[] { data },
                 Species = parse,
                 SpeciesForm = 0,
