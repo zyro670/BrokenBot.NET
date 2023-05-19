@@ -695,7 +695,7 @@ namespace SysBot.Pokemon.Discord
         [Alias("errp")]
         [Summary("Skips replacing the first raid in line, adding on the new one at the end.")]
         [RequireSudo]
-        public async Task ReplaceRaidParam([Summary("Seed")] string seed, [Summary("Content Type")] string content)
+        public async Task EventReplaceRaidParam([Summary("Seed")] string seed, [Summary("Content Type")] string content)
         {
             int type = int.Parse(content);
             var title = string.Empty;
