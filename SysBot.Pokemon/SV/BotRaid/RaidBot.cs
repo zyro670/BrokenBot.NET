@@ -474,7 +474,6 @@ namespace SysBot.Pokemon
 
                 if (rotate && Settings.RaidEmbedParameters.Count > 1 || TemporaryLossCount >= 3)
                 {
-                    TemporaryLossCount = 0; // reset the loss count
                     Log($"Replacing seed at location {SeedIndexToReplace}.");
                     Log($"Next raid in the list: {Settings.RaidEmbedParameters[RotationCount].Species}.");
                     if (Settings.RaidEmbedParameters[RotationCount].ActiveInRotation == false && RotationCount < Settings.RaidEmbedParameters.Count)
@@ -495,6 +494,7 @@ namespace SysBot.Pokemon
                         }
                     }
                     await EnqueueEmbed(null, "", false, false, true, token).ConfigureAwait(false);
+                    TemporaryLossCount = 0; // reset the loss count
                     return true;
                 }
                 Log("We lost the raid...");
@@ -508,6 +508,7 @@ namespace SysBot.Pokemon
             if (trainers is null)
             {
                 if (TemporaryLossCount >= 3){
+                    Log($"Loss Counter is past 3, attempting to move on");
                     return true;
                 } else {
                 TemporaryLossCount++; // increment the loss count
