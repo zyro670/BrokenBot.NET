@@ -499,7 +499,7 @@ namespace SysBot.Pokemon
                     if (TemporaryLossCount >= 3)
                     {
                         Log($"Loss Counter is past 3, attempting to move on");
-                        LossCount++
+                        LossCount++;
                         TemporaryLossCount = 0; // reset the loss count
                         RotationCount++;
                         if (RotationCount >= Settings.RaidEmbedParameters.Count)
@@ -513,7 +513,7 @@ namespace SysBot.Pokemon
                     {
                         TemporaryLossCount++; // increment the loss count
                         Log($"We lost the raid... Loss Counter is at {TemporaryLossCount}/3");
-                        LossCount++
+                        LossCount++;
                         return false;
                     }
                 } 
