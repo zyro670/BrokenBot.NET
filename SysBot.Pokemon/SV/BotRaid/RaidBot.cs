@@ -279,7 +279,7 @@ namespace SysBot.Pokemon
                 // Check if TemporaryLossCount is 3 and restart the game
                 if (TemporaryLossCount - 1 == 3)
                 {
-                    await RestartGameAfterLosses(Hub.Config, token).ConfigureAwait(false);
+                    await RestartGameAfterLosses(token).ConfigureAwait(false);
                     Log($"Temporary loss count reached 3. Restarting the game and moving to the next rotation.");
                     continue;
                 }
