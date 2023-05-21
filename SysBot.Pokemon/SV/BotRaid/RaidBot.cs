@@ -387,6 +387,7 @@ namespace SysBot.Pokemon
         private async Task RestartGameAfterLosses(CancellationToken token)
         {
                 RotationCount++;
+                TemporaryLossCount = 0;
                 if (RotationCount >= Settings.RaidEmbedParameters.Count)
                 {
                     RotationCount = 0;
@@ -1190,19 +1191,29 @@ namespace SysBot.Pokemon
 
                             (string[] raidDescription, string raidTitle) = Hub.Config.StopConditions.processRaidPlaceholders(newDescription, pk);
 
+                            // Reduce multiple spaces to a single space in raid descriptions
+                            for (int j = 0; j < raidDescription.Length; j++)
+                            {
+                                raidDescription[j] = Regex.Replace(raidDescription[j], @"\s+", " ").Trim();
+                            }
+
+                            // Reduce multiple spaces to a single space in raid title
+                            raidTitle = Regex.Replace(raidTitle, @"\s+", " ").Trim();
+
+                            // Replace placeholders with variables
                             for (int j = 0; j < raidDescription.Length; j++)
                             {
                                 raidDescription[j] = raidDescription[j]
-                                .Replace("{tera}", tera)
-                                .Replace("{difficulty}", $"{stars}")
-                                .Replace("{stars}", starcount) // Replace placeholder with Variable
-                                .Trim();
+                                    .Replace("{tera}", tera)
+                                    .Replace("{difficulty}", $"{stars}")
+                                    .Replace("{stars}", starcount)
+                                    .Trim();
                             }
-                            
+
                             raidTitle = raidTitle
                                 .Replace("{tera}", tera)
                                 .Replace("{difficulty}", $"{stars}")
-                                .Replace("{stars}", starcount) // Replace placeholder with Variable
+                                .Replace("{stars}", starcount)
                                 .Trim();
 
                             Settings.RaidEmbedParameters[a].Title = raidTitle;
