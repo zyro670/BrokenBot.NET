@@ -521,13 +521,13 @@ namespace SysBot.Pokemon
                 LossCount++;
                 if (TemporaryLossCount-1 >= 3){
                     TemporaryLossCount = 0;
-                    RotationCount++
+                    RotationCount++;
                     if (RotationCount >= Settings.RaidEmbedParameters.Count)
                     {
                         RotationCount = 0;
                         Log($"Resetting Rotation Count to {RotationCount}");                        
                     }
-                    Log("Attempting to move on to next raid...")
+                    Log("Attempting to move on to next raid...");
                     return true;
                 }
             }
