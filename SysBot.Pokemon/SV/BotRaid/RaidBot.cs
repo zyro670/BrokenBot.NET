@@ -496,17 +496,18 @@ namespace SysBot.Pokemon
                 }
                 else
                 {
-                    if (TemporaryLossCount >= 3)
+                    if (TemporaryLossCount-1 >= 3)
                     {
                         Log($"Loss Counter is past 3, attempting to move on");
                         LossCount++;
-                        TemporaryLossCount = 0; // reset the loss count
+                        TemporaryLossCount-1 = 0; // reset the loss count
                         RotationCount++;
                         if (RotationCount >= Settings.RaidEmbedParameters.Count)
                         {
                             RotationCount = 0;
                             Log($"Resetting Rotation Count to {RotationCount}");
                         }
+                        await EnqueueEmbed(null, "", false, false, true, token).ConfigureAwait(false);
                         return true;
                     } 
                     else 
@@ -520,7 +521,7 @@ namespace SysBot.Pokemon
             }
             else 
             {
-                if (TemporaryLossCount >= 3)
+                if (TemporaryLossCount-1 >= 3)
                 {
                     Log($"Loss Counter is past 3, attempting to move on");
                     TemporaryLossCount = 0; // reset the loss count
@@ -530,6 +531,7 @@ namespace SysBot.Pokemon
                         RotationCount = 0;
                         Log($"Resetting Rotation Count to {RotationCount}");
                     }
+                    await EnqueueEmbed(null, "", false, false, true, token).ConfigureAwait(false);
                     return true;
                 } 
                 else 
