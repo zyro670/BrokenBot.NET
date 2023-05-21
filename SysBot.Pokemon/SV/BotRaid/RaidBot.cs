@@ -384,7 +384,7 @@ namespace SysBot.Pokemon
                 OverrideTodaySeed();
         }
 
-        private async Task RestartGameAfterLosses(CancellationToken token)
+        private async Task RestartGameAfterLosses(List<(ulong, TradeMyStatus)> trainers, CancellationToken token)
         {
                 RotationCount++;
                  if (RotationCount >= Settings.RaidEmbedParameters.Count)
