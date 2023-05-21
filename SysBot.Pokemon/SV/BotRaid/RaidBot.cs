@@ -387,7 +387,7 @@ namespace SysBot.Pokemon
         private async Task RestartGameAfterLosses(CancellationToken token)
         {
                 RotationCount++;
-                 if (RotationCount >= Settings.RaidEmbedParameters.Count)
+                if (RotationCount >= Settings.RaidEmbedParameters.Count)
                 {
                     RotationCount = 0;
                     Log($"Resetting Rotation Count to {RotationCount}");                        
@@ -521,6 +521,13 @@ namespace SysBot.Pokemon
                 LossCount++;
                 if (TemporaryLossCount-1 >= 3){
                     TemporaryLossCount = 0;
+                    RotationCount++
+                    if (RotationCount >= Settings.RaidEmbedParameters.Count)
+                    {
+                        RotationCount = 0;
+                        Log($"Resetting Rotation Count to {RotationCount}");                        
+                    }
+                    Log("Attempting to move on to next raid...")
                     return true;
                 }
             }
