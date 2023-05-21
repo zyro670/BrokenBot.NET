@@ -10,11 +10,13 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using static SysBot.Base.SwitchButton;
 using static SysBot.Pokemon.RaidSettingsSV;
 using RaidCrawler.Core.Structures;
+
 
 namespace SysBot.Pokemon
 {
