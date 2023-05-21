@@ -275,9 +275,19 @@ namespace SysBot.Pokemon
                     }
                     continue;
                 }
+
+                // Check if TemporaryLossCount is 3 and restart the game
+                if (TemporaryLossCount - 1 == 3)
+                {
+                    await RestartGameAfterLosses(Hub.Config, token).ConfigureAwait(false);
+                    Log($"Temporary loss count reached 3. Restarting the game and moving to the next rotation.");
+                    continue;
+                }
+
                 await CompleteRaid(lobbyTrainers, token).ConfigureAwait(false);
             }
         }
+
 
         public override async Task HardStop()
         {
@@ -374,6 +384,19 @@ namespace SysBot.Pokemon
                 OverrideTodaySeed();
         }
 
+        private async Task RestartGameAfterLosses(CancellationToken token)
+        {
+                RotationCount++
+                 if (RotationCount >= Settings.RaidEmbedParameters.Count)
+                {
+                    RotationCount = 0;
+                    Log($"Resetting Rotation Count to {RotationCount}");                        
+                }
+                Log("Temporary loss count has reached 3, closing the game to move on.");     
+                await CloseGame(Hub.Config, token).ConfigureAwait(false);
+                await StartGameRaid(Hub.Config, token).ConfigureAwait(false);
+        }
+
         private void ApplyPenalty(List<(ulong, TradeMyStatus)> trainers)
         {
             for (int i = 0; i < trainers.Count; i++)
@@ -425,9 +448,6 @@ namespace SysBot.Pokemon
 
         private async Task<bool> CountRaids(List<(ulong, TradeMyStatus)>? trainers, bool rotate, CancellationToken token)
         {
-            if (RotationCount > Settings.RaidEmbedParameters.Count){
-                RotationCount = 0;
-            }
             List<uint> seeds = new();
             var data = await SwitchConnection.ReadBytesAbsoluteAsync(TeraRaidBlockOffset, 2304, token).ConfigureAwait(false);
             for (int i = 0; i < 69; i++)
@@ -459,7 +479,7 @@ namespace SysBot.Pokemon
                 {
                     Log("We defeated the raid boss!");
                     WinCount++;
-                    TemporaryLossCount = 0; // reset the loss count
+                    TemporaryLossCount = 0;
                     if (trainers.Count > 0 && Settings.CatchLimit != 0 || TodaySeed != BitConverter.ToUInt64(data.Slice(0, 8)) && RaidsAtStart == seeds.Count && Settings.CatchLimit != 0)
                         ApplyPenalty(trainers);
 
@@ -477,76 +497,36 @@ namespace SysBot.Pokemon
                     {
                         Log($"Replacing seed at location {SeedIndexToReplace}.");
                         Log($"Next raid in the list: {Settings.RaidEmbedParameters[RotationCount].Species}.");
-                        if (Settings.RaidEmbedParameters[RotationCount].ActiveInRotation == false && RotationCount < Settings.RaidEmbedParameters.Count)
+                        if (Settings.RaidEmbedParameters[RotationCount].ActiveInRotation == false && RotationCount <= Settings.RaidEmbedParameters.Count)
                         {
                             Log($"{Settings.RaidEmbedParameters[RotationCount].Species} is disabled. Moving to next active raid in rotation.");
-                            RotationCount++;
-                            while (RotationCount < Settings.RaidEmbedParameters.Count && Settings.RaidEmbedParameters[RotationCount].ActiveInRotation == false)
+                            for (int i = RotationCount; i <= Settings.RaidEmbedParameters.Count; i++)
+                            {
                                 RotationCount++;
-                                
+                                if (Settings.RaidEmbedParameters[RotationCount].ActiveInRotation == true || RotationCount >= Settings.RaidEmbedParameters.Count)
+                                    break;
+                            }
                             if (RotationCount >= Settings.RaidEmbedParameters.Count)
                             {
                                 RotationCount = 0;
                                 Log($"Resetting Rotation Count to {RotationCount}");
                             }
                         }
-                        await EnqueueEmbed(null, "", false, false, true, token).ConfigureAwait(false);
-                        return true;
-                    }
-                }
-                else
-                {
-                    if (TemporaryLossCount-1 >= 3)
-                    {
-                        Log($"Loss Counter is past 3, attempting to move on");
-                        LossCount++;
-                        TemporaryLossCount-1 = 0; // reset the loss count
-                        RotationCount++;
-                        if (RotationCount >= Settings.RaidEmbedParameters.Count)
-                        {
-                            RotationCount = 0;
-                            Log($"Resetting Rotation Count to {RotationCount}");
-                        }
-                        await EnqueueEmbed(null, "", false, false, true, token).ConfigureAwait(false);
-                        return true;
-                    } 
-                    else 
-                    {
-                        TemporaryLossCount++; // increment the loss count
-                        Log($"We lost the raid... Loss Counter is at {TemporaryLossCount}/3");
-                        LossCount++;
-                        return false;
-                    }
-                } 
-            }
-            else 
-            {
-                if (TemporaryLossCount-1 >= 3)
-                {
-                    Log($"Loss Counter is past 3, attempting to move on");
-                    TemporaryLossCount = 0; // reset the loss count
-                    RotationCount++;
-                    if (RotationCount >= Settings.RaidEmbedParameters.Count)
-                    {
-                        RotationCount = 0;
-                        Log($"Resetting Rotation Count to {RotationCount}");
                     }
                     await EnqueueEmbed(null, "", false, false, true, token).ConfigureAwait(false);
                     return true;
-                } 
-                else 
-                {
-                    TemporaryLossCount++; // increment the loss count
-                    Log($"No one joined Loss Counter is at {TemporaryLossCount}/3");
-                    return false;
                 }
+                TemporaryLossCount++;
+                Log($"We lost the raid... Loss Count: {TemporaryLossCount-1}/3");
+                LossCount++;
+            }
+            else
+            {
+                TemporaryLossCount++;
+                Log($"No one joined the Lobby... Loss Count: {TemporaryLossCount-1}/3");
             }
             return false;
         }
-
-
-
-
 
         private async void InjectPartyPk(string battlepk)
         {
