@@ -386,7 +386,7 @@ namespace SysBot.Pokemon
 
         private async Task RestartGameAfterLosses(CancellationToken token)
         {
-                RotationCount++
+                RotationCount++;
                  if (RotationCount >= Settings.RaidEmbedParameters.Count)
                 {
                     RotationCount = 0;
