@@ -274,15 +274,14 @@ namespace SysBot.Pokemon
                         await SwitchConnection.PointerPoke(new byte[16], ptr, token).ConfigureAwait(false);
                     }
 
+                // Check if TemporaryLossCount is 3 and restart the game
                     if (TemporaryLossCount - 1 >= 3)
                     {
                         await RestartGameAfterLosses(token).ConfigureAwait(false);
-                        Log($"Temporary loss count reached 3. Restarting the game and moving to the next rotation.");
                     }
                     continue;
                 }
 
-                // Check if TemporaryLossCount is 3 and restart the game
 
 
                 await CompleteRaid(lobbyTrainers, token).ConfigureAwait(false);
@@ -520,6 +519,10 @@ namespace SysBot.Pokemon
                 TemporaryLossCount++;
                 Log($"We lost the raid... Loss Count: {TemporaryLossCount-1}/3");
                 LossCount++;
+                if (TemporaryLossCount-1 >= 3){
+                    TemporaryLossCount = 0;
+                    return true;
+                }
             }
             else
             {
