@@ -279,7 +279,7 @@ namespace SysBot.Pokemon
             string ability = $"{(Ability)pk.Ability}";
             string IVText = "";
 
-            if  (pk.IV_ATK == 31 && pk.IV_DEF == 31 && pk.IV_SPA == 31 && pk.IV_SPD == 31 && pk.IV_SPE == 31)
+            if  (pk.IV_HP == 31 && pk.IV_ATK == 31 && pk.IV_DEF == 31 && pk.IV_SPA == 31 && pk.IV_SPD == 31 && pk.IV_SPE == 31)
             {
                 IVText = "6IV";
             }
