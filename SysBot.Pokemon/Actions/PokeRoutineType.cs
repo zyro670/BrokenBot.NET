@@ -48,11 +48,14 @@
         /// <summary> Retrieves eggs from the Day Care, but faster (with a mod). </summary>
         EggFetchV2 = 5000,
 
-        /// <summary> Monitors captures, clears B1S1 when not matching stop condition and uses 100% catch cheat. </summary>
+        /// <summary> Monitors captures, clears B1S1 when not matching stop condition and (optionally) uses 100% catch cheat. </summary>
         EncounterCapture = 5001,
 
-        /// <summary> Catches Ruinous until the criteria is satisfied, using 100% catch cheat.  </summary>
+        /// <summary> Catches Ruinous until the criteria is satisfied, (optionally) using 100% catch cheat.  </summary>
         EncounterRuinous = 5002,
+
+        /// <summary> Catches Gimmighoul until the criteria is satisfied, (optionally) using 100% catch cheat.  </summary>
+        EncounterGimmighoul = 5003,
 
         /// <summary> Searches, injects, or skips to den seeds. </summary>
         DenBot = 6001,
