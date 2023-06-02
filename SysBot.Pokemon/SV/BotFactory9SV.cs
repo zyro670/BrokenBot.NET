@@ -1,4 +1,5 @@
 ﻿using PKHeX.Core;
+using SysBot.Pokemon.SV.BotEncounter;
 using System;
 
 namespace SysBot.Pokemon
@@ -17,6 +18,7 @@ namespace SysBot.Pokemon
             PokeRoutineType.EggFetchV2 => new EggBotSVV2(cfg, Hub),
             PokeRoutineType.EncounterCapture => new EncounterCaptureSV(cfg, Hub),
             PokeRoutineType.EncounterRuinous => new EncounterRuinousSV(cfg, Hub),
+            PokeRoutineType.EncounterGimmighoul => new EncounterGimmighoulSV(cfg, Hub),
             PokeRoutineType.RaidBot => new RaidSV(cfg, Hub),
             PokeRoutineType.RemoteControl => new RemoteControlBotSV(cfg),
             _ => throw new ArgumentException(nameof(cfg.NextRoutineType)),
@@ -34,6 +36,7 @@ namespace SysBot.Pokemon
             PokeRoutineType.EggFetchV2 => true,
             PokeRoutineType.EncounterCapture => true,
             PokeRoutineType.EncounterRuinous => true,
+            PokeRoutineType.EncounterGimmighoul => true,
             PokeRoutineType.RaidBot => true,
             PokeRoutineType.RemoteControl => true,
 

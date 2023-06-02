@@ -1,8 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 using static SysBot.Base.SwitchOffsetType;
 
 namespace SysBot.Base
@@ -65,6 +66,26 @@ namespace SysBot.Base
                 byte[] baseBytes = ReadBulkUSB();
                 return BitConverter.ToUInt64(baseBytes, 0).ToString("X16").Trim();
 
+            }, token);
+        }
+
+        public Task<string> GetBotbaseVersion(CancellationToken token)
+        {
+            return Task.Run(() =>
+            {
+                Send(SwitchCommand.GetBotbaseVersion(false));
+                byte[] baseBytes = ReadBulkUSB();
+                return Encoding.UTF8.GetString(baseBytes).Trim('\0');
+            }, token);
+        }
+
+        public Task<string> GetGameInfo(string info, CancellationToken token)
+        {
+            return Task.Run(() =>
+            {
+                Send(SwitchCommand.GetGameInfo(info, false));
+                byte[] baseBytes = ReadBulkUSB();
+                return Encoding.UTF8.GetString(baseBytes).Trim('\0');
             }, token);
         }
 

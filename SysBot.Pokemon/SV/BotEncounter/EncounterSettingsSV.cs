@@ -24,6 +24,7 @@ namespace SysBot.Pokemon
 
         private int _completedWild;
         private int _completedLegend;
+        private int _completedGimmighoul;
 
         [Category(Counts), Description("Encountered Wild Pokémon")]
         public int CompletedEncounters
@@ -39,11 +40,19 @@ namespace SysBot.Pokemon
             set => _completedLegend = value;
         }
 
+        [Category(Counts), Description("Encountered Gimmighoul Pokémon")]
+        public int CompletedGimmighouls
+        {
+            get => _completedGimmighoul;
+            set => _completedGimmighoul = value;
+        }
+
         [Category(Counts), Description("When enabled, the counts will be emitted when a status check is requested.")]
         public bool EmitCountsOnStatusCheck { get; set; }
 
         public int AddCompletedEncounters() => Interlocked.Increment(ref _completedWild);
         public int AddCompletedLegends() => Interlocked.Increment(ref _completedLegend);
+        public int AddCompletedGimmighouls() => Interlocked.Increment(ref _completedLegend);
 
         public IEnumerable<string> GetNonZeroCounts()
         {
@@ -53,6 +62,8 @@ namespace SysBot.Pokemon
                 yield return $"Wild Encounters: {CompletedEncounters}";
             if (CompletedLegends != 0)
                 yield return $"Legendary Encounters: {CompletedLegends}";
+            if (CompletedGimmighouls != 0)
+                yield return $"Gimmighoul Encounters: {CompletedGimmighouls}";
         }
     }
 }
