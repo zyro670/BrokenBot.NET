@@ -1664,16 +1664,19 @@ namespace SysBot.Pokemon
                     pk.Species = (ushort)Species.Phione;
                 pk.EncryptionConstant = gen.EC;
                 pk.PID = gen.PID;
-                int[] pkIVList = gen.IVs;
-                pk.IVs = pkIVList;
-                pk.Nature = (int)gen.nature;
-                Log($"\n{(Species)pk.Species}\nEC: {pk.EncryptionConstant:X8}\nPID: {pk.PID:X8}\nIVs: {string.Join("/", pk.IVs)}\nNature: {(Nature)pk.Nature}\nGenerator Seed: {generator_seed:X16}");
-
+                pk.IV_HP = gen.IVs[0];
+                pk.IV_ATK = gen.IVs[1];
+                pk.IV_DEF = gen.IVs[2];
+                pk.IV_SPA = gen.IVs[3];
+                pk.IV_SPD = gen.IVs[4];
+                pk.IV_SPE = gen.IVs[5];
+                pk.Nature = (int)gen.nature;               
                 if (StopConditionSettings.EncounterFound(pk, DesiredMinIVs, DesiredMaxIVs, Hub.Config.StopConditions, null))
                 {
                     Settings.AlphaScanConditions.StopOnMatch = true;
                     EmbedMons.Add((pk, true));
                 }
+                Log($"\n{(Species)pk.Species}\nEC: {pk.EncryptionConstant:X8}\nPID: {pk.PID:X8}\nIVs: {pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}\nNature: {(Nature)pk.Nature}\nGenerator Seed: {generator_seed:X16}");
             }
         }
 
@@ -1716,21 +1719,23 @@ namespace SysBot.Pokemon
                     pk.Species = (ushort)geniename;
                     pk.EncryptionConstant = gen.EC;
                     pk.PID = gen.PID;
-
-                    int[] pkIVList = gen.IVs;
-                    // Reorder the speed to be last.
-                    (pkIVList[5], pkIVList[3], pkIVList[4]) = (pkIVList[3], pkIVList[4], pkIVList[5]);
-
-                    pk.IVs = pkIVList;
-                    pk.Nature = (int)gen.nature;
-                    Log($"\nAdvance: {i} - {geniename}\nEC: {pk.EncryptionConstant:X8}\nPID: {pk.PID:X8}\nIVs: {string.Join("/", pk.IVs)}\nNature: {(Nature)pk.Nature}\nGenerator Seed: {generator_seed:X16}");
-
+                    pk.IV_HP = gen.IVs[0];
+                    pk.IV_ATK = gen.IVs[1];
+                    pk.IV_DEF = gen.IVs[2];
+                    pk.IV_SPA = gen.IVs[3];
+                    pk.IV_SPD = gen.IVs[4];
+                    pk.IV_SPE = gen.IVs[5];
+                    pk.Nature = (int)gen.nature;      
+                    
                     if (StopConditionSettings.EncounterFound(pk, DesiredMinIVs, DesiredMaxIVs, Hub.Config.StopConditions, null))
                     {
+                        Log($"\nAdvance: {i} - {geniename}\nEC: {pk.EncryptionConstant:X8}\nPID: {pk.PID:X8}\nIVs: {pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}\nNature: {(Nature)pk.Nature}\nGenerator Seed: {generator_seed:X16}");
                         Settings.AlphaScanConditions.StopOnMatch = true;
                         EmbedMons.Add((pk, true));
                         return (newseed, pk);
                     }
+                    Log($"\nAdvance: {i} - {geniename}\nEC: {pk.EncryptionConstant:X8}\nPID: {pk.PID:X8}\nIVs: {pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}\nNature: {(Nature)pk.Nature}\nGenerator Seed: {generator_seed:X16}");
+
                     mainrng = new Xoroshiro128Plus(mainrng.Next());
                 }
 
