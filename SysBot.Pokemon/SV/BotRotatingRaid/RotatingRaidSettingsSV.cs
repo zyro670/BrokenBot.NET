@@ -12,19 +12,22 @@ namespace SysBot.Pokemon
         private const string Hosting = nameof(Hosting);
         private const string Counts = nameof(Counts);
         private const string FeatureToggle = nameof(FeatureToggle);
-        public override string ToString() => "RaidBotSV Settings";
+        public override string ToString() => "RotatingRaidBotSV Settings";
 
         [Category(FeatureToggle), Description("URL to Pokémon Automation's Tera Ban List json (or one matching the required structure).")]
-        public string BanListURL { get; set; } = "https://raw.githubusercontent.com/PokemonAutomation/ServerConfigs-PA-SHA/main/PokemonScarletViolet/TeraAutoHost-BanList.json";
+        public string BanListURL { get; set; } = "https://raw.githubusercontent.com/lGodHatesMel/SysBot.PokemonScarletViolet/main/Resources/RaidSysBotUserBanlist.JSON";
 
         [Category(Hosting), Description("Amount of raids before updating the ban list. If you want the global ban list off, set this to -1.")]
         public int RaidsBetweenUpdate { get; set; } = 3;
 
-        [Category(Hosting), Description("If true, the bot will notify you if you are not on the latest azure-build of NotForkBot.")]
-        public bool CheckForUpdatedBuild { get; set; } = true;
-
         [Category(Hosting), Description("If true, the bot will attempt to auto-generate Raid Parameters from the \"raidsv.txt\" file on botstart.")]
-        public bool GenerateParametersFromFile { get; set; } = true;
+        public bool GenerateParametersFromFile { get; set; } = false;
+
+        [Category(FeatureToggle), Description("If true, the bot will hide the raid code in the embed.")]
+        public bool HideRaidCode { get; set; } = true;
+
+        [Category(FeatureToggle), Description("If using The `HideRaidCode` Option then add your stream Link URL Here.")]
+        public string RaidStreamLink { get; set; } = "https://www.twitch.tv/lgodhatesmel";
 
         [Category(Hosting), Description("RotatingRaid Preset Filters"), DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
         public RotatingRaidPresetFiltersCategory PresetFilters { get; set; } = new();
@@ -36,19 +39,19 @@ namespace SysBot.Pokemon
         public int CatchLimit { get; set; } = 0;
 
         [Category(Hosting), Description("Minimum amount of seconds to wait before starting a raid.")]
-        public int TimeToWait { get; set; } = 90;
+        public int TimeToWait { get; set; } = 110;
 
         [Category(Hosting), Description("Lobby Options"), DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
         public LobbyFiltersCategory LobbyOptions { get; set; } = new();
 
         [Category(FeatureToggle), Description("If true, the bot will attempt take screenshots for the Raid Embeds. If you experience crashes often about \"Size/Parameter\" try setting this to false.")]
-        public bool TakeScreenshot { get; set; } = true;
+        public bool TakeScreenshot { get; set; } = false;
 
         [Category(Hosting), Description("Users NIDs here are banned raiders.")]
         public RemoteControlAccessList RaiderBanList { get; set; } = new() { AllowIfEmpty = false };
 
         [Category(Hosting), Description("When enabled, the bot will restore current day seed to tomorrow's day seed.")]
-        public bool KeepDaySeed { get; set; } = false;
+        public bool KeepDaySeed { get; set; } = true;
 
         [Category(FeatureToggle), Description("Set your Switch Date/Time format in the Date/Time settings. The day will automatically rollback by 1 if the Date changes.")]
         public DTFormat DateTimeFormat { get; set; } = DTFormat.MMDDYY;
@@ -102,7 +105,7 @@ namespace SysBot.Pokemon
             public Species Species { get; set; } = Species.None;
             public int SpeciesForm { get; set; } = 0;
             public string[] PartyPK { get; set; } = Array.Empty<string>();
-            public bool SpriteAlternateArt { get; set; } = false;
+            public bool SpriteAlternateArt { get; set; } = true;
             public string Seed { get; set; } = "0";
             public string Title { get; set; } = string.Empty;
         }
@@ -114,22 +117,22 @@ namespace SysBot.Pokemon
             public override string ToString() => "Preset filters.";
 
             [Category(Hosting), Description("If true, the bot will attempt to auto-generate Raid Embeds based on the \"preset.txt\" file.")]
-            public bool UsePresetFile { get; set; } = true;
+            public bool UsePresetFile { get; set; } = false;
 
             [Category(Hosting), Description("If true, the bot will use the first line of preset as title.")]
-            public bool TitleFromPreset { get; set; } = true;
+            public bool TitleFromPreset { get; set; } = false;
 
             [Category(Hosting), Description("If true, the bot will overwrite any set Title with the new one.")]
-            public bool ForceTitle { get; set; } = true;
+            public bool ForceTitle { get; set; } = false;
 
             [Category(Hosting), Description("If true, the bot will overwrite any set Description with the new one.")]
-            public bool ForceDescription { get; set; } = true;
+            public bool ForceDescription { get; set; } = false;
 
             [Category(Hosting), Description("If true, the bot will append the moves to the preset Description.")]
-            public bool IncludeMoves { get; set; } = true;
+            public bool IncludeMoves { get; set; } = false;
 
             [Category(Hosting), Description("If true, the bot will append the Special Rewards to the preset Description.")]
-            public bool IncludeRewards { get; set; } = true;
+            public bool IncludeRewards { get; set; } = false;
         }
 
         [Category(Hosting)]
@@ -142,10 +145,10 @@ namespace SysBot.Pokemon
             public LobbyMethodOptions LobbyMethodOptions { get; set; } = LobbyMethodOptions.OpenLobby;
 
             [Category(Hosting), Description("Empty raid limit per parameter before the bot hosts and uncoded raid. Default is 3 raids.")]
-            public int EmptyRaidLimit { get; set; } = 3;
+            public int EmptyRaidLimit { get; set; } = 2;
 
             [Category(Hosting), Description("Empty/Lost raid limit per parameter before the bot moves on to the next one. Default is 3 raids.")]
-            public int SkipRaidLimit { get; set; } = 3;
+            public int SkipRaidLimit { get; set; } = 2;
         }
 
         public class RotatingRaidPresetFiltersCategoryConverter : TypeConverter

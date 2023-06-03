@@ -10,25 +10,32 @@ namespace SysBot.Base
 {
     public static class LogUtil
     {
+        private static bool createLogFiles = false; // Set this to true or false based on your condition
+
         static LogUtil()
         {
             var config = new LoggingConfiguration();
-            Directory.CreateDirectory("logs");
-            var logfile = new FileTarget("logfile")
-            {
-                FileName = Path.Combine("logs", "SysBotLog.txt"),
-                ConcurrentWrites = true,
 
-                ArchiveEvery = FileArchivePeriod.Day,
-                ArchiveNumbering = ArchiveNumberingMode.Date,
-                ArchiveFileName = Path.Combine("logs", "SysBotLog.{#}.txt"),
-                ArchiveDateFormat = "yyyy-MM-dd",
-                ArchiveAboveSize = 104857600, // 100MB (never)
-                MaxArchiveFiles = 14, // 2 weeks
-                Encoding = Encoding.Unicode,
-                WriteBom = true,
-            };
-            config.AddRule(LogLevel.Debug, LogLevel.Fatal, logfile);
+            if (createLogFiles)
+            {
+                Directory.CreateDirectory("logs");
+                var logfile = new FileTarget("logfile")
+                {
+                    FileName = Path.Combine("logs", "SysBotLog.txt"),
+                    ConcurrentWrites = true,
+
+                    ArchiveEvery = FileArchivePeriod.Day,
+                    ArchiveNumbering = ArchiveNumberingMode.Date,
+                    ArchiveFileName = Path.Combine("logs", "SysBotLog.{#}.txt"),
+                    ArchiveDateFormat = "yyyy-MM-dd",
+                    ArchiveAboveSize = 104857600, // 100MB (never)
+                    MaxArchiveFiles = 0, // 2 weeks
+                    Encoding = Encoding.Unicode,
+                    WriteBom = true,
+                };
+                config.AddRule(LogLevel.Debug, LogLevel.Fatal, logfile);
+            }
+
             LogManager.Configuration = config;
         }
 

@@ -45,26 +45,6 @@ namespace SysBot.Pokemon
 
         // Encounter Bots - For finding or hosting Pokémon in-game.
 
-        [Category(BotEncounter), Description("Stop conditions for EggBot, FossilBot, and EncounterBot.")]
-        [TypeConverter(typeof(ExpandableObjectConverter))]
-        public StopConditionSettings StopConditions { get; set; } = new();
-
-        [Category(BotEncounter)]
-        [TypeConverter(typeof(ExpandableObjectConverter))]
-        public OverworldSettingsSV OverworldSV { get; set; } = new();
-
-        [Category(BotEncounter)]
-        [TypeConverter(typeof(ExpandableObjectConverter))]
-        public EggSettingsSV EggSV { get; set; } = new();
-
-        [Category(BotEncounter)]
-        [TypeConverter(typeof(ExpandableObjectConverter))]
-        public RaidSettingsSV RaidSV { get; set; } = new();
-
-        [Category(BotEncounter)]
-        [TypeConverter(typeof(ExpandableObjectConverter))]
-        public RotatingRaidSettingsSV RotatingRaidSV { get; set; } = new();
-
         [Category(BotEncounter)]
         [TypeConverter(typeof(ExpandableObjectConverter))]
         public ArceusBotSettings ArceusLA { get; set; } = new();
@@ -105,6 +85,26 @@ namespace SysBot.Pokemon
         [TypeConverter(typeof(ExpandableObjectConverter))]
         public EtumrepDumpSettings EtumrepDump { get; set; } = new();
 
+        [Category(BotEncounter), Description("Stop conditions for EggBot, FossilBot, and EncounterBot.")]
+        [TypeConverter(typeof(ExpandableObjectConverter))]
+        public StopConditionSettings StopConditions { get; set; } = new();
+
+        [Category(BotEncounter)]
+        [TypeConverter(typeof(ExpandableObjectConverter))]
+        public OverworldSettingsSV OverworldSV { get; set; } = new();
+
+        [Category(BotEncounter)]
+        [TypeConverter(typeof(ExpandableObjectConverter))]
+        public EggSettingsSV EggSV { get; set; } = new();
+
+        [Category(BotEncounter)]
+        [TypeConverter(typeof(ExpandableObjectConverter))]
+        public RaidSettingsSV RaidSV { get; set; } = new();
+
+        [Category(BotEncounter)]
+        [TypeConverter(typeof(ExpandableObjectConverter))]
+        public RotatingRaidSettingsSV RotatingRaidSV { get; set; } = new();
+
         // Integration
 
         [Category(Integration)]
@@ -115,13 +115,13 @@ namespace SysBot.Pokemon
         [TypeConverter(typeof(ExpandableObjectConverter))]
         public TwitchSettings Twitch { get; set; } = new();
 
-        [Category(Integration)]
-        [TypeConverter(typeof(ExpandableObjectConverter))]
-        public YouTubeSettings YouTube { get; set; } = new();
-
         [Category(Integration), Description("Configure generation of assets for streaming.")]
         [TypeConverter(typeof(ExpandableObjectConverter))]
         public StreamSettings Stream { get; set; } = new();
+
+        [Category(Integration)]
+        [TypeConverter(typeof(ExpandableObjectConverter))]
+        public YouTubeSettings YouTube { get; set; } = new();
 
         [Category(Integration), Description("Allows favored users to join the queue with a more favorable position than unfavored users.")]
         [TypeConverter(typeof(ExpandableObjectConverter))]

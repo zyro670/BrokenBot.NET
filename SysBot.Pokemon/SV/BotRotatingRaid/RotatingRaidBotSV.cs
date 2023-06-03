@@ -30,7 +30,6 @@ namespace SysBot.Pokemon
             Settings = hub.Config.RotatingRaidSV;
         }
 
-        private const int AzureBuildID = 421;
         private int RaidsAtStart;
         private int RaidCount;
         private int WinCount;
@@ -57,18 +56,6 @@ namespace SysBot.Pokemon
 
         public override async Task MainLoop(CancellationToken token)
         {
-            if (Settings.CheckForUpdatedBuild)
-            {
-                var update = await CheckAzureLabel();
-                if (update)
-                {
-                    Log("A new azure-build is available for download @ https://dev.azure.com/zyrocodez/zyro670/_build?definitionId=2&_a=summary");
-                    return;
-                }
-                else
-                    Log("You are on the latest build of NotForkBot.");
-            }
-
             if (Settings.GenerateParametersFromFile)
             {
                 GenerateSeedsFromFile();
@@ -356,7 +343,7 @@ namespace SysBot.Pokemon
                         var tr = trainers.FirstOrDefault(x => x.Item2.OT == trainer.OT);
                         if (tr != default)
                             Log($"Player {i + 2} matches lobby check for {trainer.OT}.");
-                        else Log($"New Player {i + 2}: {trainer.OT} | TID: {trainer.DisplayTID} | NID: {nid}.");
+                        else Log($"New Player {i + 2}: {trainer.OT} | TID: {trainer.DisplayTID} | SID: {trainer.DisplaySID} | NID: {nid}.");
                     }
                     var nidDupe = lobbyTrainersFinal.Select(x => x.Item1).ToList();
                     var dupe = lobbyTrainersFinal.Count > 1 && nidDupe.Distinct().Count() == 1;
@@ -670,7 +657,7 @@ namespace SysBot.Pokemon
 
         private async Task<bool> CheckIfTrainerBanned(TradeMyStatus trainer, ulong nid, int player, bool updateBanList, CancellationToken token)
         {
-            Log($"Player {player}: {trainer.OT} | TID: {trainer.DisplayTID} | NID: {nid}");
+            Log($"Player {player}: {trainer.OT} | TID: {trainer.DisplayTID} | SID: {trainer.DisplaySID} | NID: {nid}");
             if (!RaidTracker.ContainsKey(nid))
                 RaidTracker.Add(nid, 0);
 
@@ -920,26 +907,38 @@ namespace SysBot.Pokemon
             if (Settings.TakeScreenshot && !upnext)
                 bytes = await SwitchConnection.PixelPeek(token).ConfigureAwait(false) ?? Array.Empty<byte>();
 
-            string disclaimer = Settings.RaidEmbedParameters.Count > 1 ? "Disclaimer: Raids are on rotation via seed injection.\n" : "";
-
             if (upnext)
                 title = "Preparing next raid...";
 
             var embed = new EmbedBuilder()
             {
                 Title = disband ? $"**Raid canceled: [{TeraRaidCode}]**" : title,
-                Color = disband ? Color.Red : hatTrick ? Color.Purple : Color.Green,
+                Color = disband ? Color.Red : hatTrick ? Color.Blue : Color.Purple,
                 Description = disband ? message : upnext ? Settings.RaidEmbedParameters[RotationCount].Title : description,
                 ImageUrl = bytes.Length > 0 ? "attachment://zap.jpg" : default,
             }.WithFooter(new EmbedFooterBuilder()
             {
                 Text = $"Host: {HostSAV.OT} | Uptime: {StartTime - DateTime.Now:d\\.hh\\:mm\\:ss}\n" +
-                       $"Raids: {RaidCount} | Wins: {WinCount} | Losses: {LossCount}\n" + disclaimer
+                       $"Raids: {RaidCount} | Wins: {WinCount} | Losses: {LossCount}\n" +
+                       $"Command For This Bot: {Hub.Config.Discord.CommandPrefix}"
             });
 
             if (!disband && names is null && !upnext)
             {
-                embed.AddField("**Waiting in lobby!**", $"Raid code: {code}");
+                if (Settings.HideRaidCode)
+                {
+                    if (Settings.RaidEmbedParameters[RotationCount].IsCoded)
+                        embed.AddField("***Waiting in lobby!\n Join Raid Now***", $"**Twitch Stream:**\n[Click Here for Stream Link]({Settings.RaidStreamLink})");
+                    else
+                        embed.AddField("**Waiting in lobby!**", $"Raid Code: Free For All");
+                }
+                else
+                {
+                    if (Settings.RaidEmbedParameters[RotationCount].IsCoded)
+                        embed.AddField("**Waiting in lobby!**", $"Raid Code: {code}");
+                    else 
+                        embed.AddField("**Waiting in lobby!**", $"Raid Code: Free For All");
+                }
             }
 
             if (!disband && names is not null && !upnext)
@@ -1125,19 +1124,6 @@ namespace SysBot.Pokemon
             return _ = $"https://raw.githubusercontent.com/zyro670/PokeTextures/main/Placeholder_Sprites/scaled_up_sprites/Shiny/AlternateArt/" + $"{pkm.Species}{pkmform}" + ".png";
         }
 
-        private static async Task<bool> CheckAzureLabel()
-        {
-            int azurematch;
-            string latestazure = "https://dev.azure.com/zyrocodez/zyro670/_apis/build/builds?definitions=2&$top=1&api-version=5.0-preview.5";
-            HttpClient client = new();
-            var content = await client.GetStringAsync(latestazure);
-            int buildId = int.Parse(content.Substring(135, 3));
-            azurematch = AzureBuildID.CompareTo(buildId);
-            if (azurematch < 0)
-                return true;
-            return false;
-        }
-
         private async Task GetRaidSprite(CancellationToken token)
         {
             PK9 pk = new()
@@ -1150,9 +1136,9 @@ namespace SysBot.Pokemon
                 CommonEdits.SetIsShiny(pk, false);
             PK9 pknext = new()
             {
-                Species = Settings.RaidEmbedParameters.Count > 1 && RotationCount < Settings.RaidEmbedParameters.Count ? (ushort)Settings.RaidEmbedParameters[RotationCount + 1].Species : Settings.RaidEmbedParameters.Count > 1 && RotationCount >= Settings.RaidEmbedParameters.Count ? (ushort)Settings.RaidEmbedParameters[0].Species : (ushort)Settings.RaidEmbedParameters[RotationCount].Species,
+                Species = Settings.RaidEmbedParameters.Count > 1 && RotationCount + 1 < Settings.RaidEmbedParameters.Count ? (ushort)Settings.RaidEmbedParameters[RotationCount + 1].Species : (ushort)Settings.RaidEmbedParameters[0].Species,
             };
-            if (Settings.RaidEmbedParameters.Count > 1 && RotationCount < Settings.RaidEmbedParameters.Count ? Settings.RaidEmbedParameters[RotationCount + 1].IsShiny : Settings.RaidEmbedParameters.Count > 1 && RotationCount >= Settings.RaidEmbedParameters.Count ? Settings.RaidEmbedParameters[0].IsShiny : Settings.RaidEmbedParameters[RotationCount].IsShiny)
+            if (Settings.RaidEmbedParameters.Count > 1 && RotationCount + 1 < Settings.RaidEmbedParameters.Count ? Settings.RaidEmbedParameters[RotationCount + 1].IsShiny : Settings.RaidEmbedParameters[0].IsShiny)
                 CommonEdits.SetIsShiny(pknext, true);
             else
                 CommonEdits.SetIsShiny(pknext, false);

@@ -30,7 +30,6 @@ namespace SysBot.Pokemon
             Settings = hub.Config.RaidSV;
         }
 
-        private const int AzureBuildID = 421;
         private int RaidsAtStart;
         private int RaidCount;
         private int WinCount;
@@ -54,18 +53,6 @@ namespace SysBot.Pokemon
 
         public override async Task MainLoop(CancellationToken token)
         {
-            if (Settings.CheckForUpdatedBuild)
-            {
-                var update = await CheckAzureLabel();
-                if (update)
-                {
-                    Log("A new azure-build is available for download @ https://dev.azure.com/zyrocodez/zyro670/_build?definitionId=2&_a=summary");
-                    return;
-                }
-                else
-                    Log("You are on the latest build of NotForkBot.");
-            }
-
             if (Settings.GenerateParametersFromFile)
             {
                 GenerateSeedsFromFile();
@@ -340,7 +327,7 @@ namespace SysBot.Pokemon
                         var tr = trainers.FirstOrDefault(x => x.Item2.OT == trainer.OT);
                         if (tr != default)
                             Log($"Player {i + 2} matches lobby check for {trainer.OT}.");
-                        else Log($"New Player {i + 2}: {trainer.OT} | TID: {trainer.DisplayTID} | NID: {nid}.");
+                        else Log($"New Player {i + 2}: {trainer.OT} | TID: {trainer.DisplayTID} | SID: {trainer.DisplaySID} | NID: {nid}.");
                     }
                     var nidDupe = lobbyTrainersFinal.Select(x => x.Item1).ToList();
                     var dupe = lobbyTrainersFinal.Count > 1 && nidDupe.Distinct().Count() == 1;
@@ -560,7 +547,7 @@ namespace SysBot.Pokemon
 
         private async Task<bool> CheckIfTrainerBanned(TradeMyStatus trainer, ulong nid, int player, bool updateBanList, CancellationToken token)
         {
-            Log($"Player {player}: {trainer.OT} | TID: {trainer.DisplayTID} | NID: {nid}");
+            Log($"Player {player}: {trainer.OT} | TID: {trainer.DisplayTID} | SID: {trainer.DisplaySID} | NID: {nid}");
             if (!RaidTracker.ContainsKey(nid))
                 RaidTracker.Add(nid, 0);
 
@@ -797,18 +784,22 @@ namespace SysBot.Pokemon
             var embed = new EmbedBuilder()
             {
                 Title = disband ? $"**Raid canceled: [{TeraRaidCode}]**" : title,
-                Color = disband ? Color.Red : hatTrick ? Color.Purple : Color.Green,
+                Color = disband ? Color.Red : hatTrick ? Color.Blue : Color.Purple,
                 Description = disband ? message : upnext ? Settings.RaidEmbedFilters.Title : description,
                 ImageUrl = bytes.Length > 0 ? "attachment://zap.jpg" : default,
             }.WithFooter(new EmbedFooterBuilder()
             {
                 Text = $"Host: {HostSAV.OT} | Uptime: {StartTime - DateTime.Now:d\\.hh\\:mm\\:ss}\n" +
-                       $"Raids: {RaidCount} | Wins: {WinCount} | Losses: {LossCount}"
+                       $"Raids: {RaidCount} | Wins: {WinCount} | Losses: {LossCount}\n" +
+                       $"Command For This Bot: {Hub.Config.Discord.CommandPrefix}"
             });
 
             if (!disband && names is null && !upnext)
             {
-                embed.AddField("**Waiting in lobby!**", $"Raid code: {code}");
+                if (Settings.HideRaidCode)
+                    embed.AddField("***Waiting in lobby!\n Join Raid Now***", $"**Twitch Stream:**\n[Click Here for Stream Link]({Settings.RaidStreamLink})");
+                else
+                    embed.AddField("**Waiting in lobby!\n Join Raid Now**", $"Raid code: {code}");
             }
 
             if (!disband && names is not null && !upnext)
@@ -933,19 +924,6 @@ namespace SysBot.Pokemon
                 pkmform = $"-{pkm.Form}";
 
             return _ = $"https://raw.githubusercontent.com/zyro670/PokeTextures/main/Placeholder_Sprites/scaled_up_sprites/Shiny/AlternateArt/" + $"{pkm.Species}{pkmform}" + ".png";
-        }
-
-        private static async Task<bool> CheckAzureLabel()
-        {
-            int azurematch;
-            string latestazure = "https://dev.azure.com/zyrocodez/zyro670/_apis/build/builds?definitions=2&$top=1&api-version=5.0-preview.5";
-            HttpClient client = new();
-            var content = await client.GetStringAsync(latestazure);
-            int buildId = int.Parse(content.Substring(135, 3));
-            azurematch = AzureBuildID.CompareTo(buildId);
-            if (azurematch < 0)
-                return true;
-            return false;
         }
 
         private async Task GetRaidSprite(CancellationToken token)

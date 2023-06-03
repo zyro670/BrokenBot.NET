@@ -56,10 +56,10 @@ namespace SysBot.Pokemon.Discord
             else await ReplyAsync("Giveaway pool is empty.").ConfigureAwait(false);
         }
 
-        [Command("giveaway")]
-        [Alias("ga", "giveme", "gimme")]
+        [Command("request")]
+        [Alias("giveme", "gimme")]
         [Summary("Makes the bot trade you the specified giveaway Pokémon.")]
-        [RequireQueueRole(nameof(DiscordManager.RolesGiveaway))]
+        [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
         public async Task GiveawayAsync([Remainder] string content)
         {
             var code = Info.GetRandomTradeCode();
@@ -67,7 +67,7 @@ namespace SysBot.Pokemon.Discord
         }
 
         [Command("giveaway")]
-        [Alias("ga", "giveme", "gimme")]
+        [Alias("ga", "givethem")]
         [Summary("Makes the bot trade you the specified giveaway Pokémon.")]
         [RequireQueueRole(nameof(DiscordManager.RolesGiveaway))]
         public async Task GiveawayAsync([Summary("Giveaway Code")] int code, [Remainder] string content)
@@ -97,7 +97,7 @@ namespace SysBot.Pokemon.Discord
         [Command("fixOT")]
         [Alias("fix", "f")]
         [Summary("Fixes OT and Nickname of a Pokémon you show via Link Trade if an advert is detected.")]
-        [RequireQueueRole(nameof(DiscordManager.RolesFixOT))]
+        [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
         public async Task FixAdOT()
         {
             var code = Info.GetRandomTradeCode();
@@ -108,7 +108,7 @@ namespace SysBot.Pokemon.Discord
         [Command("fixOT")]
         [Alias("fix", "f")]
         [Summary("Fixes OT and Nickname of a Pokémon you show via Link Trade if an advert is detected.")]
-        [RequireQueueRole(nameof(DiscordManager.RolesFixOT))]
+        [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
         public async Task FixAdOT([Summary("Trade Code")] int code)
         {
             var sig = Context.User.GetFavor();
@@ -135,7 +135,7 @@ namespace SysBot.Pokemon.Discord
         [Command("itemTrade")]
         [Alias("it", "item")]
         [Summary("Makes the bot trade you a Pokémon holding the requested item, or Ditto if stat spread keyword is provided.")]
-        [RequireQueueRole(nameof(DiscordManager.RolesSupportTrade))]
+        [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
         public async Task ItemTrade([Remainder] string item)
         {
             var code = Info.GetRandomTradeCode();
@@ -145,7 +145,7 @@ namespace SysBot.Pokemon.Discord
         [Command("itemTrade")]
         [Alias("it", "item")]
         [Summary("Makes the bot trade you a Pokémon holding the requested item.")]
-        [RequireQueueRole(nameof(DiscordManager.RolesSupportTrade))]
+        [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
         public async Task ItemTrade([Summary("Trade Code")] int code, [Remainder] string item)
         {
             Species species = Info.Hub.Config.Trade.ItemTradeSpecies == Species.None ? Species.Diglett : Info.Hub.Config.Trade.ItemTradeSpecies;
@@ -180,7 +180,7 @@ namespace SysBot.Pokemon.Discord
         [Command("dittoTrade")]
         [Alias("dt", "ditto")]
         [Summary("Makes the bot trade you a Ditto with a requested stat spread and language.")]
-        [RequireQueueRole(nameof(DiscordManager.RolesSupportTrade))]
+        [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
         public async Task DittoTrade([Summary("A combination of \"ATK/SPA/SPE\" or \"6IV\"")] string keyword, [Summary("Language")] string language, [Summary("Nature")] string nature)
         {
             var code = Info.GetRandomTradeCode();
@@ -190,7 +190,7 @@ namespace SysBot.Pokemon.Discord
         [Command("dittoTrade")]
         [Alias("dt", "ditto")]
         [Summary("Makes the bot trade you a Ditto with a requested stat spread and language.")]
-        [RequireQueueRole(nameof(DiscordManager.RolesSupportTrade))]
+        [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
         public async Task DittoTrade([Summary("Trade Code")] int code, [Summary("A combination of \"ATK/SPA/SPE\" or \"6IV\"")] string keyword, [Summary("Language")] string language, [Summary("Nature")] string nature)
         {
             keyword = keyword.ToLower().Trim();
@@ -655,7 +655,7 @@ namespace SysBot.Pokemon.Discord
         }
 
         [Command("addRaidParams")]
-        [Alias("arp")]
+        [Alias("ar")]
         [Summary("Adds new raid parameter.")]
         [RequireSudo]
         public async Task AddNewRaidParam([Summary("Seed")] string seed, [Summary("Species Type")] string species, [Summary("Content Type")] string content)
@@ -705,7 +705,7 @@ namespace SysBot.Pokemon.Discord
         }
 
         [Command("removeRaidParams")]
-        [Alias("rrp")]
+        [Alias("rr")]
         [Summary("Adds new raid parameter.")]
         [RequireSudo]
         public async Task RemoveRaidParam([Summary("Seed")] string seed)
@@ -727,7 +727,7 @@ namespace SysBot.Pokemon.Discord
         }
 
         [Command("toggleRaidParams")]
-        [Alias("trp")]
+        [Alias("tr")]
         [Summary("Toggles raid parameter.")]
         [RequireSudo]
         public async Task DeactivateRaidParam([Summary("Seed")] string seed)
@@ -753,7 +753,7 @@ namespace SysBot.Pokemon.Discord
         }
 
         [Command("togglecodeRaidParams")]
-        [Alias("tcrp")]
+        [Alias("trc")]
         [Summary("Toggles code raid parameter.")]
         [RequireSudo]
         public async Task ToggleCodeRaidParam([Summary("Seed")] string seed)
@@ -779,7 +779,7 @@ namespace SysBot.Pokemon.Discord
         }
 
         [Command("changeRaidParamTitle")]
-        [Alias("crpt")]
+        [Alias("crt")]
         [Summary("Adds new raid parameter.")]
         [RequireSudo]
         public async Task ChangeRaidParamTite([Summary("Seed")] string seed, [Summary("Content Type")] string title)
@@ -825,7 +825,7 @@ namespace SysBot.Pokemon.Discord
         }
 
         [Command("toggleRaidPK")]
-        [Alias("trpk")]
+        [Alias("tpk")]
         [Summary("Toggles raid parameter.")]
         [RequireSudo]
         public async Task ToggleRaidParamPK([Summary("Seed")] string seed, [Summary("Showdown Set")][Remainder] string content)
@@ -847,6 +847,32 @@ namespace SysBot.Pokemon.Discord
             }
         }
 
+        [Command("toggleAltArt")]
+        [Alias("taa")]
+        [Summary("Toggles alternate art parameter.")]
+        [RequireSudo]
+        public async Task ToggleAlternateArtParam([Summary("Seed")] string seed)
+        {
+
+            var deactivate = uint.Parse(seed, NumberStyles.AllowHexSpecifier);
+            var list = SysCord<T>.Runner.Hub.Config.RotatingRaidSV.RaidEmbedParameters;
+            foreach (var s in list)
+            {
+                var def = uint.Parse(s.Seed, NumberStyles.AllowHexSpecifier);
+                if (def == deactivate)
+                {
+                    if (s.SpriteAlternateArt == false)
+                        s.SpriteAlternateArt = true;
+                    else
+                        s.SpriteAlternateArt = false;
+                    var m = s.SpriteAlternateArt == false ? "Normal Art" : "Alternate Art";
+                    var msg = $"Raid for {s.Species} | {s.Seed:X8} is now using {m}!";
+                    await ReplyAsync(msg).ConfigureAwait(false);
+                    return;
+                }
+            }
+        }
+
         [Command("raidhelp")]
         [Alias("rh")]
         [Summary("Prints the raid help command list.")]
@@ -857,12 +883,13 @@ namespace SysBot.Pokemon.Discord
             {
                 "$crb - Clear all in raider ban list.\n",
                 "$vrl - View all raids in the list.\n",
-                "$arp - Add parameter to the collection.\nEx: [Command] [Seed] [Species] [Difficulty]\n",
-                "$rrp - Remove parameter from the collection.\nEx: [Command] [Seed]\n",
-                "$trp - Toggle the parameter as Active/Inactive in the collection.\nEx: [Command] [Seed]\n",
-                "$tcrp - Toggle the parameter as Coded/Uncoded in the collection.\nEx: [Command] [Seed]\n",
-                "$trpk - Set a PartyPK for the parameter via a showdown set.\nEx: [Command] [Seed] [ShowdownSet]\n",
-                "$crpt - Set the title for the parameter.\nEx: [Command] [Seed]"
+                "$ar - Add parameter to the collection.\nEx: [Command] [Seed] [Species] [Difficulty]\n",
+                "$rr - Remove parameter from the collection.\nEx: [Command] [Seed]\n",
+                "$tr - Toggle the parameter as Active/Inactive in the collection.\nEx: [Command] [Seed]\n",
+                "$trc - Toggle the parameter as Coded/Uncoded in the collection.\nEx: [Command] [Seed]\n",
+                "$tpk - Set a PartyPK for the parameter via a showdown set.\nEx: [Command] [Seed] [ShowdownSet]\n",
+                "$crt - Set the title for the parameter.\nEx: [Command] [Seed]",
+                "$taa - Toggle Alt Art.\nEx: [Command] [Seed]"
             };
             string msg = string.Join("", cmds.ToList());
             embed.AddField(x =>

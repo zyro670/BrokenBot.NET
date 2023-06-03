@@ -63,7 +63,7 @@ namespace SysBot.Pokemon
 
         // Miscellaneous settings.
         [Category(Misc), Description("[SWSH/SV] Extra time in milliseconds to wait after clicking + to connect to Y-Comm (SWSH) or L to connect online (SV).")]
-        public int ExtraTimeConnectOnline { get; set; }
+        public int ExtraTimeConnectOnline { get; set; } = 1500;
 
         [Category(Misc), Description("Number of times to attempt reconnecting to a socket connection after a connection is lost. Set this to -1 to try indefinitely.")]
         public int ReconnectAttempts { get; set; } = 30;
@@ -93,6 +93,6 @@ namespace SysBot.Pokemon
         public int KeypressTime { get; set; } = 200;
 
         [Category(Misc), Description("Enable this to decline incoming system updates.")]
-        public bool AvoidSystemUpdate { get; set; }
+        public bool AvoidSystemUpdate { get; set; } = true;
     }
 }
