@@ -888,7 +888,7 @@ namespace SysBot.Pokemon.Discord
                 "$tr - Toggle the parameter as Active/Inactive in the collection.\nEx: [Command] [Seed]\n",
                 "$trc - Toggle the parameter as Coded/Uncoded in the collection.\nEx: [Command] [Seed]\n",
                 "$tpk - Set a PartyPK for the parameter via a showdown set.\nEx: [Command] [Seed] [ShowdownSet]\n",
-                "$crt - Set the title for the parameter.\nEx: [Command] [Seed]",
+                "$crt - Set the title for the parameter.\nEx: [Command] [Seed]\n",
                 "$taa - Toggle Alt Art.\nEx: [Command] [Seed]"
             };
             string msg = string.Join("", cmds.ToList());
