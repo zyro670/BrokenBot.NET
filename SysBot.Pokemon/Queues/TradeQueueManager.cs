@@ -14,7 +14,6 @@ namespace SysBot.Pokemon
         private readonly PokeTradeQueue<T> Dump = new(PokeTradeType.Dump);
         private readonly PokeTradeQueue<T> EtumrepDump = new(PokeTradeType.EtumrepDump);
         private readonly PokeTradeQueue<T> FixOT = new(PokeTradeType.FixOT);
-        private readonly PokeTradeQueue<T> TradeCord = new(PokeTradeType.TradeCord);
         private readonly PokeTradeQueue<T> Giveaway = new(PokeTradeType.Giveaway);
         public readonly TradeQueueInfo<T> Info;
         public readonly PokeTradeQueue<T>[] AllQueues;
@@ -23,7 +22,7 @@ namespace SysBot.Pokemon
         {
             Hub = hub;
             Info = new TradeQueueInfo<T>(hub);
-            AllQueues = new[] { Seed, Dump, Clone, Trade, EtumrepDump, FixOT, TradeCord, Giveaway };
+            AllQueues = new[] { Seed, Dump, Clone, Trade, EtumrepDump, FixOT, Giveaway };
 
             foreach (var q in AllQueues)
                 q.Queue.Settings = hub.Config.Favoritism;
@@ -36,7 +35,6 @@ namespace SysBot.Pokemon
             PokeRoutineType.Dump => Dump,
             PokeRoutineType.FixOT => FixOT,
             PokeRoutineType.EtumrepDump => EtumrepDump,
-            PokeRoutineType.TradeCord => TradeCord,
             _ => Trade,
         };
 
@@ -136,8 +134,6 @@ namespace SysBot.Pokemon
             if (TryDequeueInternal(PokeRoutineType.EtumrepDump, out detail, out priority))
                 return true;
             if (TryDequeueInternal(PokeRoutineType.FixOT, out detail, out priority))
-                return true;
-            if (TryDequeueInternal(PokeRoutineType.TradeCord, out detail, out priority))
                 return true;
             return false;
         }

@@ -14,7 +14,6 @@ namespace SysBot.Pokemon
                 or PokeRoutineType.Dump
                 or PokeRoutineType.SeedCheck
                 or PokeRoutineType.FixOT
-                or PokeRoutineType.TradeCord
                 => new PokeTradeBotSWSH(Hub, cfg),
 
             PokeRoutineType.EggFetch => new EncounterBotEggSWSH(cfg, Hub),
@@ -44,7 +43,6 @@ namespace SysBot.Pokemon
                 or PokeRoutineType.Dump
                 or PokeRoutineType.SeedCheck
                 or PokeRoutineType.FixOT
-                or PokeRoutineType.TradeCord
                 => true,
 
             PokeRoutineType.EggFetch => true,

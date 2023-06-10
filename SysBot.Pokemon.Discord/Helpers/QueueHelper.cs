@@ -102,9 +102,6 @@ namespace SysBot.Pokemon.Discord
                 return false;
             }
 
-            if (detail.Type == PokeTradeType.TradeCord)
-                TradeCordHelper<T>.TradeCordTrades.Add(trader.Id, catchID);
-
             var position = Info.CheckPosition(userID, type);
 
             var ticketID = "";
@@ -112,7 +109,7 @@ namespace SysBot.Pokemon.Discord
                 ticketID = $", unique ID: {detail.ID}";
 
             var pokeName = "";
-            if ((t == PokeTradeType.Specific || t == PokeTradeType.TradeCord || t == PokeTradeType.SupportTrade || t == PokeTradeType.Giveaway) && pk.Species != 0)
+            if ((t == PokeTradeType.Specific || t == PokeTradeType.SupportTrade || t == PokeTradeType.Giveaway) && pk.Species != 0)
                 pokeName = $" Receiving: {(t == PokeTradeType.SupportTrade && pk.Species != (int)Species.Ditto && pk.HeldItem != 0 ? $"{(Species)pk.Species} ({ShowdownParsing.GetShowdownText(pk).Split('@','\n')[1].Trim()})" : $"{(Species)pk.Species}")}.";
             msg = $"{user.Mention} - Added to the {type} queue{ticketID}. Current Position: {position.Position}.{pokeName}";
 

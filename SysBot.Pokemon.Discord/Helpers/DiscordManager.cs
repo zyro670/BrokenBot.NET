@@ -24,7 +24,6 @@ namespace SysBot.Pokemon.Discord
 
         public RemoteControlAccessList RolesEtumrepDump => Config.RoleCanEtumrepDump;
         public RemoteControlAccessList RolesFixOT => Config.RoleCanFixOT;
-        public RemoteControlAccessList RolesTradeCord => Config.RoleCanTradeCord;
         public RemoteControlAccessList RolesGiveaway => Config.RoleCanGiveaway;
         public RemoteControlAccessList RolesSupportTrade => Config.RoleCanSupportTrade;
 
@@ -64,7 +63,6 @@ namespace SysBot.Pokemon.Discord
             nameof(RolesRemoteControl) => RolesRemoteControl,
             nameof(RolesEtumrepDump) => RolesEtumrepDump,
             nameof(RolesFixOT) => RolesFixOT,
-            nameof(RolesTradeCord) => RolesTradeCord,
             nameof(RolesGiveaway) => RolesGiveaway,
             nameof(RolesSupportTrade) => RolesSupportTrade,
             _ => throw new ArgumentOutOfRangeException(nameof(type)),

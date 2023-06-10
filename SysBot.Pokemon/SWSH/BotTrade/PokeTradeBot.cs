@@ -333,7 +333,7 @@ namespace SysBot.Pokemon
             }
 
             // Confirm Box 1 Slot 1
-            if (poke.Type == PokeTradeType.Specific || poke.Type == PokeTradeType.SupportTrade || poke.Type == PokeTradeType.Giveaway || poke.Type == PokeTradeType.TradeCord)
+            if (poke.Type == PokeTradeType.Specific || poke.Type == PokeTradeType.SupportTrade || poke.Type == PokeTradeType.Giveaway)
             {
                 for (int i = 0; i < 5; i++)
                     await Click(A, 0_500, token).ConfigureAwait(false);
@@ -428,8 +428,6 @@ namespace SysBot.Pokemon
                 counts.AddCompletedFixOTs();
             else if (poke.Type == PokeTradeType.SupportTrade)
                 counts.AddCompletedSupportTrades();
-            else if (poke.Type == PokeTradeType.TradeCord)
-                counts.AddCompletedTradeCords();
             else
                 counts.AddCompletedTrade();
 
@@ -437,7 +435,7 @@ namespace SysBot.Pokemon
             {
                 var subfolder = poke.Type.ToString().ToLower();
                 DumpPokemon(DumpSetting.DumpFolder, subfolder, received); // received by bot
-                if (poke.Type is PokeTradeType.Specific or PokeTradeType.Clone or PokeTradeType.FixOT or PokeTradeType.SupportTrade or PokeTradeType.TradeCord or PokeTradeType.Giveaway)
+                if (poke.Type is PokeTradeType.Specific or PokeTradeType.Clone or PokeTradeType.FixOT or PokeTradeType.SupportTrade or PokeTradeType.Giveaway)
                     DumpPokemon(DumpSetting.DumpFolder, "traded", toSend); // sent to partner
             }
         }

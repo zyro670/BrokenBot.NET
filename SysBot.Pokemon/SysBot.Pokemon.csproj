@@ -12,14 +12,12 @@
 		<None Remove="SWSH\BotDen\FlatbuffersResource\shieldEnc.bin" />
 		<None Remove="SWSH\BotDen\FlatbuffersResource\swordEnc.bin" />
 		<None Remove="SWSH\BotLair\MoveInfo.json" />
-		<None Remove="TradeCord\Resources\DexFlavor.txt" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<EmbeddedResource Include="SV\BotRaid\BanList\Resources\languages.json" />
 		<EmbeddedResource Include="SV\BotRaid\BanList\Resources\substitutionTable.json" />
 		<EmbeddedResource Include="SWSH\BotLair\MoveInfo.json" />
-		<EmbeddedResource Include="TradeCord\Resources\DexFlavor.txt" />
 		<EmbeddedResource Include="SWSH\BotDen\FlatbuffersResource\shieldEnc.bin" />
 		<EmbeddedResource Include="SWSH\BotDen\FlatbuffersResource\swordEnc.bin" />
 	</ItemGroup>

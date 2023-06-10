@@ -33,10 +33,6 @@ namespace SysBot.Pokemon
 
         [Category(BotTrade)]
         [TypeConverter(typeof(ExpandableObjectConverter))]
-        public TradeCordSettings TradeCord { get; set; } = new();
-
-        [Category(BotTrade)]
-        [TypeConverter(typeof(ExpandableObjectConverter))]
         public SeedCheckSettings SeedCheckSWSH { get; set; } = new();
 
         [Category(BotTrade)]

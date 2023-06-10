@@ -10,7 +10,6 @@
         Display,
         EtumrepDump,
         FixOT,
-        TradeCord,
         Giveaway,
         SupportTrade,
     }

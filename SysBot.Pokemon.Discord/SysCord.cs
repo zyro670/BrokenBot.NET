@@ -149,8 +149,6 @@ namespace SysBot.Pokemon.Discord
             foreach (var t in genericTypes)
             {
                 var genModule = t.MakeGenericType(typeof(T));
-                if (!initTC && t.Name == "TradeCordModule`1")
-                    continue;
                 await _commands.AddModuleAsync(genModule, _services).ConfigureAwait(false);
             }
             var modules = _commands.Modules.ToList();
@@ -174,7 +172,6 @@ namespace SysBot.Pokemon.Discord
             _client.Ready += LoadLoggingAndEcho;
             _client.MessageReceived += HandleMessageAsync;
             _client.ReactionAdded += ExtraCommandUtil<T>.HandleReactionAsync;
-            _client.UserBanned += ExtraCommandUtil<T>.TCUserBanned;
             _client.ButtonExecuted += ExtraCommandUtil<T>.ButtonExecuted;
             _client.SelectMenuExecuted += ExtraCommandUtil<T>.SelectMenuExecuted;
             _client.ModalSubmitted += ExtraCommandUtil<T>.ModalSubmitted;

@@ -16,7 +16,6 @@
 
 	<ItemGroup>
 		<EmbeddedResource Include="SWSH\BotLair\MoveInfo.json" />
-		<EmbeddedResource Include="TradeCord\Resources\DexFlavor.txt" />
 		<EmbeddedResource Include="SWSH\BotDen\FlatbuffersResource\shieldEnc.bin" />
 		<EmbeddedResource Include="SWSH\BotDen\FlatbuffersResource\swordEnc.bin" />
 	</ItemGroup>

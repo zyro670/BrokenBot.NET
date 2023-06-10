@@ -521,91 +521,91 @@ namespace SysBot.Pokemon.Discord
             await ReplyAsync(!ArceusBot.EmbedsInitialized ? "Arceus Embed task started!" : "Arceus Embed task stopped!").ConfigureAwait(false);
             if (ArceusBot.EmbedsInitialized)
                 ArceusBot.EmbedSource.Cancel();
-            else _ = Task.Run(async () => await ArceusEmbedLoop(channels, ArceusBot.EmbedSource.Token).ConfigureAwait(false));
-            ArceusBot.EmbedsInitialized ^= true;
+            // else _ = Task.Run(async () => await ArceusEmbedLoop(channels, ArceusBot.EmbedSource.Token).ConfigureAwait(false));
+            // ArceusBot.EmbedsInitialized ^= true;
         }
 
-        private async Task ArceusEmbedLoop(List<ulong> channels, CancellationToken token)
-        {
-            var ping = SysCord<T>.Runner.Hub.Config.StopConditions.MatchFoundEchoMention;
-            while (!ArceusBot.EmbedSource.IsCancellationRequested)
-            {
-                if (ArceusBot.EmbedMons.Count > 0)
-                {
-                    var mons = ArceusBot.EmbedMons;
-                    for (int i = 0; i < mons.Count; i++)
-                    {
-                        if (mons[i].Item1 == null)
-                        {
-                            ArceusBot.EmbedMons.Remove(mons[i]);
-                            continue;
-                        }
+        // private async Task ArceusEmbedLoop(List<ulong> channels, CancellationToken token)
+        // {
+        //     var ping = SysCord<T>.Runner.Hub.Config.StopConditions.MatchFoundEchoMention;
+        //     while (!ArceusBot.EmbedSource.IsCancellationRequested)
+        //     {
+        //         if (ArceusBot.EmbedMons.Count > 0)
+        //         {
+        //             var mons = ArceusBot.EmbedMons;
+        //             for (int i = 0; i < mons.Count; i++)
+        //             {
+        //                 if (mons[i].Item1 == null)
+        //                 {
+        //                     ArceusBot.EmbedMons.Remove(mons[i]);
+        //                     continue;
+        //                 }
 
-                        PA8 mon = mons[i].Item1 ?? new();
-                        var url = TradeExtensions<PA8>.PokeImg(mon, mon.CanGigantamax, SysCord<T>.Runner.Hub.Config.TradeCord.UseFullSizeImages);
-                        string shinyurl = "https://img.favpng.com/6/14/25/computer-icons-icon-design-photography-royalty-free-png-favpng-mtjTHeWQe8FUAUB3RdJ3B2KJG.jpg";
-                        var location = Hub.Config.ArceusLA.SpecialConditions.ScanLocation;
-                        string msg = mons[i].Item2 ? "Match found!" : "Unwanted match...";
-                        if (Hub.Config.ArceusLA.DistortionConditions.ShinyAlphaOnly && !mon.IsAlpha && Hub.Config.ArceusLA.BotType == ArceusMode.DistortionReader)
-                            msg = "Not an Alpha...";
+        //                 PA8 mon = mons[i].Item1 ?? new();
+        //                 var url = TradeExtensions<PA8>.PokeImg(mon, mon.CanGigantamax, SysCord<T>.Runner.Hub.Config.TradeCord.UseFullSizeImages);
+        //                 string shinyurl = "https://img.favpng.com/6/14/25/computer-icons-icon-design-photography-royalty-free-png-favpng-mtjTHeWQe8FUAUB3RdJ3B2KJG.jpg";
+        //                 var location = Hub.Config.ArceusLA.SpecialConditions.ScanLocation;
+        //                 string msg = mons[i].Item2 ? "Match found!" : "Unwanted match...";
+        //                 if (Hub.Config.ArceusLA.DistortionConditions.ShinyAlphaOnly && !mon.IsAlpha && Hub.Config.ArceusLA.BotType == ArceusMode.DistortionReader)
+        //                     msg = "Not an Alpha...";
 
-                        string stats;
-                        if (Hub.Config.ArceusLA.SpeciesToHunt.Length == 0 || mon.IVTotal != 0)
-                            stats = $"{(mon.ShinyXor == 0 ? "■ - " : mon.ShinyXor <= 16 ? "★ - " : "")}{SpeciesName.GetSpeciesNameGeneration(mon.Species, 2, 8)}{TradeExtensions<T>.FormOutput(mon.Species, mon.Form, out _)}\nIVs: {string.Join("/", mon.IVs)}\nNature: {(Nature)mon.Nature}";
-                        else
-                        {
-                            stats = "Hunting for a special Alpha!";
-                            shinyurl = "https://previews.123rf.com/images/fokaspokas/fokaspokas1809/fokaspokas180901587/109973633-loupe-search-or-magnifying-linear-icon-thin-outline-black-glass-icon-with-soft-shadow-on-transparent.jpg";
-                        }
+        //                 string stats;
+        //                 if (Hub.Config.ArceusLA.SpeciesToHunt.Length == 0 || mon.IVTotal != 0)
+        //                     stats = $"{(mon.ShinyXor == 0 ? "■ - " : mon.ShinyXor <= 16 ? "★ - " : "")}{SpeciesName.GetSpeciesNameGeneration(mon.Species, 2, 8)}{TradeExtensions<T>.FormOutput(mon.Species, mon.Form, out _)}\nIVs: {string.Join("/", mon.IVs)}\nNature: {(Nature)mon.Nature}";
+        //                 else
+        //                 {
+        //                     stats = "Hunting for a special Alpha!";
+        //                     shinyurl = "https://previews.123rf.com/images/fokaspokas/fokaspokas1809/fokaspokas180901587/109973633-loupe-search-or-magnifying-linear-icon-thin-outline-black-glass-icon-with-soft-shadow-on-transparent.jpg";
+        //                 }
 
-                        if (mon.IsAlpha)
-                            shinyurl = "https://cdn.discordapp.com/emojis/944278189000228894.webp?size=96&quality=lossless";
+        //                 if (mon.IsAlpha)
+        //                     shinyurl = "https://cdn.discordapp.com/emojis/944278189000228894.webp?size=96&quality=lossless";
 
-                        if (mons[i].Item2)
-                            shinyurl = "https://i.imgur.com/T8vEiIk.jpg";
-                        else
-                            shinyurl = $"https://i.imgur.com/t2M8qF4.png";
+        //                 if (mons[i].Item2)
+        //                     shinyurl = "https://i.imgur.com/T8vEiIk.jpg";
+        //                 else
+        //                     shinyurl = $"https://i.imgur.com/t2M8qF4.png";
 
-                        var author = new EmbedAuthorBuilder { IconUrl = shinyurl, Name = msg };
-                        var footer = new EmbedFooterBuilder
-                        {
-                            Text = Hub.Config.ArceusLA.BotType switch
-                            {
-                                ArceusMode.DistortionReader => "Found in a space-time distortion.",
-                                ArceusMode.MassiveOutbreakHunter when Hub.Config.ArceusLA.OutbreakConditions.TypeOfScan == OutbreakScanType.OutbreakOnly => "Found in a mass outbreak.",
-                                ArceusMode.MassiveOutbreakHunter when (Species)mon.Species is Species.Shieldon or Species.Bastiodon or Species.Cranidos or Species.Rampardos or Species.Scizor or Species.Sneasel or
-                                Species.Weavile or Species.Magnemite or Species.Magneton or Species.Magnezone or Species.Sylveon or Species.Leafeon or Species.Glaceon or Species.Flareon or Species.Jolteon or Species.Vaporeon
-                                or Species.Umbreon or Species.Espeon => "Found in a space-time distortion.",
-                                ArceusMode.GenieScanner => "Found a genie in a cloud",
-                                ArceusMode.ManaphyReset => "Found a in a cave",
-                                _ => "Found in a massive mass outbreak.",
-                            }
-                        };
+        //                 var author = new EmbedAuthorBuilder { IconUrl = shinyurl, Name = msg };
+        //                 var footer = new EmbedFooterBuilder
+        //                 {
+        //                     Text = Hub.Config.ArceusLA.BotType switch
+        //                     {
+        //                         ArceusMode.DistortionReader => "Found in a space-time distortion.",
+        //                         ArceusMode.MassiveOutbreakHunter when Hub.Config.ArceusLA.OutbreakConditions.TypeOfScan == OutbreakScanType.OutbreakOnly => "Found in a mass outbreak.",
+        //                         ArceusMode.MassiveOutbreakHunter when (Species)mon.Species is Species.Shieldon or Species.Bastiodon or Species.Cranidos or Species.Rampardos or Species.Scizor or Species.Sneasel or
+        //                         Species.Weavile or Species.Magnemite or Species.Magneton or Species.Magnezone or Species.Sylveon or Species.Leafeon or Species.Glaceon or Species.Flareon or Species.Jolteon or Species.Vaporeon
+        //                         or Species.Umbreon or Species.Espeon => "Found in a space-time distortion.",
+        //                         ArceusMode.GenieScanner => "Found a genie in a cloud",
+        //                         ArceusMode.ManaphyReset => "Found a in a cave",
+        //                         _ => "Found in a massive mass outbreak.",
+        //                     }
+        //                 };
 
-                        var embed = new EmbedBuilder { Color = Color.Gold, ThumbnailUrl = url }.WithAuthor(author).WithDescription(stats).WithFooter(footer);
-                        var guilds = Context.Client.Guilds;
-                        foreach (var guild in guilds)
-                        {
-                            foreach (var channel in channels)
-                            {
-                                var ch = guild.Channels.FirstOrDefault(x => x.Id == channel);
-                                if (ch != default && ch is ISocketMessageChannel sock)
-                                {
-                                    try
-                                    {
-                                        await sock.SendMessageAsync(mons[i].Item2 ? ping : "", embed: embed.Build()).ConfigureAwait(false);
-                                    }
-                                    catch { }
-                                }
-                            }
-                        }
-                        ArceusBot.EmbedMons.Remove(mons[i]);
-                    }
-                }
-                else await Task.Delay(1_000, token).ConfigureAwait(false);
-            }
-            ArceusBot.EmbedSource = new();
-        }
+        //                 var embed = new EmbedBuilder { Color = Color.Gold, ThumbnailUrl = url }.WithAuthor(author).WithDescription(stats).WithFooter(footer);
+        //                 var guilds = Context.Client.Guilds;
+        //                 foreach (var guild in guilds)
+        //                 {
+        //                     foreach (var channel in channels)
+        //                     {
+        //                         var ch = guild.Channels.FirstOrDefault(x => x.Id == channel);
+        //                         if (ch != default && ch is ISocketMessageChannel sock)
+        //                         {
+        //                             try
+        //                             {
+        //                                 await sock.SendMessageAsync(mons[i].Item2 ? ping : "", embed: embed.Build()).ConfigureAwait(false);
+        //                             }
+        //                             catch { }
+        //                         }
+        //                     }
+        //                 }
+        //                 ArceusBot.EmbedMons.Remove(mons[i]);
+        //             }
+        //         }
+        //         else await Task.Delay(1_000, token).ConfigureAwait(false);
+        //     }
+        //     ArceusBot.EmbedSource = new();
+        // }
 
         [Command("repeek")]
         [Summary("Take and send a screenshot from the specified Switch.")]
