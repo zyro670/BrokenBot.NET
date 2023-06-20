@@ -12,6 +12,7 @@ namespace SysBot.Pokemon
         private const string Hosting = nameof(Hosting);
         private const string Counts = nameof(Counts);
         private const string FeatureToggle = nameof(FeatureToggle);
+        public int accessibleRotationCount { get; set; } = 0;
         public override string ToString() => "RaidBotSV Settings";
 
         [Category(FeatureToggle), Description("URL to Pokémon Automation's Tera Ban List json (or one matching the required structure).")]
@@ -124,6 +125,9 @@ namespace SysBot.Pokemon
 
             [Category(Hosting), Description("If true, the bot will overwrite any set Description with the new one.")]
             public bool ForceDescription { get; set; } = true;
+
+            [Category(Hosting), Description("If true, the bot will add a Lobby Countdown to the Discord Embed")]
+            public bool IncludeCountdown { get; set; } = true;
 
             [Category(Hosting), Description("If true, the bot will append the moves to the preset Description.")]
             public bool IncludeMoves { get; set; } = true;

@@ -1,9 +1,11 @@
-﻿using PKHeX.Core;
+﻿using Newtonsoft.Json.Linq;
+using PKHeX.Core;
 using SysBot.Base;
 using System;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 // ReSharper disable AutoPropertyCanBeMadeGetOnly.Global
@@ -351,8 +353,6 @@ namespace SysBot.Pokemon
                 if (CreateRaidOnDeck)
                 {
                     await GenerateRaidInfo(i, hub, type, token).ConfigureAwait(false);
-                    await GenerateRaidMoveset(i, hub, type, token).ConfigureAwait(false);
-                    await GenerateRaidRewards(i, hub, type, token).ConfigureAwait(false);
                 }
                 if (CreateTradeStartSprite)
                 {
@@ -367,51 +367,130 @@ namespace SysBot.Pokemon
             }
         }
 
-        private async Task GenerateRaidRewards(int i, PokeTradeHub<PK9> hub, int type, CancellationToken token)
-        {
-            await Task.Delay(0_050, token).ConfigureAwait(false);
-            var rew = string.Empty;
-            switch (type)
-            {
-                case 0: rew = hub.Config.RaidSV.RaidEmbedFilters.Description.Last(); break;
-                case 1: rew = hub.Config.RotatingRaidSV.RaidEmbedParameters[i].Description.Last(); break;
-            }
-            var value = string.Format(RaidRewardsInQueueFormat, rew);
-            File.WriteAllText("raidrewards.txt", value);
-        }
-
         private async Task GenerateRaidInfo(int i, PokeTradeHub<PK9> hub, int type, CancellationToken token)
         {
             await Task.Delay(0_050, token).ConfigureAwait(false);
-            var rew = string.Empty;
-            switch (type)
+
+            var description = GetDescription(hub, type, i);
+
+            if (description.Length > 0)
             {
-                case 0: rew = hub.Config.RaidSV.RaidEmbedFilters.Description[1]; break;
-                case 1: rew = hub.Config.RotatingRaidSV.RaidEmbedParameters[i].Description[1]; break;
+                string movesetStartRegex = @"\*\*Moveset:\*\*";
+                string rewardsStartRegex = @"\*\*Special Rewards:\*\*";
+                int moveStartIndex = Array.FindIndex(description, line => Regex.IsMatch(line, movesetStartRegex));
+                int rewardsStartIndex = Array.FindIndex(description, line => Regex.IsMatch(line, rewardsStartRegex));
+
+                var formattedTitle = GetTitle(hub, type, i);
+                File.WriteAllText("raidTitle.txt", " " + formattedTitle + " ");
+
+                var formattedInfo = GetFormattedInfo(description, moveStartIndex, rewardsStartIndex);
+                File.WriteAllText("raidinfo.txt", string.Format(RaidInfoFormat, formattedInfo));
+
+                var formattedMoveset = GetFormattedMoveset(description, moveStartIndex, rewardsStartIndex);
+                File.WriteAllText("raidmoveset.txt", string.Format(formattedMoveset));
+
+                var formattedRewards = GetFormattedRewards(description, rewardsStartIndex);
+                File.WriteAllText("raidrewards.txt", string.Format(formattedRewards));
             }
-            var value = string.Format(RaidInfoFormat, rew);
-            File.WriteAllText("raidinfo.txt", value);
+            else
+            {
+                File.WriteAllText("raidinfo.txt", "No Information Found");
+                File.WriteAllText("raidmoveset.txt", "No Moves Found");
+                File.WriteAllText("raidrewards.txt", "No Rewards Found");
+            }
         }
 
-        private async Task GenerateRaidMoveset(int i, PokeTradeHub<PK9> hub, int type, CancellationToken token)
+        private string GetTitle(PokeTradeHub<PK9> hub, int type, int i)
         {
-            await Task.Delay(0_050, token).ConfigureAwait(false);
-            string moves = string.Empty;
-            string extra = string.Empty;
             switch (type)
             {
-                case 0: moves = hub.Config.RaidSV.RaidEmbedFilters.Description[3]; extra = hub.Config.RaidSV.RaidEmbedFilters.Description[4]; break;
-                case 1: moves = hub.Config.RotatingRaidSV.RaidEmbedParameters[i].Description[3]; extra = hub.Config.RotatingRaidSV.RaidEmbedParameters[i].Description[4]; break;
+                case 0:
+                    return hub.Config.RaidSV.RaidEmbedFilters.Title;
+                case 1:
+                    return hub.Config.RotatingRaidSV.RaidEmbedParameters[i].Title;
+                default:
+                    return string.Empty;
             }
-            if (!string.IsNullOrEmpty(extra))
-                moves = moves + Environment.NewLine + extra;
-            var value = string.Format(RaidMovesetFormat, moves);
-            File.WriteAllText("raidmoveset.txt", value);
         }
+
+        private string[] GetDescription(PokeTradeHub<PK9> hub, int type, int i)
+        {
+            switch (type)
+            {
+                case 0:
+                    return hub.Config.RaidSV.RaidEmbedFilters.Description;
+                case 1:
+                    return hub.Config.RotatingRaidSV.RaidEmbedParameters[i].Description;
+                default:
+                    return new string[0];
+            }
+        }
+
+
+        private string GetFormattedInfo(string[] description, int moveStartIndex, int rewardsStartIndex)
+        {
+            if (moveStartIndex != -1)
+            {
+                var infoArray = description.Take(moveStartIndex).ToArray();
+                return string.Join(Environment.NewLine, infoArray);
+            }
+            else if (rewardsStartIndex != -1)
+            {
+                var infoArray = description.Take(rewardsStartIndex).ToArray();
+                return string.Join(Environment.NewLine, infoArray);
+            }
+            else
+            {
+                return string.Join(Environment.NewLine, description);
+            }
+        }
+
+        private string GetFormattedMoveset(string[] description, int moveStartIndex, int rewardsStartIndex)
+        {
+            if (moveStartIndex != -1)
+            {
+                moveStartIndex++;
+                string[] movesArray;
+                if (moveStartIndex != -1 && rewardsStartIndex != -1)
+                {
+                    movesArray = description.Skip(moveStartIndex).Take(rewardsStartIndex - moveStartIndex).ToArray();
+                }
+                else
+                {
+                    movesArray = description.Skip(moveStartIndex).ToArray();
+                }
+
+                if (movesArray.Length > 0)
+                {
+                    movesArray[1] = Regex.Replace(movesArray[1], @"(.*?)ㅤ(.*?)", "$1\r\n$2").Trim();
+                }
+
+                return Environment.NewLine + string.Join(Environment.NewLine, movesArray);
+            }
+            else
+            {
+                return "No Moves Found";
+            }
+        }
+
+        private string GetFormattedRewards(string[] description, int rewardsStartIndex)
+        {
+            if (rewardsStartIndex != -1)
+            {
+                rewardsStartIndex++;
+                string[] rewardsArray = description.Skip(rewardsStartIndex - 1).ToArray();
+                return string.Join(Environment.NewLine, rewardsArray);
+            }
+            else
+            {
+                return "No Rewards Found";
+            }
+        }
+
 
         private async Task GenerateRaidBotSprite(PokeRoutineExecutorBase b, PK9 pk, CancellationToken token)
         {
-            await Task.Delay(0_050, token).ConfigureAwait(false);
+            await Task.Delay(0_100, token).ConfigureAwait(false);
             var func = CreateSpriteFile;
             if (func == null)
                 return;
