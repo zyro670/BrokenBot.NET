@@ -796,15 +796,15 @@ namespace SysBot.Pokemon.Discord
         {
             var raidList = SysCord<T>.Runner.Hub.Config.RotatingRaidSV.RaidEmbedParameters;
             int raidCount = raidList.Count;
-            int numberOfFields = (int)Math.Ceiling((double)raidCount / 20);
+            int numberOfFields = (int)Math.Ceiling((double)raidCount / 15);
 
             var embed = new EmbedBuilder();
             embed.Title = "Raid List";
 
             for (int i = 0; i < numberOfFields; i++)
             {
-                int startIndex = i * 20;
-                int endIndex = Math.Min(startIndex + 19, raidCount - 1);
+                int startIndex = i * 15;
+                int endIndex = Math.Min(startIndex + 14, raidCount - 1);
 
                 var fieldBuilder = new StringBuilder();
                 for (int j = startIndex; j <= endIndex; j++)
