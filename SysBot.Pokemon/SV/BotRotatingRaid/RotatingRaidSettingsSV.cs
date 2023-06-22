@@ -12,8 +12,10 @@ namespace SysBot.Pokemon
         private const string Hosting = nameof(Hosting);
         private const string Counts = nameof(Counts);
         private const string FeatureToggle = nameof(FeatureToggle);
-        public int accessibleRotationCount { get; set; } = 0;
         public override string ToString() => "RaidBotSV Settings";
+
+        [Browsable(false)]
+        public int accessibleRotationCount { get; set; } = 0;
 
         [Category(FeatureToggle), Description("URL to Pokémon Automation's Tera Ban List json (or one matching the required structure).")]
         public string BanListURL { get; set; } = "https://raw.githubusercontent.com/PokemonAutomation/ServerConfigs-PA-SHA/main/PokemonScarletViolet/TeraAutoHost-BanList.json";
