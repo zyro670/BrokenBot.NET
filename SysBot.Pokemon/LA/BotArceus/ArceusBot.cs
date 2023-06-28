@@ -1249,7 +1249,10 @@ namespace SysBot.Pokemon
 
                 Log($"SpawnerID {bytes:X16} - Generator Seed: {BitConverter.ToString(GeneratorSeed).Replace("-", "")}", false);
                 var group_seed = (BitConverter.ToUInt64(GeneratorSeed, 0) - 0x82A2B175229D6A5B) & 0xFFFFFFFFFFFFFFFF;
-                GenerateNextShiny(0, group_seed);
+                var (newSeed, pa8) = GenerateNextShiny(0, group_seed);
+
+                if (Settings.SpecialConditions.InjectResultSeed && newSeed > 0)
+                    await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(newSeed), SpawnerOff, token).ConfigureAwait(false);
             }
         }
 
@@ -1722,14 +1725,24 @@ namespace SysBot.Pokemon
                     // Reorder the speed to be 3rd.
                     pk.IVs = new[] { gen.IVs[0], gen.IVs[1], gen.IVs[2], gen.IVs[5], gen.IVs[3], gen.IVs[4] };
 
-                    var print = Hub.Config.StopConditions.GetSpecialPrintName(pk);
-                    Log($"\nAdvance: {i}\n{print}\nGenerator Seed: {generator_seed:X16}", false);
+                    if (Settings.SpecialConditions.MaxAdvancesToSearch <= 500)
+                    {
+                        var print = Hub.Config.StopConditions.GetSpecialPrintName(pk);
+                        Log($"\nAdvance: {i}\n{print}\nGenerator Seed: {generator_seed:X16}", false);
+                    }
 
                     if (StopConditionSettings.EncounterFound(pk, Hub.Config.StopConditions, null))
                     {
+                        if (Settings.SpecialConditions.MaxAdvancesToSearch > 500)
+                        {
+                            var print = Hub.Config.StopConditions.GetSpecialPrintName(pk);
+                            var advance = Settings.SpecialConditions.InjectResultSeed ? Random.Shared.Next(3, 33) : i;
+                            Log($"\nAdvance: {advance}\n{print}\nGenerator Seed: {generator_seed:X16}", false);
+                        }
+
                         Settings.AlphaScanConditions.StopOnMatch = true;
                         EmbedMons.Add((pk, true));
-                        return (newseed, pk);
+                        return (generator_seed, pk);
                     }
                     mainrng = new Xoroshiro128Plus(mainrng.Next());
                 }

@@ -149,6 +149,9 @@ namespace SysBot.Pokemon
             [Category(Arceus), Description("Enter number of advances to search.")]
             public int MaxAdvancesToSearch { get; set; } = 50;
 
+            [Category(Arceus), Description("Injects result seed at advance 0.")]
+            public bool InjectResultSeed { get; set; } = false;
+
             [Category(Arceus), Description("Wait time between teleporting and scanning.")]
             public int WaitMsBetweenTeleports { get; set; } = 1000;
 
