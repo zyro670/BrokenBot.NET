@@ -146,6 +146,9 @@ namespace SysBot.Pokemon
             [Category(Arceus), Description("Select the Location of the map you are hunting for. Ignore this setting if you are running MMOHunter")]
             public ArceusMap ScanLocation { get; set; } = ArceusMap.ObsidianFieldlands;
 
+            [Category(Arceus), Description("Select the legend you are scanning for. Ignore this setting if you are running MMOHunter")]
+            public LegendsOnMap TypeOfLegend { get; set; } = LegendsOnMap.Heatran;
+
             [Category(Arceus), Description("Enter number of advances to search.")]
             public int MaxAdvancesToSearch { get; set; } = 50;
 

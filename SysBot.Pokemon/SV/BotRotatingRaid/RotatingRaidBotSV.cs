@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -30,17 +29,16 @@ namespace SysBot.Pokemon
             Settings = hub.Config.RotatingRaidSV;
         }
 
-        private const int AzureBuildID = 421;
         private int RaidsAtStart;
         private int RaidCount;
         private int WinCount;
         private int LossCount;
         private int SeedIndexToReplace;
-        private int RotationCount;
         private int StoryProgress;
         private int EventProgress;
         private int EmptyRaid = 0;
         private int LostRaid = 0;
+        public int RotationCount;
         private ulong TodaySeed;
         private ulong OverworldOffset;
         private ulong ConnectedOffset;
@@ -57,18 +55,6 @@ namespace SysBot.Pokemon
 
         public override async Task MainLoop(CancellationToken token)
         {
-            if (Settings.CheckForUpdatedBuild)
-            {
-                var update = await CheckAzureLabel();
-                if (update)
-                {
-                    Log("A new azure-build is available for download @ https://dev.azure.com/zyrocodez/zyro670/_build?definitionId=2&_a=summary");
-                    return;
-                }
-                else
-                    Log("You are on the latest build of NotForkBot.");
-            }
-
             if (Settings.GenerateParametersFromFile)
             {
                 GenerateSeedsFromFile();
@@ -232,7 +218,7 @@ namespace SysBot.Pokemon
                     Log($"Today Seed: {TodaySeed:X8}");
                 }
 
-                if (!Settings.RaidEmbedParameters[RotationCount].IsSet || SeedIndexToReplace == 0)
+                if (!Settings.RaidEmbedParameters[RotationCount].IsSet)
                 {
                     Log($"Preparing parameter for {Settings.RaidEmbedParameters[RotationCount].Species}");
                     await ReadRaids(token).ConfigureAwait(false);
@@ -801,7 +787,7 @@ namespace SysBot.Pokemon
 
         private async Task<bool> IsConnectedToLobby(CancellationToken token)
         {
-            var data = await SwitchConnection.ReadBytesMainAsync(Offsets.TeraLobby, 1, token).ConfigureAwait(false);
+            var data = await SwitchConnection.ReadBytesMainAsync(Offsets.TeraLobbyIsConnected, 1, token).ConfigureAwait(false);
             return data[0] != 0x00; // 0 when in lobby but not connected
         }
 
@@ -902,11 +888,10 @@ namespace SysBot.Pokemon
                 if (Settings.LobbyOptions.LobbyMethodOptions == LobbyMethodOptions.OpenLobby)
                 {
                     code = $"**{(Settings.RaidEmbedParameters[RotationCount].IsCoded && EmptyRaid < Settings.LobbyOptions.EmptyRaidLimit ? await GetRaidCode(token).ConfigureAwait(false) : "Free For All")}**";
-
                 }
                 else
                 {
-                    code = $"**{(Settings.RaidEmbedParameters[RotationCount].IsCoded ? await GetRaidCode(token).ConfigureAwait(false) : "Free For All")}**";
+                    code = $"**{(Settings.RaidEmbedParameters[RotationCount].IsCoded && !Settings.HideRaidCode ? await GetRaidCode(token).ConfigureAwait(false) : Settings.RaidEmbedParameters[RotationCount].IsCoded && Settings.HideRaidCode ? "||Is Hidden!||" : "Free For All")}**";
                 }
             }
 
@@ -939,7 +924,7 @@ namespace SysBot.Pokemon
 
             if (!disband && names is null && !upnext)
             {
-                embed.AddField("**Waiting in lobby!**", $"Raid code: {code}");
+                embed.AddField(Settings.IncludeCountdown ? $"**Starting raid <t:{DateTimeOffset.Now.ToUnixTimeSeconds() + Settings.TimeToWait}:R>!**" : $"**Waiting in lobby!", $"Raid code: {code}");
             }
 
             if (!disband && names is not null && !upnext)
@@ -1111,7 +1096,7 @@ namespace SysBot.Pokemon
         private async Task SkipRaidOnLosses(CancellationToken token)
         {
             Log($"We had {Settings.LobbyOptions.SkipRaidLimit} lost/empty raids.. Moving on!");
-            await SanitizeRotationCount(token).ConfigureAwait(false);            
+            await SanitizeRotationCount(token).ConfigureAwait(false);
             await CloseGame(Hub.Config, token).ConfigureAwait(false);
             await StartGameRaid(Hub.Config, token).ConfigureAwait(false);
         }
@@ -1123,19 +1108,6 @@ namespace SysBot.Pokemon
                 pkmform = $"-{pkm.Form}";
 
             return _ = $"https://raw.githubusercontent.com/zyro670/PokeTextures/main/Placeholder_Sprites/scaled_up_sprites/Shiny/AlternateArt/" + $"{pkm.Species}{pkmform}" + ".png";
-        }
-
-        private static async Task<bool> CheckAzureLabel()
-        {
-            int azurematch;
-            string latestazure = "https://dev.azure.com/zyrocodez/zyro670/_apis/build/builds?definitions=2&$top=1&api-version=5.0-preview.5";
-            HttpClient client = new();
-            var content = await client.GetStringAsync(latestazure);
-            int buildId = int.Parse(content.Substring(135, 3));
-            azurematch = AzureBuildID.CompareTo(buildId);
-            if (azurematch < 0)
-                return true;
-            return false;
         }
 
         private async Task GetRaidSprite(CancellationToken token)
@@ -1150,9 +1122,9 @@ namespace SysBot.Pokemon
                 CommonEdits.SetIsShiny(pk, false);
             PK9 pknext = new()
             {
-                Species = Settings.RaidEmbedParameters.Count > 1 && RotationCount < Settings.RaidEmbedParameters.Count ? (ushort)Settings.RaidEmbedParameters[RotationCount + 1].Species : Settings.RaidEmbedParameters.Count > 1 && RotationCount >= Settings.RaidEmbedParameters.Count ? (ushort)Settings.RaidEmbedParameters[0].Species : (ushort)Settings.RaidEmbedParameters[RotationCount].Species,
+                Species = Settings.RaidEmbedParameters.Count > 1 && RotationCount + 1 < Settings.RaidEmbedParameters.Count ? (ushort)Settings.RaidEmbedParameters[RotationCount + 1].Species : (ushort)Settings.RaidEmbedParameters[0].Species,
             };
-            if (Settings.RaidEmbedParameters.Count > 1 && RotationCount < Settings.RaidEmbedParameters.Count ? Settings.RaidEmbedParameters[RotationCount + 1].IsShiny : Settings.RaidEmbedParameters.Count > 1 && RotationCount >= Settings.RaidEmbedParameters.Count ? Settings.RaidEmbedParameters[0].IsShiny : Settings.RaidEmbedParameters[RotationCount].IsShiny)
+            if (Settings.RaidEmbedParameters.Count > 1 && RotationCount + 1 < Settings.RaidEmbedParameters.Count ? Settings.RaidEmbedParameters[RotationCount + 1].IsShiny : Settings.RaidEmbedParameters[0].IsShiny)
                 CommonEdits.SetIsShiny(pknext, true);
             else
                 CommonEdits.SetIsShiny(pknext, false);
@@ -1219,7 +1191,7 @@ namespace SysBot.Pokemon
                             res = "**Special Rewards:**\n" + res;
                         Log($"Seed {seed:X8} found for {(Species)pk.Species}");
                         Settings.RaidEmbedParameters[a].Seed = $"{seed:X8}";
-                        var stars = RaidExtensions.GetStarCount(raids[i], raids[i].Difficulty, StoryProgress, raids[i].IsBlack);
+                        var stars = raids[i].IsEvent ? encounters[i].Stars : RaidExtensions.GetStarCount(raids[i], raids[i].Difficulty, StoryProgress, raids[i].IsBlack);
                         string starcount = string.Empty;
                         switch (stars)
                         {
@@ -1232,7 +1204,7 @@ namespace SysBot.Pokemon
                             case 7: starcount = "7 ☆"; break;
                         }
                         Settings.RaidEmbedParameters[a].IsShiny = raids[i].IsShiny;
-                        Settings.RaidEmbedParameters[a].CrystalType = raids[i].IsBlack ? TeraCrystalType.Black : raids[i].IsEvent ? TeraCrystalType.Might : TeraCrystalType.Base;
+                        Settings.RaidEmbedParameters[a].CrystalType = raids[i].IsBlack ? TeraCrystalType.Black : raids[i].IsEvent && stars == 7 ? TeraCrystalType.Might : raids[i].IsEvent ? TeraCrystalType.Distribution : TeraCrystalType.Base;
                         Settings.RaidEmbedParameters[a].Species = (Species)pk.Species;
                         Settings.RaidEmbedParameters[a].SpeciesForm = pk.Form;
                         var pkinfo = Hub.Config.StopConditions.GetRaidPrintName(pk);
@@ -1311,9 +1283,14 @@ namespace SysBot.Pokemon
                             foreach (var p in Settings.RaidEmbedParameters.ToList())
                             {
                                 if (p.Seed == param.Seed)
-                                    Settings.RaidEmbedParameters.Remove(p);
+                                    break;
+                                RotationCount++;
+
+                                if (RotationCount >= Settings.RaidEmbedParameters.Count)
+                                {
+                                    RotationCount = 0;
+                                }
                             }
-                            Settings.RaidEmbedParameters.Insert(0, param);
                         }
                         SeedIndexToReplace = i;
                         done = true;

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading;
 using SysBot.Base;
-using static SysBot.Pokemon.RaidSettingsSV;
 
 namespace SysBot.Pokemon
 {
@@ -49,8 +48,7 @@ namespace SysBot.Pokemon
         [Category(Overworld), Description("When enabled, the screen will be turned off during normal bot loop operation to save power.")]
         public bool ScreenOff { get; set; }
 
-        [Category(Overworld)]
-        [TypeConverter(typeof(PicnicFiltersCategoryConverter))]
+        [Category(Overworld), TypeConverter(typeof(CategoryConverter<PicnicFiltersCategory>))]
         public class PicnicFiltersCategory
         {
             public override string ToString() => "Picnic Conditions";
@@ -81,8 +79,7 @@ namespace SysBot.Pokemon
 
         }
 
-        [Category(Overworld)]
-        [TypeConverter(typeof(MovementFiltersCategoryConverter))]
+        [Category(Overworld), TypeConverter(typeof(CategoryConverter<MovementFiltersCategory>))]
         public class MovementFiltersCategory
         {
             public override string ToString() => "Movement Conditions";
@@ -92,11 +89,9 @@ namespace SysBot.Pokemon
 
             [Category(Overworld), Description("Indicates how long the character will move south before every scan.")]
             public int MoveDownMs { get; set; } = 3000;
-
         }
 
-        [Category(Overworld)]
-        [TypeConverter(typeof(RolloverFiltersCategoryConverter))]
+        [Category(Overworld), TypeConverter(typeof(CategoryConverter<RolloverFiltersCategory>))]
         public class RolloverFiltersCategory
         {
             public override string ToString() => "Rollover Conditions";
@@ -121,29 +116,11 @@ namespace SysBot.Pokemon
 
         }
 
-        private sealed class PicnicFiltersCategoryConverter : TypeConverter
+        public class CategoryConverter<T> : TypeConverter
         {
             public override bool GetPropertiesSupported(ITypeDescriptorContext? context) => true;
 
-            public override PropertyDescriptorCollection GetProperties(ITypeDescriptorContext? context, object? value, Attribute[]? attributes) => TypeDescriptor.GetProperties(typeof(PicnicFiltersCategory));
-
-            public override bool CanConvertTo(ITypeDescriptorContext? context, Type? destinationType) => destinationType != typeof(string) && base.CanConvertTo(context, destinationType);
-        }
-
-        private sealed class MovementFiltersCategoryConverter : TypeConverter
-        {
-            public override bool GetPropertiesSupported(ITypeDescriptorContext? context) => true;
-
-            public override PropertyDescriptorCollection GetProperties(ITypeDescriptorContext? context, object? value, Attribute[]? attributes) => TypeDescriptor.GetProperties(typeof(MovementFiltersCategory));
-
-            public override bool CanConvertTo(ITypeDescriptorContext? context, Type? destinationType) => destinationType != typeof(string) && base.CanConvertTo(context, destinationType);
-        }
-
-        private sealed class RolloverFiltersCategoryConverter : TypeConverter
-        {
-            public override bool GetPropertiesSupported(ITypeDescriptorContext? context) => true;
-
-            public override PropertyDescriptorCollection GetProperties(ITypeDescriptorContext? context, object? value, Attribute[]? attributes) => TypeDescriptor.GetProperties(typeof(RolloverFiltersCategory));
+            public override PropertyDescriptorCollection GetProperties(ITypeDescriptorContext? context, object value, Attribute[]? attributes) => TypeDescriptor.GetProperties(typeof(T));
 
             public override bool CanConvertTo(ITypeDescriptorContext? context, Type? destinationType) => destinationType != typeof(string) && base.CanConvertTo(context, destinationType);
         }

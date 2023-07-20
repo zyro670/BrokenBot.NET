@@ -11,9 +11,10 @@ namespace SysBot.Pokemon
                 or PokeRoutineType.LinkTrade
                 or PokeRoutineType.Clone
                 or PokeRoutineType.Dump
+                or PokeRoutineType.Display
                 => new PokeTradeBotSV(Hub, cfg),
 
-            PokeRoutineType.OverworldBot => new OverworldBotSV(cfg, Hub),            
+            PokeRoutineType.OverworldBot => new OverworldBotSV(cfg, Hub),
             PokeRoutineType.EggFetch => new EggBotSV(cfg, Hub),
             PokeRoutineType.RaidBot => new RaidBotSV(cfg, Hub),
             PokeRoutineType.RotatingRaidBot => new RotatingRaidBotSV(cfg, Hub),
@@ -27,6 +28,7 @@ namespace SysBot.Pokemon
                 or PokeRoutineType.LinkTrade
                 or PokeRoutineType.Clone
                 or PokeRoutineType.Dump
+                or PokeRoutineType.Display
                 => true,
 
             PokeRoutineType.OverworldBot => true,

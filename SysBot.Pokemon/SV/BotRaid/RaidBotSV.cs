@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -30,7 +29,6 @@ namespace SysBot.Pokemon
             Settings = hub.Config.RaidSV;
         }
 
-        private const int AzureBuildID = 421;
         private int RaidsAtStart;
         private int RaidCount;
         private int WinCount;
@@ -54,18 +52,6 @@ namespace SysBot.Pokemon
 
         public override async Task MainLoop(CancellationToken token)
         {
-            if (Settings.CheckForUpdatedBuild)
-            {
-                var update = await CheckAzureLabel();
-                if (update)
-                {
-                    Log("A new azure-build is available for download @ https://dev.azure.com/zyrocodez/zyro670/_build?definitionId=2&_a=summary");
-                    return;
-                }
-                else
-                    Log("You are on the latest build of NotForkBot.");
-            }
-
             if (Settings.GenerateParametersFromFile)
             {
                 GenerateSeedsFromFile();
@@ -682,7 +668,7 @@ namespace SysBot.Pokemon
 
         private async Task<bool> IsConnectedToLobby(CancellationToken token)
         {
-            var data = await SwitchConnection.ReadBytesMainAsync(Offsets.TeraLobby, 1, token).ConfigureAwait(false);
+            var data = await SwitchConnection.ReadBytesMainAsync(Offsets.TeraLobbyIsConnected, 1, token).ConfigureAwait(false);
             return data[0] != 0x00; // 0 when in lobby but not connected
         }
 
@@ -808,7 +794,7 @@ namespace SysBot.Pokemon
 
             if (!disband && names is null && !upnext)
             {
-                embed.AddField("**Waiting in lobby!**", $"Raid code: {code}");
+                embed.AddField(Settings.IncludeCountdown ? $"**Starting raid in <t:{DateTimeOffset.Now.ToUnixTimeSeconds() + Settings.TimeToWait}:R> seconds!**" : $"**Waiting in lobby!", $"Raid code: {code}");
             }
 
             if (!disband && names is not null && !upnext)
@@ -935,19 +921,6 @@ namespace SysBot.Pokemon
             return _ = $"https://raw.githubusercontent.com/zyro670/PokeTextures/main/Placeholder_Sprites/scaled_up_sprites/Shiny/AlternateArt/" + $"{pkm.Species}{pkmform}" + ".png";
         }
 
-        private static async Task<bool> CheckAzureLabel()
-        {
-            int azurematch;
-            string latestazure = "https://dev.azure.com/zyrocodez/zyro670/_apis/build/builds?definitions=2&$top=1&api-version=5.0-preview.5";
-            HttpClient client = new();
-            var content = await client.GetStringAsync(latestazure);
-            int buildId = int.Parse(content.Substring(135, 3));
-            azurematch = AzureBuildID.CompareTo(buildId);
-            if (azurematch < 0)
-                return true;
-            return false;
-        }
-
         private async Task GetRaidSprite(CancellationToken token)
         {
             PK9 pk = new()
@@ -1017,7 +990,7 @@ namespace SysBot.Pokemon
                         res = "**Special Rewards:**\n" + res;
                     Log($"Seed {seed:X8} found for {(Species)pk.Species}");
                     Settings.RaidEmbedFilters.Seed = $"{seed:X8}";
-                    var stars = RaidExtensions.GetStarCount(raids[i], raids[i].Difficulty, StoryProgress, raids[i].IsBlack);
+                    var stars = raids[i].IsEvent ? encounters[i].Stars : RaidExtensions.GetStarCount(raids[i], raids[i].Difficulty, StoryProgress, raids[i].IsBlack);
                     string starcount = string.Empty;
                     switch (stars)
                     {
@@ -1030,7 +1003,7 @@ namespace SysBot.Pokemon
                         case 7: starcount = "7 ☆"; break;
                     }
                     Settings.RaidEmbedFilters.IsShiny = raids[i].IsShiny;
-                    Settings.RaidEmbedFilters.CrystalType = raids[i].IsBlack ? TeraCrystalType.Black : raids[i].IsEvent ? TeraCrystalType.Might : TeraCrystalType.Base;
+                    Settings.RaidEmbedFilters.CrystalType = raids[i].IsBlack ? TeraCrystalType.Black : raids[i].IsEvent && stars == 7 ? TeraCrystalType.Might : raids[i].IsEvent ? TeraCrystalType.Distribution : TeraCrystalType.Base;
                     Settings.RaidEmbedFilters.Species = (Species)pk.Species;
                     Settings.RaidEmbedFilters.SpeciesForm = pk.Form;
                     var catchlimit = Settings.CatchLimit;

@@ -12,8 +12,21 @@
         MultiSpawnPathSearch = 7,
         GenieScanner = 8,
         ManaphyReset = 9,
-        AdvanceTimeDelay = 10,
+        OtherLegendReset = 10,
+        AdvanceTimeDelay = 11,
     }
+
+    public enum LegendsOnMap
+    {
+        Heatran = 0,
+        Cresselia = 1,
+        Darkrai = 2,
+        Shaymin = 3,
+        Mesprit = 4,
+        Uxie = 5,
+        Azelf = 6,
+    }
+
     public enum ArceusAutoFill
     {
         CampZone = 0,

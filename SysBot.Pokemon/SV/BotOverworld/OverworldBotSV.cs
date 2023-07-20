@@ -32,7 +32,7 @@ namespace SysBot.Pokemon
         private ulong PlayerCanMoveOffset;
         private ulong PlayerOnMountOffset;
         private bool GameWasReset = false;
-        private int SandwichCounter;
+        private int sandwichCounter;
         private SAV9SV TrainerSav = new();
 
         public OverworldBotSV(PokeBotState cfg, PokeTradeHub<PK9> hub) : base(cfg)
@@ -89,17 +89,18 @@ namespace SysBot.Pokemon
             PlayerOnMountOffset = await SwitchConnection.PointerAll(Offsets.PlayerOnMountPointer, token).ConfigureAwait(false);
             TeraRaidBlockOffset = await SwitchConnection.PointerAll(Offsets.TeraRaidBlockPointer, token).ConfigureAwait(false);
             Log("Caching offsets complete!");
-        }       
+        }
 
-        private async Task ResetOverworld(CancellationToken token, bool time)
+        private async Task ResetOverworld(CancellationToken token, bool opensettings, bool time)
         {
             await Click(B, 0_050, token).ConfigureAwait(false);
             await CloseGame(Hub.Config, token).ConfigureAwait(false);
-            await RolloverCorrectionSV(token, time).ConfigureAwait(false);
+            if (opensettings)
+                await RolloverCorrectionSV(token, time).ConfigureAwait(false);
             await StartGame(Hub.Config, token).ConfigureAwait(false);
             await InitializeSessionOffsets(token).ConfigureAwait(false);
         }
-        
+
         private async Task Preparize(CancellationToken token)
         {
             Log("Navigating to picnic..");
@@ -126,7 +127,7 @@ namespace SysBot.Pokemon
             }
             Log("Time for a bonus!");
             await MakeSandwich(token).ConfigureAwait(false);
-            SandwichCounter++;
+            sandwichCounter++;
             Log("Continuing the hunt..");
         }
 
@@ -145,7 +146,7 @@ namespace SysBot.Pokemon
                 start++;
                 if (start == 3 && Settings.RolloverFilters.CheckForRollover)
                 {
-                    await ResetOverworld(token, true).ConfigureAwait(false);
+                    await ResetOverworld(token, true, true).ConfigureAwait(false);
                     start = 0;
                 }
                 uint currentSeed = BitConverter.ToUInt32(await SwitchConnection.ReadBytesAbsoluteAsync(TeraRaidBlockOffset, 4, token).ConfigureAwait(false), 0);
@@ -158,7 +159,7 @@ namespace SysBot.Pokemon
                         return;
                     }
                     Log(msg);     
-                    await ResetOverworld(token, false).ConfigureAwait(false);
+                    await ResetOverworld(token, true, false).ConfigureAwait(false);
                     PicnicVal = await PicnicState(token).ConfigureAwait(false);
                     TodaySeed = BitConverter.ToUInt32(await SwitchConnection.ReadBytesAbsoluteAsync(TeraRaidBlockOffset, 4, token).ConfigureAwait(false), 0);
                     if (Settings.LocationSelection != Location.NonAreaZero && Settings.LocationSelection != Location.TownBorder)
@@ -227,7 +228,7 @@ namespace SysBot.Pokemon
                             return;
                         }
                         Log(msg);
-                        await ResetOverworld(token, false).ConfigureAwait(false);
+                        await ResetOverworld(token, true, false).ConfigureAwait(false);
                         PicnicVal = await PicnicState(token).ConfigureAwait(false);
                         TodaySeed = BitConverter.ToUInt32(await SwitchConnection.ReadBytesAbsoluteAsync(TeraRaidBlockOffset, 4, token).ConfigureAwait(false), 0);
                         if (Settings.LocationSelection != Location.NonAreaZero && Settings.LocationSelection != Location.TownBorder)
@@ -250,7 +251,7 @@ namespace SysBot.Pokemon
                     if (await PlayerCannotMove(token).ConfigureAwait(false) && Settings.LocationSelection != Location.SecretCave || await PlayerCannotMove(token).ConfigureAwait(false) && await PlayerNotOnMount(token).ConfigureAwait(false) && Settings.LocationSelection == Location.SecretCave)
                     {
                         Log("We can't move! Are we in battle? Resetting game to attempt recovery and positioning.");
-                        await ReOpenGame(Hub.Config, token).ConfigureAwait(false);
+                        await ResetOverworld(token, false, false).ConfigureAwait(false);
                         PicnicVal = await PicnicState(token).ConfigureAwait(false);
                         TodaySeed = BitConverter.ToUInt32(await SwitchConnection.ReadBytesAbsoluteAsync(TeraRaidBlockOffset, 4, token).ConfigureAwait(false), 0);
                         if (Settings.LocationSelection != Location.NonAreaZero && Settings.LocationSelection != Location.TownBorder)
@@ -499,10 +500,10 @@ namespace SysBot.Pokemon
 
                 IsWaiting = true;
                 while (IsWaiting)
-                    await Task.Delay(5_000, token).ConfigureAwait(false);
+                    await Task.Delay(1_000, token).ConfigureAwait(false);
 
                 for (int i = 0; i < 2; i++)
-                    await Click(B, 0_500, token).ConfigureAwait(false);
+                    await Click(B, 1_000, token).ConfigureAwait(false);
                 await Click(HOME, 1_000, token).ConfigureAwait(false);
             }
 
@@ -602,7 +603,7 @@ namespace SysBot.Pokemon
             await SetStick(LEFT, 0, -10000, 1_000, token).ConfigureAwait(false); // Face down to basket
             await SetStick(LEFT, 0, 0, 0, token).ConfigureAwait(false);
             await Task.Delay(1_000, token).ConfigureAwait(false);
-            await SetStick(LEFT, 0, 5000, 0_400, token).ConfigureAwait(false); // Face up to basket
+            await SetStick(LEFT, 0, 5000, 0_650, token).ConfigureAwait(false); // Face up to basket
             await SetStick(LEFT, 0, 0, 0, token).ConfigureAwait(false);
             await Task.Delay(1_500, token).ConfigureAwait(false);
             Log("Returning to overworld..");

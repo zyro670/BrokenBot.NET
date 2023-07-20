@@ -1,15 +1,15 @@
 ﻿using PKHeX.Core;
 using PermuteMMO.Lib;
 using System.Globalization;
-using ResultsUtil = SysBot.Base.ResultsUtil;
-using static SysBot.Base.SwitchButton;
-using static SysBot.Base.SwitchStick;
-using static SysBot.Pokemon.PokeDataOffsetsLA;
 using System.Threading.Tasks;
 using System.Threading;
 using System.Collections.Generic;
 using System;
 using System.Linq;
+using ResultsUtil = SysBot.Base.ResultsUtil;
+using static SysBot.Base.SwitchButton;
+using static SysBot.Base.SwitchStick;
+using static SysBot.Pokemon.PokeDataOffsetsLA;
 
 namespace SysBot.Pokemon
 {
@@ -75,7 +75,6 @@ namespace SysBot.Pokemon
                 Config.IterateNextRoutine();
                 HasCharm = await CheckForCharm(token).ConfigureAwait(false);
                 var dex = await ReadPokedex(token).ConfigureAwait(false);
-                // Clear out any residual stick weirdness.
                 await ResetStick(token).ConfigureAwait(false);
                 MainNsoBase = await SwitchConnection.GetMainNsoBaseAsync(token).ConfigureAwait(false);
                 var task = Hub.Config.ArceusLA.BotType switch
@@ -90,6 +89,7 @@ namespace SysBot.Pokemon
                     ArceusMode.MultiSpawnPathSearch => PerformMultiSpawnerScan(dex, token),
                     ArceusMode.GenieScanner => ScanForSpawners(token),
                     ArceusMode.ManaphyReset => ManaphyReset(token),
+                    ArceusMode.OtherLegendReset => ScanForSpawners(token),
                     ArceusMode.AdvanceTimeDelay => AdvanceTimeDelay(token),
                     _ => PlayerCoordScan(token),
                 };
@@ -281,11 +281,9 @@ namespace SysBot.Pokemon
 
                     var SpawnerOff = await SwitchConnection.PointerAll(disofs, token).ConfigureAwait(false);
                     var GeneratorSeed = await SwitchConnection.ReadBytesAbsoluteAsync(SpawnerOff, 8, token).ConfigureAwait(false);
-                    //Log($"GroupID: {i} | Generator Seed: {BitConverter.ToString(GeneratorSeed).Replace("-", "")}");
                     var group_seed = (BitConverter.ToUInt64(GeneratorSeed, 0) - 0x82A2B175229D6A5B) & 0xFFFFFFFFFFFFFFFF;
                     if (group_seed != 0)
                     {
-                        //Log($"Group Seed: {string.Format("0x{0:X}", group_seed)}");
                         if (i >= 13 && i <= 15 && Settings.DistortionConditions.DistortionLocation == ArceusMap.CrimsonMirelands)
                             encounter_slot_sum = 118;
 
@@ -1049,7 +1047,7 @@ namespace SysBot.Pokemon
                 await Click(B, 0_500, token).ConfigureAwait(false);
             Log("Searching for a match!");
             GetDefaultCoords();
-            if (!Settings.SpecialConditions.RunToProfessor)
+            if (Settings.SpecialConditions.RunToProfessor == false && Settings.SpecialConditions.TypeOfLegend is not LegendsOnMap.Heatran or LegendsOnMap.Azelf or LegendsOnMap.Mesprit or LegendsOnMap.Uxie)
                 await TeleportToCampZone(token);
             while (!token.IsCancellationRequested)
             {
@@ -1058,6 +1056,19 @@ namespace SysBot.Pokemon
                     await SpawnerScan(token).ConfigureAwait(false);
                 if (Settings.BotType == ArceusMode.GenieScanner)
                     await GenieScan(token).ConfigureAwait(false);
+                if (Settings.BotType == ArceusMode.OtherLegendReset)
+                {
+                    if (Settings.SpecialConditions.TypeOfLegend is LegendsOnMap.Heatran or LegendsOnMap.Azelf or LegendsOnMap.Mesprit or LegendsOnMap.Uxie)
+                    {
+                        await Click(A, 0_800, token).ConfigureAwait(false);
+
+                        while (!await IsOnOverworldTitle(token).ConfigureAwait(false))
+                            await Click(A, 0_800, token).ConfigureAwait(false);
+
+                        await Task.Delay(2_000, token).ConfigureAwait(false);
+                    }
+                    await OtherLegendsReset(token).ConfigureAwait(false);
+                }
                 if (Settings.AlphaScanConditions.StopOnMatch)
                 {
                     Log($"{Hub.Config.StopConditions.MatchFoundEchoMention} a match has been found!");
@@ -1077,7 +1088,13 @@ namespace SysBot.Pokemon
                     else
                         return;
                 }
-                if (!Settings.SpecialConditions.RunToProfessor)
+                if (Settings.BotType == ArceusMode.OtherLegendReset && Settings.SpecialConditions.TypeOfLegend is LegendsOnMap.Azelf or LegendsOnMap.Heatran or LegendsOnMap.Mesprit or LegendsOnMap.Uxie)
+                {
+                    await CloseGame(Hub.Config, token).ConfigureAwait(false);
+                    await StartGame(Hub.Config, token).ConfigureAwait(false);
+                    continue;
+                }
+                if (Settings.SpecialConditions.RunToProfessor == false)
                 {
                     await TeleportToCampZone(token);
                     await SetStick(LEFT, -30_000, 0, 1_000, token).ConfigureAwait(false); // reset face forward
@@ -1097,7 +1114,7 @@ namespace SysBot.Pokemon
                     while (!await IsOnOverworldTitle(token).ConfigureAwait(false))
                         await Click(A, 1_000, token).ConfigureAwait(false);
                 }
-                else if (Settings.SpecialConditions.RunToProfessor)
+                if (Settings.SpecialConditions.RunToProfessor == true)
                 {
                     var mode = Settings.SpecialConditions.ScanLocation;
                     switch (mode)
@@ -1253,6 +1270,54 @@ namespace SysBot.Pokemon
                 GenerateNextShiny(0, group_seed);
             }
         }        
+
+        private async Task OtherLegendsReset(CancellationToken token)
+        {
+            await Task.Delay(0_500, token).ConfigureAwait(false);
+            int groupID = Settings.SpecialConditions.ScanLocation switch
+            {
+                ArceusMap.ObsidianFieldlands => 310,
+                ArceusMap.CrimsonMirelands => 402,
+                ArceusMap.CobaltCoastlands => 412,
+                ArceusMap.AlabasterIcelands => 302,
+                ArceusMap.CoronetHighlands => 265,
+                _ => throw new NotImplementedException("Invalid scan location."),
+            };
+            string spawnerID = Settings.SpecialConditions.TypeOfLegend switch
+            {
+                LegendsOnMap.Shaymin => "CDE0EAB0B0192256",
+                LegendsOnMap.Darkrai => "14044B0D5D36E4B6",
+                LegendsOnMap.Cresselia => "80E30B44446F80BE",
+                LegendsOnMap.Heatran => "DA1BB574FA53D58C",
+                LegendsOnMap.Mesprit => "375CE0719E93B5CF",
+                LegendsOnMap.Uxie => "5A67A8230FAF4B95",
+                LegendsOnMap.Azelf => "33DB175E98E892F7",
+                _ => throw new NotImplementedException("Invalid scan location."),
+            };
+
+            bool isSpawner = false;
+            while (!isSpawner)
+            {
+                var test = new long[] { 0x42a6ee0, 0x330, 0x70 + groupID * 0x440 + 0x20 + 0x3F0 };
+                var stest = await SwitchConnection.PointerAll(test, token).ConfigureAwait(false);
+                var bytes = BitConverter.ToUInt64(await SwitchConnection.ReadBytesAbsoluteAsync(stest, 8, token).ConfigureAwait(false), 0);
+                isSpawner = $"{bytes:X16}".Equals(spawnerID);
+                if (!isSpawner)
+                {
+                    groupID--;
+                    Log($"Bad SpawnerID {bytes:X16}\nTrying again with SpawnerID: {groupID}.");
+                    continue;
+                }
+                Log($"Checking SpawnerID: {groupID}...");
+                var SpawnerOffpoint = new long[] { 0x42a6ee0, 0x330, 0x70 + groupID * 0x440 + 0x20 };
+                var SpawnerOff = await SwitchConnection.PointerAll(SpawnerOffpoint, token).ConfigureAwait(false);
+                var GeneratorSeed = await SwitchConnection.ReadBytesAbsoluteAsync(SpawnerOff, 8, token).ConfigureAwait(false);
+
+                Log($"SpawnerID {bytes:X16} - Generator Seed: {BitConverter.ToString(GeneratorSeed).Replace("-", "")}");
+                var group_seed = (BitConverter.ToUInt64(GeneratorSeed, 0) - 0x82A2B175229D6A5B) & 0xFFFFFFFFFFFFFFFF;
+                GenerateNextShiny(0, group_seed);
+            }
+        }
 
         private async Task ManaphyReset(CancellationToken token)
         {
@@ -1697,26 +1762,46 @@ namespace SysBot.Pokemon
                 mainrng = new Xoroshiro128Plus(mainrng.Next());
             }
             
-            if (Settings.BotType == ArceusMode.GenieScanner)
+            if (Settings.BotType == ArceusMode.GenieScanner || Settings.BotType == ArceusMode.OtherLegendReset)
             {
+                Species species = Species.None;
                 for (int i = 0; i < Settings.SpecialConditions.MaxAdvancesToSearch; i++)
                 {
-                    Species geniename = Settings.SpecialConditions.ScanLocation switch
+                    if (Settings.BotType == ArceusMode.GenieScanner)
                     {
-                        ArceusMap.ObsidianFieldlands => Species.Landorus,
-                        ArceusMap.CrimsonMirelands => Species.Enamorus,
-                        ArceusMap.CobaltCoastlands => Species.Thundurus,
-                        ArceusMap.AlabasterIcelands => Species.Tornadus,
-                        _ => throw new NotImplementedException("Invalid location."),
-                    };
+                        species = Settings.SpecialConditions.ScanLocation switch
+                        {
+                            ArceusMap.ObsidianFieldlands => Species.Landorus,
+                            ArceusMap.CrimsonMirelands => Species.Enamorus,
+                            ArceusMap.CobaltCoastlands => Species.Thundurus,
+                            ArceusMap.AlabasterIcelands => Species.Tornadus,
+                            _ => throw new NotImplementedException("Invalid location."),
+                        };
+                    }
+
+                    if (Settings.BotType == ArceusMode.OtherLegendReset)
+                    {
+                        species = Settings.SpecialConditions.TypeOfLegend switch
+                        {
+                            LegendsOnMap.Heatran => Species.Heatran,
+                            LegendsOnMap.Azelf => Species.Azelf,
+                            LegendsOnMap.Mesprit => Species.Mesprit,
+                            LegendsOnMap.Uxie => Species.Uxie,
+                            LegendsOnMap.Cresselia => Species.Cresselia,
+                            LegendsOnMap.Shaymin => Species.Shaymin,
+                            LegendsOnMap.Darkrai => Species.Darkrai,
+                            _ => throw new NotImplementedException("Invalid location."),
+                        };
+                    }
 
                     var generator_seed = mainrng.Next();
                     mainrng.Next();
                     var rng = new Xoroshiro128Plus(generator_seed);
                     rng.Next();
 
-                    var gen = GenerateFromSeed(rng.Next(), 1, 3, 0);
-                    pk.Species = (ushort)geniename;
+                    var genderratio = Settings.SpecialConditions.TypeOfLegend is LegendsOnMap.Heatran ? 127 : 0;
+                    var gen = GenerateFromSeed(rng.Next(), 1, 3, genderratio);
+                    pk.Species = (ushort)species;
                     pk.EncryptionConstant = gen.EC;
                     pk.PID = gen.PID;
                     pk.IV_HP = gen.IVs[0];
@@ -1729,18 +1814,18 @@ namespace SysBot.Pokemon
                     
                     if (StopConditionSettings.EncounterFound(pk, DesiredMinIVs, DesiredMaxIVs, Hub.Config.StopConditions, null))
                     {
-                        Log($"\nAdvance: {i} - {geniename}\nEC: {pk.EncryptionConstant:X8}\nPID: {pk.PID:X8}\nIVs: {pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}\nNature: {(Nature)pk.Nature}\nGenerator Seed: {generator_seed:X16}");
+                        Log($"\nAdvance: {i} - {species}\nEC: {pk.EncryptionConstant:X8}\nPID: {pk.PID:X8}\nIVs: {pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}\nNature: {(Nature)pk.Nature}\nGenerator Seed: {generator_seed:X16}");
                         Settings.AlphaScanConditions.StopOnMatch = true;
                         EmbedMons.Add((pk, true));
                         return (newseed, pk);
                     }
-                    Log($"\nAdvance: {i} - {geniename}\nEC: {pk.EncryptionConstant:X8}\nPID: {pk.PID:X8}\nIVs: {pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}\nNature: {(Nature)pk.Nature}\nGenerator Seed: {generator_seed:X16}");
+                    Log($"\nAdvance: {i} - {species}\nEC: {pk.EncryptionConstant:X8}\nPID: {pk.PID:X8}\nIVs: {pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}\nNature: {(Nature)pk.Nature}\nGenerator Seed: {generator_seed:X16}");
 
                     mainrng = new Xoroshiro128Plus(mainrng.Next());
                 }
 
             }
-            else if (Settings.BotType != ArceusMode.GenieScanner)
+            else if (Settings.BotType != ArceusMode.GenieScanner && Settings.BotType != ArceusMode.OtherLegendReset)
             {
                 string species = Settings.SpecialConditions.ScanLocation switch
                 {
@@ -2502,6 +2587,6 @@ namespace SysBot.Pokemon
                 boxlist.Add(new PA8(dataSlice));
             }
             return boxlist;
-        }
+        }        
     }
 }

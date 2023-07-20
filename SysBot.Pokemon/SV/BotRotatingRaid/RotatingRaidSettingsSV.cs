@@ -20,10 +20,7 @@ namespace SysBot.Pokemon
         [Category(Hosting), Description("Amount of raids before updating the ban list. If you want the global ban list off, set this to -1.")]
         public int RaidsBetweenUpdate { get; set; } = 3;
 
-        [Category(Hosting), Description("If true, the bot will notify you if you are not on the latest azure-build of NotForkBot.")]
-        public bool CheckForUpdatedBuild { get; set; } = true;
-
-        [Category(Hosting), Description("If true, the bot will attempt to auto-generate Raid Parameters from the \"raidsv.txt\" file on botstart.")]
+        [Category(Hosting), Description("When enabled, the bot will attempt to auto-generate Raid Parameters from the \"raidsv.txt\" file on botstart.")]
         public bool GenerateParametersFromFile { get; set; } = true;
 
         [Category(Hosting), Description("RotatingRaid Preset Filters"), DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
@@ -38,11 +35,17 @@ namespace SysBot.Pokemon
         [Category(Hosting), Description("Minimum amount of seconds to wait before starting a raid.")]
         public int TimeToWait { get; set; } = 90;
 
+        [Category(FeatureToggle), Description("When enabled, the embed will countdown the amount of seconds in \"TimeToWait\" until starting the raid.")]
+        public bool IncludeCountdown { get; set; } = false;
+
         [Category(Hosting), Description("Lobby Options"), DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
         public LobbyFiltersCategory LobbyOptions { get; set; } = new();
 
-        [Category(FeatureToggle), Description("If true, the bot will attempt take screenshots for the Raid Embeds. If you experience crashes often about \"Size/Parameter\" try setting this to false.")]
+        [Category(FeatureToggle), Description("When enabled, the bot will attempt take screenshots for the Raid Embeds. If you experience crashes often about \"Size/Parameter\" try setting this to false.")]
         public bool TakeScreenshot { get; set; } = true;
+
+        [Category(FeatureToggle), Description("When enabled, the bot will hide the raid code from the Discord embed.")]
+        public bool HideRaidCode { get; set; } = false;
 
         [Category(Hosting), Description("Users NIDs here are banned raiders.")]
         public RemoteControlAccessList RaiderBanList { get; set; } = new() { AllowIfEmpty = false };
@@ -62,7 +65,7 @@ namespace SysBot.Pokemon
         [Category(Hosting), Description("Time to scroll down duration in milliseconds for accessing date/time settings during rollover correction. You want to have it overshoot the Date/Time setting by 1, as it will click DUP after scrolling down. [Default: 930ms]")]
         public int HoldTimeForRollover { get; set; } = 900;
 
-        [Category(Hosting), Description("If true, start the bot when you are on the HOME screen with the game closed. The bot will only run the rollover routine so you can try to configure accurate timing.")]
+        [Category(Hosting), Description("When enabled, start the bot when you are on the HOME screen with the game closed. The bot will only run the rollover routine so you can try to configure accurate timing.")]
         public bool ConfigureRolloverCorrection { get; set; } = false;
 
         [Category(FeatureToggle), Description("When enabled, the screen will be turned off during normal bot loop operation to save power.")]
@@ -107,8 +110,7 @@ namespace SysBot.Pokemon
             public string Title { get; set; } = string.Empty;
         }
 
-        [Category(Hosting)]
-        [TypeConverter(typeof(RotatingRaidPresetFiltersCategoryConverter))]
+        [Category(Hosting), TypeConverter(typeof(CategoryConverter<RotatingRaidPresetFiltersCategory>))]
         public class RotatingRaidPresetFiltersCategory
         {
             public override string ToString() => "Preset filters.";
@@ -132,8 +134,7 @@ namespace SysBot.Pokemon
             public bool IncludeRewards { get; set; } = true;
         }
 
-        [Category(Hosting)]
-        [TypeConverter(typeof(LobbyFiltersCategoryConverter))]
+        [Category(Hosting), TypeConverter(typeof(CategoryConverter<LobbyFiltersCategory>))]
         public class LobbyFiltersCategory
         {
             public override string ToString() => "Lobby Filters";
@@ -148,20 +149,11 @@ namespace SysBot.Pokemon
             public int SkipRaidLimit { get; set; } = 3;
         }
 
-        public class RotatingRaidPresetFiltersCategoryConverter : TypeConverter
+        public class CategoryConverter<T> : TypeConverter
         {
             public override bool GetPropertiesSupported(ITypeDescriptorContext? context) => true;
 
-            public override PropertyDescriptorCollection GetProperties(ITypeDescriptorContext? context, object? value, Attribute[]? attributes) => TypeDescriptor.GetProperties(typeof(RotatingRaidPresetFiltersCategory));
-
-            public override bool CanConvertTo(ITypeDescriptorContext? context, Type? destinationType) => destinationType != typeof(string) && base.CanConvertTo(context, destinationType);
-        }
-
-        public class LobbyFiltersCategoryConverter : TypeConverter
-        {
-            public override bool GetPropertiesSupported(ITypeDescriptorContext? context) => true;
-
-            public override PropertyDescriptorCollection GetProperties(ITypeDescriptorContext? context, object? value, Attribute[]? attributes) => TypeDescriptor.GetProperties(typeof(LobbyFiltersCategory));
+            public override PropertyDescriptorCollection GetProperties(ITypeDescriptorContext? context, object value, Attribute[]? attributes) => TypeDescriptor.GetProperties(typeof(T));
 
             public override bool CanConvertTo(ITypeDescriptorContext? context, Type? destinationType) => destinationType != typeof(string) && base.CanConvertTo(context, destinationType);
         }

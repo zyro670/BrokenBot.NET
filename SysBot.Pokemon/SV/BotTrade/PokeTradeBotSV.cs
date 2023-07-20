@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using static SysBot.Base.SwitchButton;
 using static SysBot.Pokemon.PokeDataOffsetsSV;
+using System.IO;
 
 namespace SysBot.Pokemon
 {
@@ -43,6 +44,7 @@ namespace SysBot.Pokemon
             TradeSettings = hub.Config.Trade;
             AbuseSettings = hub.Config.TradeAbuse;
             DumpSetting = hub.Config.Folder;
+            lastOffered = new byte[8];
         }
 
         // Cached offsets that stay the same per session.
@@ -63,6 +65,8 @@ namespace SysBot.Pokemon
         // Stores whether the last trade was Distribution with fixed code, in which case we don't need to re-enter the code.
         private bool LastTradeDistributionFixed;
 
+        // Track the last Pokémon we were offered since it persists between trades.
+        private byte[] lastOffered;
         public override async Task MainLoop(CancellationToken token)
         {
             try
@@ -254,7 +258,8 @@ namespace SysBot.Pokemon
             if (toSend.Species != 0)
                 await SetBoxPokemonAbsolute(BoxStartOffset, toSend, token, sav).ConfigureAwait(false);
 
-            // Line for Trade Display Notifier
+            // Line for Trade
+            // Notifier
             TradeExtensions<PK9>.SVTrade = toSend;
 
             // Assumes we're freshly in the Portal and the cursor is over Link Trade.
@@ -306,7 +311,11 @@ namespace SysBot.Pokemon
             }
             if (!partnerFound)
             {
-                await RecoverToPortal(token).ConfigureAwait(false);
+                if (!await RecoverToPortal(token).ConfigureAwait(false))
+                {
+                    Log("Failed to recover to portal.");
+                    await RecoverToOverworld(token).ConfigureAwait(false);
+                }
                 return PokeTradeResult.NoTrainerFound;
             }
 
@@ -320,7 +329,11 @@ namespace SysBot.Pokemon
                 if (++cnt > 20) // Didn't make it in after 10 seconds.
                 {
                     await Click(A, 1_000, token).ConfigureAwait(false); // Ensures we dismiss a popup.
-                    await RecoverToPortal(token).ConfigureAwait(false);
+                    if (!await RecoverToPortal(token).ConfigureAwait(false))
+                    {
+                        Log("Failed to recover to portal.");
+                        await RecoverToOverworld(token).ConfigureAwait(false);
+                    }
                     return PokeTradeResult.RecoverOpenBox;
                 }
             }
@@ -331,12 +344,21 @@ namespace SysBot.Pokemon
             RecordUtil<PokeTradeBotSV>.Record($"Initiating\t{trainerNID:X16}\t{tradePartner.TrainerName}\t{poke.Trainer.TrainerName}\t{poke.Trainer.ID}\t{poke.ID}\t{toSend.EncryptionConstant:X8}");
             Log($"Found Link Trade partner: {tradePartner.TrainerName}-{tradePartner.TID7} (ID: {trainerNID})");
 
-            var partnerCheck = await CheckPartnerReputation(this, poke, trainerNID, tradePartner.TrainerName, AbuseSettings, PreviousUsers, PreviousUsersDistribution, EncounteredUsers, token);
+            var partnerCheck = await CheckPartnerReputation(this, poke, trainerNID, tradePartner.TrainerName, AbuseSettings, token);
             if (partnerCheck != PokeTradeResult.Success)
             {
                 await Click(A, 1_000, token).ConfigureAwait(false); // Ensures we dismiss a popup.
                 await ExitTradeToPortal(false, token).ConfigureAwait(false);
                 return partnerCheck;
+            }
+
+            // Hard check to verify that the offset changed from the last thing offered from the previous trade.
+            // This is because box opening times can vary per person, the offset persists between trades, and can also change offset between trades.
+            var tradeOffered = await ReadUntilChanged(TradePartnerOfferedOffset, lastOffered, 10_000, 0_500, false, true, token).ConfigureAwait(false);
+            if (!tradeOffered)
+            {
+                await ExitTradeToPortal(false, token).ConfigureAwait(false);
+                return PokeTradeResult.TrainerTooSlow;
             }
 
             poke.SendNotification(this, $"Found Link Trade partner: {tradePartner.TrainerName}. Waiting for a Pokémon...");
@@ -407,10 +429,11 @@ namespace SysBot.Pokemon
             // Only log if we completed the trade.
             UpdateCountsAndExport(poke, received, toSend);
 
-            // Still need to wait out the trade animation.
-            for (var i = 0; i < 30; i++)
-                await Click(B, 0_500, token).ConfigureAwait(false);
+            // Log for Trade Abuse tracking.
+            LogSuccessfulTrades(poke, trainerNID, tradePartner.TrainerName);
 
+            // Sometimes they offered another mon, so store that immediately upon leaving Union Room.
+            lastOffered = await SwitchConnection.ReadBytesAbsoluteAsync(TradePartnerOfferedOffset, 8, token).ConfigureAwait(false);
             await ExitTradeToPortal(false, token).ConfigureAwait(false);
             return PokeTradeResult.Success;
         }
@@ -442,33 +465,28 @@ namespace SysBot.Pokemon
         {
             // We'll keep watching B1S1 for a change to indicate a trade started -> should try quitting at that point.
             var oldEC = await SwitchConnection.ReadBytesAbsoluteAsync(BoxStartOffset, 8, token).ConfigureAwait(false);
-
             await Click(A, 3_000, token).ConfigureAwait(false);
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < Hub.Config.Trade.MaxTradeConfirmTime; i++)
             {
                 if (await IsUserBeingShifty(detail, token).ConfigureAwait(false))
                     return PokeTradeResult.SuspiciousActivity;
-                await Click(A, 1_500, token).ConfigureAwait(false);
-            }
 
-            var tradeCounter = 0;
-            while (true)
-            {
+                // We can fall out of the box if the user offers, then quits.
+                if (!await IsInBox(PortalOffset, token).ConfigureAwait(false))
+                    return PokeTradeResult.TrainerLeft;
+
+                await Click(A, 1_000, token).ConfigureAwait(false);
+
+                // EC is detectable at the start of the animation.
                 var newEC = await SwitchConnection.ReadBytesAbsoluteAsync(BoxStartOffset, 8, token).ConfigureAwait(false);
                 if (!newEC.SequenceEqual(oldEC))
                 {
-                    await Task.Delay(5_000, token).ConfigureAwait(false);
+                    await Task.Delay(25_000, token).ConfigureAwait(false);
                     return PokeTradeResult.Success;
                 }
-
-                tradeCounter++;
-
-                if (tradeCounter >= Hub.Config.Trade.TradeAnimationMaxDelaySeconds)
-                {
-                    // If we don't detect a B1S1 change, the trade didn't go through in that time.
-                    return PokeTradeResult.TrainerTooSlow;
-                }
             }
+            // If we don't detect a B1S1 change, the trade didn't go through in that time.
+            return PokeTradeResult.TrainerTooSlow;
         }
 
         // Upon connecting, their Nintendo ID will instantly update.
@@ -487,7 +505,6 @@ namespace SysBot.Pokemon
                     TradePartnerOfferedOffset = await SwitchConnection.PointerAll(Offsets.LinkTradePartnerPokemonPointer, token).ConfigureAwait(false);
                     return true;
                 }
-
                 // Fully load into the box.
                 await Task.Delay(1_000, token).ConfigureAwait(false);
             }
@@ -529,6 +546,10 @@ namespace SysBot.Pokemon
                 await RestartGameSV(token).ConfigureAwait(false);
             }
             await Task.Delay(1_000, token).ConfigureAwait(false);
+
+            // Force the bot to go through all the motions again on its first pass.
+            StartFromOverworld = true;
+            LastTradeDistributionFixed = false;
             return true;
         }
 
@@ -541,17 +562,18 @@ namespace SysBot.Pokemon
             var attempts = 0;
             while (await IsInPokePortal(PortalOffset, token).ConfigureAwait(false))
             {
-                attempts++;
-                if (attempts >= 30)
-                    break;
                 await Click(B, 1_500, token).ConfigureAwait(false);
+                if (++attempts >= 30)
+                {
+                    Log("Failed to recover to Poké Portal.");
+                    return false;
+                }
             }
 
             // Should be in the X menu hovered over Poké Portal.
             await Click(A, 1_000, token).ConfigureAwait(false);
 
-            await SetUpPortalCursor(token).ConfigureAwait(false);
-            return true;
+            return await SetUpPortalCursor(token).ConfigureAwait(false);
         }
 
         // Should be used from the overworld. Opens X menu, attempts to connect online, and enters the Portal.
@@ -582,8 +604,7 @@ namespace SysBot.Pokemon
             await Click(DUP, 0_200, token).ConfigureAwait(false);
             await Click(A, 1_000, token).ConfigureAwait(false);
 
-            await SetUpPortalCursor(token).ConfigureAwait(false);
-            return true;
+            return await SetUpPortalCursor(token).ConfigureAwait(false);
         }
 
         // Waits for the Portal to load (slow) and then moves the cursor down to Link Trade.
@@ -685,7 +706,8 @@ namespace SysBot.Pokemon
                 if (++attempts > 20)
                 {
                     Log("Failed to exit box, rebooting the game.");
-                    await RestartGameSV(token).ConfigureAwait(false);
+                    if (!await RecoverToOverworld(token).ConfigureAwait(false))
+                        await RestartGameSV(token).ConfigureAwait(false);
                     await ConnectAndEnterPortal(token).ConfigureAwait(false);
                     return;
                 }
@@ -704,7 +726,8 @@ namespace SysBot.Pokemon
                 if (++attempts > 40)
                 {
                     Log("Failed to load the portal, rebooting the game.");
-                    await RestartGameSV(token).ConfigureAwait(false);
+                    if (!await RecoverToOverworld(token).ConfigureAwait(false))
+                        await RestartGameSV(token).ConfigureAwait(false);
                     await ConnectAndEnterPortal(token).ConfigureAwait(false);
                     return;
                 }
@@ -801,7 +824,6 @@ namespace SysBot.Pokemon
             int ctr = 0;
             var time = TimeSpan.FromSeconds(Hub.Config.Trade.MaxDumpTradeTime);
             var start = DateTime.Now;
-
             var pkprev = new PK9();
             List<PK9> shinylist = new();
             var bctr = 0;
@@ -845,18 +867,18 @@ namespace SysBot.Pokemon
                 if ((Species)pk.Species is Species.Maushold && pk.EncryptionConstant % 100 != 0)
                     msg += $"Family of 4 Maus!";
                 string TIDFormatted = pk.Generation >= 7 ? $"{pk.TrainerTID7:000000}" : $"{pk.TID16:00000}";
-                detail.SendNotification(this, $"Displaying: {(pk.ShinyXor == 0 ? "■ - " : pk.ShinyXor <= 16 ? "★ - " : "")}{SpeciesName.GetSpeciesNameGeneration(pk.Species, 2, 8) + TradeExtensions<PK9>.FormOutput(pk.Species, pk.Form, out _)}{gender}\n{pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}\n" +
+                detail.SendNotification(this, $"Displaying: {(pk.ShinyXor == 0 ? "■ - " : pk.ShinyXor <= 16 ? "★ - " : "")}{SpeciesName.GetSpeciesNameGeneration(pk.Species, 2, 9) + TradeExtensions<PK9>.FormOutput(pk.Species, pk.Form, out _)}{gender}\n{pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}\n" +
                     $"Ability: {(Ability)pk.Ability} | {(Nature)pk.Nature} Nature | Ball: {(Ball)pk.Ball}\nTrainer Info: {pk.OT_Name}/{TIDFormatted}\n" +
                     $"{(StopConditionSettings.HasMark(pk, out RibbonIndex mark) ? $"**Pokémon Mark: {mark.ToString().Replace("Mark", "")}{Environment.NewLine}**" : "")}Scale: {size}\n{msg}");
-                Log($"Displaying {SpeciesName.GetSpeciesNameGeneration(pk.Species, 2, 8) + TradeExtensions<PK9>.FormOutput(pk.Species, pk.Form, out _)}{gender}\n{pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}\n{(Nature)pk.Nature} - {(Ball)pk.Ball} - {pk.OT_Name}/{TIDFormatted}");
+                Log($"Displaying {SpeciesName.GetSpeciesNameGeneration(pk.Species, 2, 9) + TradeExtensions<PK9>.FormOutput(pk.Species, pk.Form, out _)}{gender}\n{pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}\n{(Nature)pk.Nature} - {(Ball)pk.Ball} - {pk.OT_Name}/{TIDFormatted}");
                 ctr++;
 
-                if (pk.IsShiny)      
-                    shinylist.Add(pk);         
+                if (pk.IsShiny)
+                    shinylist.Add(pk);
             }
 
-            foreach (var pk in shinylist)            
-                TradeExtensions<PK9>.SVTrade = pk;            
+            foreach (var pk in shinylist)
+                TradeExtensions<PK9>.SVTrade = pk;
 
             Log($"Ended Display loop after processing {ctr} Pokémon.");
             if (ctr == 0)
@@ -953,7 +975,7 @@ namespace SysBot.Pokemon
                 return (offered, PokeTradeResult.TrainerRequestBad);
             }
 
-            var clone = (PK9)offered.Clone();
+            var clone = offered.Clone();
             if (Hub.Config.Legality.ResetHOMETracker)
                 clone.Tracker = 0;
 
@@ -1117,6 +1139,6 @@ namespace SysBot.Pokemon
                 Hub.BotSync.Barrier.RemoveParticipant();
                 Log($"Left the Barrier. Count: {Hub.BotSync.Barrier.ParticipantCount}");
             }
-        }        
+        }
     }
 }
