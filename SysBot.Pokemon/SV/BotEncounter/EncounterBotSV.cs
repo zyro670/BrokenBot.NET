@@ -96,17 +96,17 @@ namespace SysBot.Pokemon
 
             // Original cheat:
             /*
-             * [100% Fast capture on(v1.3.1)]
-             * 04000000 018575E8 52800028
-             * 04000000 018575F4 14000020
-             * 04000000 0185764C 52800028
-             * 04000000 01857684 52800028
+             * [100% Fast capture on(v1.3.2)]
+             * 04000000 01857FE8 52800028
+             * 04000000 01857FF4 14000020
+             * 04000000 0185804C 52800028
+             * 04000000 01858084 52800028
              */
 
-            await SwitchConnection.WriteBytesMainAsync(BitConverter.GetBytes(0x52800028), 0x018575E8, token);
-            await SwitchConnection.WriteBytesMainAsync(BitConverter.GetBytes(0x14000020), 0x018575F4, token);
-            await SwitchConnection.WriteBytesMainAsync(BitConverter.GetBytes(0x52800028), 0x0185764C, token);
-            await SwitchConnection.WriteBytesMainAsync(BitConverter.GetBytes(0x52800028), 0x01857684, token);
+            await SwitchConnection.WriteBytesMainAsync(BitConverter.GetBytes(0x52800028), 0x01857FE8, token);
+            await SwitchConnection.WriteBytesMainAsync(BitConverter.GetBytes(0x14000020), 0x01857FF4, token);
+            await SwitchConnection.WriteBytesMainAsync(BitConverter.GetBytes(0x52800028), 0x0185804C, token);
+            await SwitchConnection.WriteBytesMainAsync(BitConverter.GetBytes(0x52800028), 0x01858084, token);
         }
 
         protected async Task<bool> CheckEncounter(string print, PK9 pk)
