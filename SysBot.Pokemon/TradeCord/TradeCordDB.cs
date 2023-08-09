@@ -344,7 +344,7 @@ namespace SysBot.Pokemon
             msg = string.Empty;
             shedinja = null;
             var tree = EvolutionTree.GetEvolutionTree(pk.Context);
-            var evos = tree.GetEvolutions(pk.Species, pk.Form).ToArray();
+            var evos = tree.Forward.GetEvolutions(pk.Species, pk.Form).ToArray();
 
             bool hasEvo = evos.Length > 0;
             if (!hasEvo)
@@ -661,12 +661,12 @@ namespace SysBot.Pokemon
         private bool SameEvoTree(PKM pkm1, PKM pkm2)
         {
             var tree = EvolutionTree.GetEvolutionTree(pkm1.Context);
-            var evos = tree.GetValidPreEvolutions(pkm1, 100, 8, true);
+            var evos = tree.Reverse.GetPreEvolutions(pkm1.Species, pkm1.Form).Select(e => new EvoCriteria { Species = e.Species, Form = e.Form }).ToArray();
             var encs = EncounterGenerator.GetGenerator(Game).GetPossible(pkm1, evos, Game, EncounterTypeGroup.Egg).ToArray();
             var base1 = encs.Length > 0 ? encs[^1].Species : -1;
 
             tree = EvolutionTree.GetEvolutionTree(pkm2.Context);
-            evos = tree.GetValidPreEvolutions(pkm2, 100, 8, true);
+            evos = tree.Reverse.GetPreEvolutions(pkm2.Species, pkm2.Form).Select(e => new EvoCriteria { Species = e.Species, Form = e.Form }).ToArray();
             encs = EncounterGenerator.GetGenerator(Game).GetPossible(pkm2, evos, Game, EncounterTypeGroup.Egg).ToArray();
             var base2 = encs.Length > 0 ? encs[^1].Species : -2;
 
@@ -683,24 +683,23 @@ namespace SysBot.Pokemon
                 {
                     (ushort)Species.Obstagoon or (ushort)Species.Cursola or (ushort)Species.Runerigus or (ushort)Species.Sirfetchd => 1,
                     (ushort)Species.Perrserker => 2,
-                    (ushort)Species.Lycanroc or (ushort)Species.Slowbro or (ushort)Species.Darmanitan when list[i].Form is 2 => 1,
-                    (ushort)Species.Lycanroc when list[i].Form is 1 => 0,
+                    (ushort)Species.Lycanroc or (ushort)Species.Slowbro or (ushort)Species.Darmanitan => list[i].Form == 2 ? (byte)1 : list[i].Form == 1 ? (byte)0 : list[i].Form,
                     (ushort)Species.Sinistea or (ushort)Species.Polteageist or (ushort)Species.Rotom or (ushort)Species.Pikachu or (ushort)Species.Raichu or (ushort)Species.Marowak or (ushort)Species.Exeggutor or (ushort)Species.Weezing or (ushort)Species.Alcremie => 0,
-                    (ushort)Species.MrMime when list[i].Form is 1 => 0,
+                    (ushort)Species.MrMime => list[i].Form == 1 ? (byte)0 : list[i].Form,
                     _ => list[i].Form,
                 };
 
-                if (list[i].Species is (ushort)Species.Rotom && list[i].Form > 0)
+                if (list[i].Species == (ushort)Species.Rotom && list[i].Form > 0)
                     list[i].Form = 0;
 
-                EvoCriteria evo = default;
-                var preEvos = EvolutionTree.GetEvolutionTree(list[i].Context).GetValidPreEvolutions(list[i], 100, 8, true).ToList().FindAll(x => x.LevelMin is 1);
-                if (preEvos.Count is 0)
+                var tree = EvolutionTree.GetEvolutionTree(list[i].Context); // Obtain the correct evolution tree for the context
+                var preEvos = tree.Reverse.GetPreEvolutions(list[i].Species, list[i].Form).Where(x => x.Form == form).ToList(); // Obtain the reverse evolution paths
+                var filteredPreEvos = preEvos.ToList();
+                if (!filteredPreEvos.Any())
                     continue;
-                else evo = preEvos.LastOrDefault(x => x.Form == form);
 
-                if (evo != default)
-                    criteriaList.Add(evo);
+                var evo = filteredPreEvos.LastOrDefault();
+                criteriaList.Add(new EvoCriteria { Species = evo.Species, Form = evo.Form });
             }
             return criteriaList;
         }
