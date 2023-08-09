@@ -25,7 +25,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Discord.Net" Version="3.9.0" />
+		<PackageReference Include="Discord.Net" Version="3.11.0" />
 		<PackageReference Include="FlatSharp.Compiler" Version="7.1.0">
 		  <PrivateAssets>all</PrivateAssets>
 		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -33,7 +33,7 @@
 		<PackageReference Include="FlatSharp.Runtime" Version="7.1.0" />
 		<PackageReference Include="MathNet.Numerics" Version="5.0.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
-		<PackageReference Include="PKHeX.Core" Version="23.6.3" />
+		<PackageReference Include="PKHeX.Core" Version="23.7.9" />
 		<PackageReference Include="KdSoft.FlatBuffers" Version="1.12.0" />
 		<PackageReference Include="System.Data.SQLite" Version="1.0.117" />
 		<ProjectReference Include="..\SysBot.Base\SysBot.Base.csproj" />

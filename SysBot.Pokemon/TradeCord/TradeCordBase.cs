@@ -756,15 +756,21 @@ namespace SysBot.Pokemon
                 return false;
 
             var table = EvolutionTree.GetEvolutionTree(pkm.Context);
-            var evos = table.GetValidPreEvolutions(pkm, 100);
-            var encs = EncounterGenerator.GetGenerator(Game).GetPossible(pkm, evos, Game, EncounterTypeGroup.Egg).ToArray();
-            if (encs.Length is 0 || !Breeding.CanHatchAsEgg(species) || !Breeding.CanHatchAsEgg(species, form, pkm.Context))
+            var preEvolutions = table.Reverse.GetPreEvolutions(pkm.Species, pkm.Form)
+                .Where(x => x.Form == pkm.Form)
+                .Select(x => new EvoCriteria { Species = x.Species, Form = x.Form })
+                .ToArray();
+            var evolutions = table.Forward.GetEvolutions(pkm.Species, pkm.Form);
+
+            var encs = EncounterGenerator.GetGenerator(Game).GetPossible(pkm, evolutions.Select(x => new EvoCriteria { Species = x.Species, Form = x.Form }).ToArray(), Game, EncounterTypeGroup.Egg).ToArray();
+            if (encs.Length == 0 || !Breeding.CanHatchAsEgg(species) || !Breeding.CanHatchAsEgg(species, form, pkm.Context))
                 return false;
 
             baseSpecies = encs[^1].Species;
             if (GameData.GetPersonal(Game).GetFormEntry(baseSpecies, form).IsFormWithinRange(form) && Breeding.CanHatchAsEgg(baseSpecies, form, pkm.Context))
                 baseForm = (byte)(species is (ushort)Darmanitan && form <= 1 ? 0 : form);
-            else baseForm = encs[^1].Form;
+            else
+                baseForm = encs[^1].Form;
             return true;
         }
 
@@ -1180,12 +1186,15 @@ namespace SysBot.Pokemon
                         continue;
 
                     var evoTree = EvolutionTree.GetEvolutionTree(blank.Context);
-                    var preEvos = evoTree.GetValidPreEvolutions(blank, 100, 8, true);
-                    var evos = evoTree.GetEvolutions(blank.Species, blank.Form);
+                    var preEvos = evoTree.Reverse.GetPreEvolutions(i, f)
+                        .Where(x => x.Form == f)
+                        .Select(x => new EvoCriteria { Species = x.Species, Form = x.Form })
+                        .ToList();
+                    var evos = evoTree.GetEvolutionsAndPreEvolutions(blank.Species, blank.Form);
 
-                    if (preEvos.Length >= 2 && evos.Count() is 0)
+                    if (preEvos.Count >= 2 && evos.Count() == 0)
                     {
-                        for (int c = 0; c < preEvos.Length; c++)
+                        for (int c = 0; c < preEvos.Count; c++)
                         {
                             var evoType = preEvos[c].Method;
                             TCItems item = TCItems.None;
@@ -1204,7 +1213,7 @@ namespace SysBot.Pokemon
                                 EvolvesInto = (ushort)(baseSp ? -1 : preEvos[c - 1].Species),
                                 EvolvedForm = (byte)(baseSp ? -1 : preEvos[c - 1].Form),
                                 EvolvesAtLevel = (ushort)(baseSp ? -1 : preEvos[c - 1].LevelMin),
-                                EvoType = (int)evoType is 255 ? EvolutionType.None : evoType,
+                                EvoType = evoType == EvolutionType.Invalid ? EvolutionType.None : evoType,
                                 Item = item,
                                 DayTime = GetEvoTime(evoType),
                             };

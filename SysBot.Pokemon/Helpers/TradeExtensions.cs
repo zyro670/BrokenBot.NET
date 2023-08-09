@@ -486,13 +486,14 @@ namespace SysBot.Pokemon
             return formString[form].Contains('-') ? formString[form] : formString[form] == "" ? "" : $"-{formString[form]}";
         }
 
-        public static bool DifferentFamily(IReadOnlyList<T> pkms)
+        public static bool DifferentFamily<T>(IReadOnlyList<T> pkms) where T : PKM
         {
-            var criteriaList = new List<EvoCriteria>();
-            for (int i = 0; i < pkms.Count; i++)
+            var criteriaList = new List<(ushort Species, byte Form)>();
+            foreach (var pkm in pkms)
             {
-                var tree = EvolutionTree.GetEvolutionTree(pkms[i].Context);
-                criteriaList.Add(tree.GetValidPreEvolutions(pkms[i], 100, 8, true).Last());
+                var tree = EvolutionTree.GetEvolutionTree(pkm.Context);
+                var validPreEvolutions = tree.Reverse.GetPreEvolutions(pkm.Species, pkm.Form).ToList();
+                criteriaList.Add((validPreEvolutions.Last().Species, validPreEvolutions.Last().Form));
             }
 
             bool different = criteriaList.Skip(1).Any(x => x.Species != criteriaList.First().Species);

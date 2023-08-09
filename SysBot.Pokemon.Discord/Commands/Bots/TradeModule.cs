@@ -5,6 +5,7 @@ using PKHeX.Core;
 using SysBot.Base;
 using System;
 using System.Linq;
+using System.Reflection.Metadata;
 using System.Threading.Tasks;
 
 namespace SysBot.Pokemon.Discord
@@ -41,6 +42,8 @@ namespace SysBot.Pokemon.Discord
             await TradeAsyncAttach(code, sig, Context.User).ConfigureAwait(false);
         }
 
+
+
         [Command("trade")]
         [Alias("t")]
         [Summary("Makes the bot trade you a Pokémon converted from the provided Showdown Set.")]
@@ -63,8 +66,16 @@ namespace SysBot.Pokemon.Discord
                 var pkm = sav.GetLegal(template, out var result);
                 bool pla = typeof(T) == typeof(PA8);
 
-                if (!pla && pkm.Nickname.ToLower() == "egg" && Breeding.CanHatchAsEgg(pkm.Species))
-                    TradeExtensions<T>.EggTrade(pkm, template);
+                string targetNickname = "egg";
+                string pokemonNickname = pkm.Nickname.ToLower(); // Convert the Pokémon's nickname to lowercase
+
+                if (!pla && pokemonNickname == targetNickname) // Compare lowercase Pokémon nickname with lowercase target word
+                {
+                    if (Breeding.CanHatchAsEgg(pkm.Species))
+                    {
+                        TradeExtensions<T>.EggTrade(pkm, template);
+                    }
+                }
 
                 var la = new LegalityAnalysis(pkm);
                 var spec = GameInfo.Strings.Species[template.Species];
@@ -75,7 +86,7 @@ namespace SysBot.Pokemon.Discord
 
                 if (pkm is not T pk || !la.Valid)
                 {
-                    var reason = result == "Timeout" ? $"That {spec} set took too long to generate." : result == "VersionMismatch" ? "Request refused: PKHeX and Auto-Legality Mod version mismatch." : $"I wasn't able to create a {spec} from that set."; 
+                    var reason = result == "Timeout" ? $"That {spec} set took too long to generate." : result == "VersionMismatch" ? "Request refused: PKHeX and Auto-Legality Mod version mismatch." : $"I wasn't able to create a {spec} from that set.";
                     var imsg = $"Oops! {reason}";
                     if (result == "Failed")
                         imsg += $"\n{AutoLegalityWrapper.GetLegalizationHint(template, sav, pkm)}";
@@ -162,6 +173,76 @@ namespace SysBot.Pokemon.Discord
         {
             var code = Info.GetRandomTradeCode();
             await TradeAsyncAttachUser(code, _).ConfigureAwait(false);
+        }
+
+        [Command("tradeUserSet")]
+        [Alias("tus")]
+        [Summary("Trades a Showdown Set to the mentioned user.")]
+        [RequireSudo] // This attribute ensures that only privileged users can use this command, modify as needed
+        public async Task TradeUserSetAsync(SocketUser mentionedUser, [Summary("Showdown Set")][Remainder] string content)
+        {
+            content = ReusableActions.StripCodeBlock(content);
+            var set = new ShowdownSet(content);
+            var template = AutoLegalityWrapper.GetTemplate(set);
+            if (set.InvalidLines.Count != 0)
+            {
+                var msg = $"Unable to parse Showdown Set:\n{string.Join("\n", set.InvalidLines)}";
+                await ReplyAsync(msg).ConfigureAwait(false);
+                return;
+            }
+
+            try
+            {
+                // Get the ITrainerInfo instance from the appropriate source (modify as needed)
+                var sav = AutoLegalityWrapper.GetTrainerInfo<T>(); // Modify the arguments as needed
+
+                // Get the mentioned user's signature (assuming you have a method to get this)
+                var sig = mentionedUser.GetFavor();
+
+                var pkm = sav.GetLegal(template, out var result);
+                bool pla = typeof(T) == typeof(PA8);
+
+                string targetNickname = "egg";
+                string pokemonNickname = pkm.Nickname.ToLower(); // Convert the Pokémon's nickname to lowercase
+
+                if (!pla && pokemonNickname == targetNickname) // Compare lowercase Pokémon nickname with lowercase target word
+                {
+                    if (Breeding.CanHatchAsEgg(pkm.Species))
+                    {
+                        TradeExtensions<T>.EggTrade(pkm, template);
+                    }
+                }
+
+                var la = new LegalityAnalysis(pkm);
+                var spec = GameInfo.Strings.Species[template.Species];
+                pkm = EntityConverter.ConvertToType(pkm, typeof(T), out _) ?? pkm;
+                bool memes = Info.Hub.Config.Trade.Memes && await TradeAdditionsModule<T>.TrollAsync(Context, pkm is not T || !la.Valid, pkm).ConfigureAwait(false);
+                if (memes)
+                    return;
+
+                if (pkm is not T pk || !la.Valid)
+                {
+                    var reason = result == "Timeout" ? $"That {spec} set took too long to generate." : result == "VersionMismatch" ? "Request refused: PKHeX and Auto-Legality Mod version mismatch." : $"I wasn't able to create a {spec} from that set.";
+                    var imsg = $"Oops! {reason}";
+                    if (result == "Failed")
+                        imsg += $"\n{AutoLegalityWrapper.GetLegalizationHint(template, sav, pkm)}";
+                    await ReplyAsync(imsg).ConfigureAwait(false);
+                    return;
+                }
+                pk.ResetPartyStats();
+
+                // Get a Link Trade code
+                int code = Info.GetRandomTradeCode();
+
+                // Add the egg to the Link Trade queue with the mentioned user's name
+                await AddTradeToQueueAsync(code, mentionedUser.Username, pk, sig, mentionedUser).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                LogUtil.LogSafe(ex, nameof(TradeModule<T>));
+                var msg = $"Oops! An unexpected problem happened with this Showdown Set:\n```{string.Join("\n", set.GetSetLines())}```";
+                await ReplyAsync(msg).ConfigureAwait(false);
+            }
         }
 
         private async Task TradeAsyncAttach(int code, RequestSignificance sig, SocketUser usr)

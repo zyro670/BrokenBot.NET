@@ -5,11 +5,11 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Discord.Net" Version="3.9.0" />
+		<PackageReference Include="Discord.Net" Version="3.11.0" />
 		<PackageReference Include="FluentAssertions" Version="6.9.0" />
 		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.4.1" />
 		<PackageReference Include="NETStandard.Library" Version="2.0.3" />
-		<PackageReference Include="PKHeX.Core" Version="23.6.3" />
+		<PackageReference Include="PKHeX.Core" Version="23.7.9" />
 		<PackageReference Include="xunit" Version="2.4.2" />
 		<PackageReference Include="xunit.runner.visualstudio" Version="2.4.5">
 			<PrivateAssets>all</PrivateAssets>
