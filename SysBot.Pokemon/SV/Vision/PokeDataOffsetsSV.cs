@@ -7,13 +7,13 @@ namespace SysBot.Pokemon
     /// </summary>
     public class PokeDataOffsetsSV
     {
-        public const string SVGameVersion = "1.3.2";
+        public const string SVGameVersion = "2.0.1";
         public const string ScarletID = "0100A3D008C5C000";
         public const string VioletID = "01008F6008C5E000";
-        public IReadOnlyList<long> BoxStartPokemonPointer { get; } = new long[] { 0x44C1C18, 0x130, 0x9B0, 0x0 };
+        public IReadOnlyList<long> BoxStartPokemonPointer { get; } = new long[] { 0x4622A30, 0x198, 0x30, 0x10, 0x9D0, 0x0 };
         public IReadOnlyList<long> LinkTradePartnerPokemonPointer { get; } = new long[] { 0x44BB848, 0x48, 0x58, 0x40, 0x148 };
         public IReadOnlyList<long> LinkTradePartnerNIDPointer { get; } = new long[] { 0x44DFCA8, 0xF8, 0x8 };
-        public IReadOnlyList<long> MyStatusPointer { get; } = new long[] { 0x44C1C18, 0x100, 0x40 };
+        public IReadOnlyList<long> MyStatusPointer { get; } = new long[] { 0x4622A30, 0xE0, 0x30, 0xB8, 0x300, 0x10, 0x18 };
         public IReadOnlyList<long> Trader1MyStatusPointer { get; } = new long[] { 0x44BB848, 0x48, 0xB0, 0x0 }; // The trade partner status uses a compact struct that looks like MyStatus.
         public IReadOnlyList<long> Trader2MyStatusPointer { get; } = new long[] { 0x44BB848, 0x48, 0xE0, 0x0 };
         public IReadOnlyList<long> ConfigPointer { get; } = new long[] { 0x44C1C18, 0x1B8, 0x40 };

@@ -123,8 +123,9 @@ namespace SysBot.Pokemon
                 throw new Exception("Refer to the SysBot.NET wiki (https://github.com/kwsch/SysBot.NET/wiki/Troubleshooting) for more information.");
             }
 
-            if (await GetTextSpeed(token).ConfigureAwait(false) < TextSpeedOption.Fast)
-                throw new Exception("Text speed should be set to FAST. Fix this for correct operation.");
+            // TODO temporary disabled..
+            //if (await GetTextSpeed(token).ConfigureAwait(false) < TextSpeedOption.Fast)
+            //    throw new Exception("Text speed should be set to FAST. Fix this for correct operation.");
 
             return sav;
         }
