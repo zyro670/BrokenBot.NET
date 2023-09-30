@@ -25,7 +25,7 @@ namespace SysBot.Pokemon
 
         private uint TodaySeed;
         private ulong OverworldOffset;
-        private ulong TeraRaidBlockOffset;
+        private ulong RaidBlockP;
         private int scanCount;
         private int PicnicVal = 0;
         private static ulong BaseBlockKeyPointer = 0;
@@ -34,6 +34,12 @@ namespace SysBot.Pokemon
         private bool GameWasReset = false;
         private int sandwichCounter;
         private SAV9SV TrainerSav = new();
+        private List<byte[]?> coordList = new();
+        private List<int> Condiments = new();
+        private List<int> Fillings = new();
+        private int[] Ingredients = new int[4];
+        private int[] Sequence = new int[4];
+        private bool[] DPADUp = new bool[4];
 
         public OverworldBotSV(PokeBotState cfg, PokeTradeHub<PK9> hub) : base(cfg)
         {
@@ -60,6 +66,8 @@ namespace SysBot.Pokemon
                     await RolloverCorrectionSV(token, false).ConfigureAwait(false);
                     return;
                 }
+
+                await PrepareIngredients(token).ConfigureAwait(false);
                 await ScanOverworld(token).ConfigureAwait(false);
             }
             catch (Exception e)
@@ -81,22 +89,139 @@ namespace SysBot.Pokemon
             await CleanExit(CancellationToken.None).ConfigureAwait(false);
         }
 
+        private async Task PrepareIngredients(CancellationToken token)
+        {
+            Ingredients = new int[4];
+            Sequence = new int[4];
+            DPADUp = new bool[4];
+            Condiments = new();
+            Fillings = new();
+
+            Log("Checking our bag for ingredients...");
+            var itemptr = await SwitchConnection.PointerAll(Offsets.ItemBlock, token).ConfigureAwait(false);
+            var items = await SwitchConnection.ReadBytesAbsoluteAsync(itemptr, TrainerSav.Items.Data.Length, token).ConfigureAwait(false);
+            items.CopyTo(TrainerSav.Items.Data, 0);
+
+            var pouches = TrainerSav.Inventory;
+            var ingredients = pouches[7];
+
+            var itemsval = IngredientSequence(Settings.PicnicFilters.TypeOfSandwich, Settings.PicnicFilters.SandwichFlavor);
+            Settings.PicnicFilters.Item1 = (PicnicFillings)itemsval.Item1;
+            Settings.PicnicFilters.Item2 = (PicnicCondiments)itemsval.Item2;
+            Settings.PicnicFilters.Item3 = (PicnicCondiments)itemsval.Item3;
+            Settings.PicnicFilters.Item4 = (PicnicCondiments)itemsval.Item4;
+            Log($"Ingredients: {Settings.PicnicFilters.Item1}, {Settings.PicnicFilters.Item2}, & {Settings.PicnicFilters.Item3}.");
+
+            // Grab fillings
+            for (int i = 0; i < ingredients.Items.Length; i++) // Fillings
+            {
+                if (ingredients.Items[i].Index >= 1909 && ingredients.Items[i].Index <= 1946 && ingredients.Items[i].Index != 0 && ingredients.Items[i].Count != 0)
+                    Fillings.Add(ingredients.Items[i].Index);
+            }
+
+            for (int f = 0; f < Fillings.Count; f++)
+            {
+                if (Fillings[f] == (int)Settings.PicnicFilters.Item1)
+                {
+                    Sequence[0] = f;
+                    DPADUp[0] = Fillings.Count - f < f;
+                    if (DPADUp[0] is true)
+                        Sequence[0] = Fillings.Count - f;
+                    Settings.PicnicFilters.Item1DUP = DPADUp[0];
+                    Log($"Clicks: {Sequence[0]}");
+                    break;
+                }
+            }
+            // Grab condiments
+            for (int i = 0; i < ingredients.Items.Length; i++) // Condiments
+            {
+                if (ingredients.Items[i].Index < 1904 && ingredients.Items[i].Index != 0 && ingredients.Items[i].Count != 0)
+                    Condiments.Add(ingredients.Items[i].Index);
+            }
+            for (int i = 0; i < ingredients.Items.Length; i++) // Add horseradish, curry powder, and wasabi
+            {
+                if (ingredients.Items[i].Index >= 1942 && ingredients.Items[i].Index <= 1944 && ingredients.Items[i].Index != 0 && ingredients.Items[i].Count != 0)
+                    Condiments.Add(ingredients.Items[i].Index);
+            }
+            for (int i = 0; i < ingredients.Items.Length; i++) // Add herbs last
+            {
+                if (ingredients.Items[i].Index >= 1904 && ingredients.Items[i].Index <= 1908 && ingredients.Items[i].Index != 0 && ingredients.Items[i].Count != 0)
+                    Condiments.Add(ingredients.Items[i].Index);
+            }
+
+            for (int f = 0; f < Condiments.Count; f++)
+            {
+                if (Condiments[f] == (int)Settings.PicnicFilters.Item2)
+                {
+                    Sequence[1] = f;
+                    DPADUp[1] = Condiments.Count - f < f;
+                    if (DPADUp[1] is true)
+                        Sequence[1] = Condiments.Count - f;
+                    Settings.PicnicFilters.Item2DUP = DPADUp[1];
+                    Log($"Clicks: {Sequence[1]}");
+                    break;
+                }
+            }
+
+            if (Settings.PicnicFilters.Item2 == Settings.PicnicFilters.Item3)
+            {
+                Sequence[2] = 0;
+                DPADUp[2] = DPADUp[1];
+                Settings.PicnicFilters.Item3DUP = DPADUp[2];
+                Log($"Clicks: {Sequence[2]}");
+            }
+
+            if (Settings.PicnicFilters.Item2 != Settings.PicnicFilters.Item3)
+            {
+                for (int f = 0; f < Condiments.Count; f++)
+                {
+                    if (Condiments[f] == (int)Settings.PicnicFilters.Item3)
+                    {
+                        DPADUp[2] = Condiments.Count - f < f;
+                        if (DPADUp[2] is true)
+                            Sequence[2] = (Condiments.Count - f) - Sequence[1];
+                        Settings.PicnicFilters.Item3DUP = DPADUp[2];
+                        Log($"Clicks: {Sequence[2]}");
+                        break;
+                    }
+                }
+            }
+
+            if (Settings.PicnicFilters.Item4 != 0)
+            {
+                for (int f = 0; f < Condiments.Count; f++)
+                {
+                    if (Condiments[f] == (int)Settings.PicnicFilters.Item4)
+                    {
+                        DPADUp[3] = Condiments.Count - f < f;
+                        if (DPADUp[3] is true)
+                            Sequence[3] = (Condiments.Count - f) - Sequence[2];
+                        Settings.PicnicFilters.Item4DUP = DPADUp[3];
+                        Log($"Clicks: {Sequence[3]}");
+                        break;
+                    }
+                }
+            }
+        }
+
         private async Task InitializeSessionOffsets(CancellationToken token)
         {
             BaseBlockKeyPointer = await SwitchConnection.PointerAll(Offsets.BlockKeyPointer, token).ConfigureAwait(false);
             OverworldOffset = await SwitchConnection.PointerAll(Offsets.OverworldPointer, token).ConfigureAwait(false);
             PlayerCanMoveOffset = await SwitchConnection.PointerAll(Offsets.MobilityPointer, token).ConfigureAwait(false);
             PlayerOnMountOffset = await SwitchConnection.PointerAll(Offsets.PlayerOnMountPointer, token).ConfigureAwait(false);
-            TeraRaidBlockOffset = await SwitchConnection.PointerAll(Offsets.TeraRaidBlockPointer, token).ConfigureAwait(false);
+            RaidBlockP = await SwitchConnection.PointerAll(Offsets.RaidBlockPointerP, token).ConfigureAwait(false);
             Log("Caching offsets complete!");
         }
 
-        private async Task ResetOverworld(CancellationToken token, bool opensettings, bool time)
+        private async Task ResetOverworld(bool opensettings, bool time, CancellationToken token)
         {
             await Click(B, 0_050, token).ConfigureAwait(false);
             await CloseGame(Hub.Config, token).ConfigureAwait(false);
+            await Task.Delay(1_500, token).ConfigureAwait(false);
             if (opensettings)
                 await RolloverCorrectionSV(token, time).ConfigureAwait(false);
+            await Task.Delay(1_700, token).ConfigureAwait(false);
             await StartGame(Hub.Config, token).ConfigureAwait(false);
             await InitializeSessionOffsets(token).ConfigureAwait(false);
         }
@@ -106,7 +231,7 @@ namespace SysBot.Pokemon
             Log("Navigating to picnic..");
             await Click(X, 3_000, token).ConfigureAwait(false);
             await Click(DRIGHT, 0_800, token).ConfigureAwait(false);
-            while (await PlayerCannotMove(token).ConfigureAwait(false))
+            if (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
             {
                 Log("Scrolling through menus...");
                 await SetStick(LEFT, 0, -32000, 1_000, token).ConfigureAwait(false);
@@ -118,12 +243,24 @@ namespace SysBot.Pokemon
                 Log("Attempting to enter picnic!");
                 await Click(A, 9_500, token).ConfigureAwait(false);
 
-                if (!await PlayerCannotMove(token).ConfigureAwait(false))
-                    break;
 
-                Log("Not in picnic! Wrong menu? Attempting recovery.");
-                await Click(B, 4_500, token).ConfigureAwait(false); // Not in picnic, press B to reset
-
+                if (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
+                {
+                    Log("Not in picnic! Wrong menu? Attempting recovery.");
+                    await Click(B, 4_500, token).ConfigureAwait(false); // Not in picnic, press B to reset
+                    while (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
+                    {
+                        Log("Scrolling through menus...");
+                        await SetStick(LEFT, 0, -32000, 1_000, token).ConfigureAwait(false);
+                        await SetStick(LEFT, 0, 0, 0, token).ConfigureAwait(false);
+                        await Task.Delay(0_100, token).ConfigureAwait(false);
+                        Log("Tap tap tap...");
+                        for (int i = 0; i < 3; i++)
+                            await Click(DDOWN, 0_800, token).ConfigureAwait(false);
+                        Log("Attempting to enter picnic!");
+                        await Click(A, 9_500, token).ConfigureAwait(false);
+                    }
+                }
             }
             Log("Time for a bonus!");
             await MakeSandwich(token).ConfigureAwait(false);
@@ -136,42 +273,25 @@ namespace SysBot.Pokemon
             bool atStation = false;
             List<PK9> encounters = new();
             List<string> prints = new();
-            var dayRoll = 0;
             PicnicVal = await PicnicState(token).ConfigureAwait(false);
-            TodaySeed = BitConverter.ToUInt32(await SwitchConnection.ReadBytesAbsoluteAsync(TeraRaidBlockOffset, 4, token).ConfigureAwait(false), 0);
+            TodaySeed = BitConverter.ToUInt32(await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockP, 4, token).ConfigureAwait(false), 0);
             int status = 0;
             int start = 0;
             while (!token.IsCancellationRequested)
             {
-                start++;
-                if (start == 3 && Settings.RolloverFilters.CheckForRollover)
+                if (start == 2 && Settings.RolloverFilters.CheckForRollover)
                 {
-                    await ResetOverworld(token, true, true).ConfigureAwait(false);
+                    await ResetOverworld(true, true, token).ConfigureAwait(false);
                     start = 0;
-                }
-                uint currentSeed = BitConverter.ToUInt32(await SwitchConnection.ReadBytesAbsoluteAsync(TeraRaidBlockOffset, 4, token).ConfigureAwait(false), 0);
-                if (TodaySeed != currentSeed && Settings.RolloverFilters.CheckForRollover)
-                {
-                    var msg = $"Current Today Seed {currentSeed:X8} does not match Starting Today Seed: {TodaySeed:X8} attempting rollover correction. ";
-                    if (dayRoll != 0)
-                    {
-                        Log(msg + "Stopping routine for the day changing.");
-                        return;
-                    }
-                    Log(msg);     
-                    await ResetOverworld(token, true, false).ConfigureAwait(false);
+                    status = 0;
                     PicnicVal = await PicnicState(token).ConfigureAwait(false);
-                    TodaySeed = BitConverter.ToUInt32(await SwitchConnection.ReadBytesAbsoluteAsync(TeraRaidBlockOffset, 4, token).ConfigureAwait(false), 0);
+                    TodaySeed = BitConverter.ToUInt32(await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockP, 4, token).ConfigureAwait(false), 0);
                     if (Settings.LocationSelection != Location.NonAreaZero && Settings.LocationSelection != Location.TownBorder)
                     {
                         await Click(Y, 1_700, token).ConfigureAwait(false);
                         await Click(RSTICK, 1_000, token).ConfigureAwait(false);
                         await Click(B, 2_500, token).ConfigureAwait(false);
                     }
-                    status = 0;
-
-                    dayRoll++;
-                    continue;
                 }
 
                 if (Settings.LocationSelection != Location.NonAreaZero && Settings.LocationSelection != Location.TownBorder && atStation is false)
@@ -181,7 +301,7 @@ namespace SysBot.Pokemon
                     await NavigateToAreaZeroPicnic(token).ConfigureAwait(false);
                 }
 
-                if (Settings.MakeASandwich)
+                if (Settings.PicnicSelection != Selection.NoSandwich)
                     await Preparize(token).ConfigureAwait(false);
 
                 var wait = TimeSpan.FromMinutes(30);
@@ -197,7 +317,6 @@ namespace SysBot.Pokemon
                             await Click(PLUS, 1_500, token).ConfigureAwait(false);
                             await CollideToCave(token).ConfigureAwait(false);
                         }
-
                         atStation = true;
                     }
 
@@ -207,7 +326,6 @@ namespace SysBot.Pokemon
                         if (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
                         {
                             Log("Not in the overworld, are we in an unwanted battle? Attempting recovery");
-
                             for (int i = 0; i < 6; i++)
                                 await Click(B, 0_500, token).ConfigureAwait(false);
                             await Click(DUP, 1_500, token).ConfigureAwait(false);
@@ -218,42 +336,12 @@ namespace SysBot.Pokemon
                         }
                     }
 
-                    currentSeed = BitConverter.ToUInt32(await SwitchConnection.ReadBytesAbsoluteAsync(TeraRaidBlockOffset, 4, token).ConfigureAwait(false), 0);
-                    if (TodaySeed != currentSeed && Settings.RolloverFilters.CheckForRollover)
-                    {
-                        var msg = $"Current Today Seed {currentSeed:X8} does not match Starting Today Seed: {TodaySeed:X8} after rolling back 1 day. ";
-                        if (dayRoll != 0)
-                        {
-                            Log(msg + "Stopping routine for the day changing.");
-                            return;
-                        }
-                        Log(msg);
-                        await ResetOverworld(token, true, false).ConfigureAwait(false);
-                        PicnicVal = await PicnicState(token).ConfigureAwait(false);
-                        TodaySeed = BitConverter.ToUInt32(await SwitchConnection.ReadBytesAbsoluteAsync(TeraRaidBlockOffset, 4, token).ConfigureAwait(false), 0);
-                        if (Settings.LocationSelection != Location.NonAreaZero && Settings.LocationSelection != Location.TownBorder)
-                        {
-                            await Click(Y, 1_700, token).ConfigureAwait(false);
-                            await Click(RSTICK, 1_000, token).ConfigureAwait(false);
-                            await Click(B, 2_500, token).ConfigureAwait(false);
-                        }
-                        if (Settings.MakeASandwich)
-                            await Preparize(token).ConfigureAwait(false);
-
-                        dayRoll++;
-
-                        wait = TimeSpan.FromMinutes(30);
-                        endTime = DateTime.Now + wait;
-                        status = 0;
-                        continue;
-                    }
-
                     if (await PlayerCannotMove(token).ConfigureAwait(false) && Settings.LocationSelection != Location.SecretCave || await PlayerCannotMove(token).ConfigureAwait(false) && await PlayerNotOnMount(token).ConfigureAwait(false) && Settings.LocationSelection == Location.SecretCave)
                     {
                         Log("We can't move! Are we in battle? Resetting game to attempt recovery and positioning.");
-                        await ResetOverworld(token, false, false).ConfigureAwait(false);
+                        await ResetOverworld(false, false, token).ConfigureAwait(false);
                         PicnicVal = await PicnicState(token).ConfigureAwait(false);
-                        TodaySeed = BitConverter.ToUInt32(await SwitchConnection.ReadBytesAbsoluteAsync(TeraRaidBlockOffset, 4, token).ConfigureAwait(false), 0);
+                        TodaySeed = BitConverter.ToUInt32(await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockP, 4, token).ConfigureAwait(false), 0);
                         if (Settings.LocationSelection != Location.NonAreaZero && Settings.LocationSelection != Location.TownBorder)
                         {
                             await Click(Y, 1_700, token).ConfigureAwait(false);
@@ -269,21 +357,21 @@ namespace SysBot.Pokemon
                             await Click(RSTICK, 1_000, token).ConfigureAwait(false);
                             await Click(B, 2_500, token).ConfigureAwait(false);
                         }
-
                         GameWasReset = true;
                     }
 
                     if (GameWasReset)
                         break;
 
-                    await Task.Delay(0 + Settings.WaitTimeBeforeSaving, token).ConfigureAwait(false);
                     await SVSaveGameOverworld(token).ConfigureAwait(false);
+
                     var block = await ReadBlock(BaseBlockKeyPointer, Blocks.Overworld, status is 0, token).ConfigureAwait(false);
                     if (status is 0)
                         status++;
                     for (int i = 0; i < 20; i++)
                     {
-                        var data = block.Slice(0 + (i * 0x1D4), 0x157);
+                        var data = block.Slice(0 + (i * 0x1D4), 0x158);
+                        var c = block.Slice(0 + (i * 0x1D4) + 0x158, 0xC);
                         var pk = new PK9(data);
                         if ((Species)pk.Species == Species.None)
                             break;
@@ -293,7 +381,8 @@ namespace SysBot.Pokemon
                         TradeExtensions<PK9>.EncounterScaleLogs(pk, "EncounterLogScalePretty.txt");
                         encounters.Add(pk);
                         prints.Add(result);
-                    }                    
+                        coordList.Add(c);
+                    }
 
                     if (encounters.Count < 1 && !await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false) && Settings.LocationSelection != Location.NonAreaZero && Settings.LocationSelection != Location.TownBorder)
                     {
@@ -322,13 +411,14 @@ namespace SysBot.Pokemon
 
                     for (int i = 0; i < encounters.Count; i++)
                     {
-                        bool match = await CheckEncounter(prints[i], encounters[i]).ConfigureAwait(false);
+                        bool match = await CheckEncounter(prints[i], encounters[i], coordList[i]).ConfigureAwait(false);
                         if (!match && Settings.ContinueAfterMatch is ContinueAfterMatch.StopExit)
                             return;
                     }
 
                     encounters = new();
                     prints = new();
+                    coordList = new();
 
                     var task = Hub.Config.OverworldSV.LocationSelection switch
                     {
@@ -347,7 +437,7 @@ namespace SysBot.Pokemon
                     atStation = false;
                 }
 
-                if (!Settings.MakeASandwich && GameWasReset == false)
+                if (Settings.PicnicSelection == Selection.StopAt30Min && GameWasReset == false)
                 {
                     var ping = string.Empty;
                     if (!string.IsNullOrWhiteSpace(Hub.Config.StopConditions.MatchFoundEchoMention))
@@ -362,18 +452,39 @@ namespace SysBot.Pokemon
                     Log("Game was reset for recovery, restarting routine.");
                     GameWasReset = false;
                 }
+
+                start++;
             }
         }
 
-        private async Task<bool> CheckEncounter(string print, PK9 pk)
+        private async Task<bool> CheckEncounter(string print, PK9 pk, byte[]? cL)
         {
             var token = CancellationToken.None;
             var url = string.Empty;
             Settings.AddCompletedScans();
-
             if (pk.IsShiny)
             {
-                Settings.AddShinyScans();                
+                Settings.AddShinyScans();
+                // Dump backup pk9 of encounter incase it is fleeing/despawning/somewhere unreachable. Should not be treated as legitimate encounters.
+                var prevEC = pk.EncryptionConstant;
+                var prevPID = pk.PID;
+                var prevXOR = pk.ShinyXor;
+                pk.TID16 = TrainerSav.TID16;
+                pk.SID16 = TrainerSav.SID16;
+                pk.OT_Name = TrainerSav.OT;
+                pk.Obedience_Level = (byte)pk.Met_Level;
+                pk.FatefulEncounter = false;
+                pk.Language = TrainerSav.Language;
+                pk.EncryptionConstant = prevEC;
+                pk.Version = (int)TrainerSav.Version;
+                pk.MetDate = DateOnly.FromDateTime(DateTime.Now);
+                pk.PID = (uint)((pk.TID16 ^ pk.SID16 ^ (prevPID & 0xFFFF) ^ prevXOR) << 16) | (prevPID & 0xFFFF); // Ty Manu098vm!!
+                var enc = EncounterSuggestion.GetSuggestedMetInfo(pk);
+                if (enc != null)
+                {
+                    int location = enc.Location;
+                    pk.Met_Location = location;
+                }
                 DumpPokemon(DumpSetting.DumpFolder, "overworld", pk);
             }
 
@@ -426,13 +537,21 @@ namespace SysBot.Pokemon
                 }
             }
 
+            if (pk.Scale is 0)
+                pk.SetRibbonIndex(RibbonIndex.MarkMini);
+            if (pk.Scale is 255)
+                pk.SetRibbonIndex(RibbonIndex.MarkJumbo);
+
             StopConditionSettings.HasMark(pk, out RibbonIndex specialmark);
             if (Settings.SpecialMarksOnly && specialmark is >= RibbonIndex.MarkLunchtime and <= RibbonIndex.MarkMisty || Settings.SpecialMarksOnly && specialmark is RibbonIndex.MarkUncommon)
             {
-                Log($"Undesired {specialmark} found..");
-                url = TradeExtensions<PK9>.PokeImg(pk, false, false);
-                EchoUtil.EchoEmbed("", print, url, markurl, false);
-                return true;
+                if (pk.Scale != 0 && pk.Scale != 255 && Settings.SpecialMarksOnly)
+                {
+                    Log($"Undesired {specialmark} found..");
+                    url = TradeExtensions<PK9>.PokeImg(pk, false, false);
+                    EchoUtil.EchoEmbed("", print, url, markurl, false);
+                    return true;
+                }
             }
 
             if (Settings.StopOnOneInOneHundredOnly)
@@ -483,6 +602,9 @@ namespace SysBot.Pokemon
 
             Log(msg);
 
+            if (Settings.Collide)
+                await TeleportToMatch(cL, token).ConfigureAwait(false);
+
             if (mode == ContinueAfterMatch.StopExit) // Stop & Exit: Condition satisfied.  Stop scanning and disconnect the bot
             {
                 url = TradeExtensions<PK9>.PokeImg(pk, false, false);
@@ -502,6 +624,7 @@ namespace SysBot.Pokemon
                 while (IsWaiting)
                     await Task.Delay(1_000, token).ConfigureAwait(false);
 
+                await Task.Delay(1_000, token).ConfigureAwait(false);
                 for (int i = 0; i < 2; i++)
                     await Click(B, 1_000, token).ConfigureAwait(false);
                 await Click(HOME, 1_000, token).ConfigureAwait(false);
@@ -511,7 +634,7 @@ namespace SysBot.Pokemon
         }
 
         private async Task ResetFromSecretCave(CancellationToken token)
-        {            
+        {
             await CollideToTheSpot(token).ConfigureAwait(false);
             await CollideToCave(token).ConfigureAwait(false);
         }
@@ -537,22 +660,30 @@ namespace SysBot.Pokemon
             await Click(A, 10_000, token).ConfigureAwait(false);
             await Click(X, 2_500, token).ConfigureAwait(false);
 
-            Log("Selecting ingredient 1..");
-            for (int i = 0; i < Settings.PicnicFilters.Item1Clicks; i++) // Select first ingredient
+            Log($"Selecting {Settings.PicnicFilters.Item1}..");
+            for (int i = 0; i < Sequence[0]; i++) // Select first ingredient
                 await Click(Settings.PicnicFilters.Item1DUP ? DUP : DDOWN, 0_500, token).ConfigureAwait(false);
 
             await Click(A, 1_000, token).ConfigureAwait(false);
             await Click(PLUS, 1_500, token).ConfigureAwait(false);
 
-            Log("Selecting ingredient 2..");
-            for (int i = 0; i < Settings.PicnicFilters.Item2Clicks; i++) // Select second ingredient
+            Log($"Selecting {Settings.PicnicFilters.Item2}..");
+            for (int i = 0; i < Sequence[1]; i++) // Select second ingredient
                 await Click(Settings.PicnicFilters.Item2DUP ? DUP : DDOWN, 0_500, token).ConfigureAwait(false);
 
             await Click(A, 1_000, token).ConfigureAwait(false);
 
-            Log("Selecting ingredient 3..");
-            for (int i = 0; i < Settings.PicnicFilters.Item3Clicks; i++) // Select third ingredient
+            Log($"Selecting {Settings.PicnicFilters.Item3}..");
+            for (int i = 0; i < Sequence[2]; i++) // Select third ingredient
                 await Click(Settings.PicnicFilters.Item3DUP ? DUP : DDOWN, 0_500, token).ConfigureAwait(false);
+
+            if (Settings.PicnicFilters.Item4 != 0)
+            {
+                await Click(A, 1_000, token).ConfigureAwait(false);
+                Log($"Selecting {Settings.PicnicFilters.Item4}..");
+                for (int i = 0; i < Sequence[3]; i++) // Select fourth ingredient if applicable
+                    await Click(Settings.PicnicFilters.Item4DUP ? DUP : DDOWN, 0_500, token).ConfigureAwait(false);
+            }
 
             await Click(A, 1_000, token).ConfigureAwait(false);
             await Click(PLUS, 1_000, token).ConfigureAwait(false);
@@ -591,7 +722,7 @@ namespace SysBot.Pokemon
                     await Click(A, 0_800, token).ConfigureAwait(false);
             }
 
-            Log("Eating our sandwich..");
+            Log($"Eating our {Settings.PicnicFilters.TypeOfSandwich} {Settings.PicnicFilters.SandwichFlavor} Sandwich..");
 
             while (await PicnicState(token).ConfigureAwait(false) == PicnicVal + 2)  // eating the sandwich
                 await Task.Delay(1_000, token).ConfigureAwait(false);
@@ -786,7 +917,7 @@ namespace SysBot.Pokemon
 
             Log("Navigating back to the cave..");
             for (int i = 0; i < 15; i++)
-                await SwitchConnection.PointerPoke(X1, Offsets.CollisionPointer, token).ConfigureAwait(false);
+                await SwitchConnection.PointerPoke(X1, Offsets.RideCollisionPointer, token).ConfigureAwait(false);
 
             await Task.Delay(3_000, token).ConfigureAwait(false);
         }
@@ -808,7 +939,7 @@ namespace SysBot.Pokemon
             Log("Navigating to despawn spawns..");
             await Click(B, 2_500, token).ConfigureAwait(false);
             for (int i = 0; i < 15; i++)
-                await SwitchConnection.PointerPoke(X1, Offsets.CollisionPointer, token).ConfigureAwait(false);
+                await SwitchConnection.PointerPoke(X1, Offsets.RideCollisionPointer, token).ConfigureAwait(false);
 
             await Task.Delay(3_000, token).ConfigureAwait(false);
         }
@@ -868,23 +999,247 @@ namespace SysBot.Pokemon
 
             if (!time)
             {
+                Log("Scrolling to end...");
                 for (int i = 0; i < scrollroll; i++) // 0 to roll day for DDMMYY, 1 to roll day for MMDDYY, 3 to roll hour
                     await Click(DRIGHT, 0_200, token).ConfigureAwait(false);
             }
-            else if (time)
+            if (time)
             {
+                Log("Moving to time...");
                 for (int i = 0; i < 3; i++)
-                    await Click(DRIGHT, 0_200, token).ConfigureAwait(false);
+                    await Click(DRIGHT, 0_500, token).ConfigureAwait(false);
             }
 
-            await Click(DDOWN, 0_200, token).ConfigureAwait(false);
+            await Click(DDOWN, 0_500, token).ConfigureAwait(false);
 
             for (int i = 0; i < 8; i++) // Mash DRIGHT to confirm
-                await Click(DRIGHT, 0_200, token).ConfigureAwait(false);
+                await Click(DRIGHT, 0_500, token).ConfigureAwait(false);
 
-            await Click(A, 0_500, token).ConfigureAwait(false); // Confirm date/time change
+            await Task.Delay(0_500, token).ConfigureAwait(false);
+            await Click(A, 1_000, token).ConfigureAwait(false); // Confirm date/time change
             await Click(HOME, 1_000, token).ConfigureAwait(false); // Back to title screen
             Log("Done.");
+        }
+
+        private async Task TeleportToMatch(byte[]? cp, CancellationToken token)
+        {
+            for (int i = 0; i < 5; i++) // Mash DRIGHT to confirm
+                await Click(B, 0_500, token).ConfigureAwait(false);
+            await Click(PLUS, 1_500, token).ConfigureAwait(false);
+
+            float Y = BitConverter.ToSingle(cp!, 4);
+            Y += 40;
+            WriteSingleLittleEndian(cp.AsSpan()[4..], Y);
+
+            for (int i = 0; i < 15; i++)
+                await SwitchConnection.PointerPoke(cp!, Offsets.RideCollisionPointer, CancellationToken.None).ConfigureAwait(false);
+        }
+
+        private (int, int, int, int) IngredientSequence(SandwichSelection element, SandwichFlavor type)
+        {
+            PicnicFillings ingr1 = 0;
+            PicnicCondiments ingr2 = 0;
+            PicnicCondiments ingr3 = 0;
+            PicnicCondiments ingr4 = 0;
+            switch (element)
+            {
+                case SandwichSelection.Normal:
+                    {
+                        switch (type)
+                        {
+                            case SandwichFlavor.Encounter: ingr1 = PicnicFillings.Chorizo; ingr2 = PicnicCondiments.SaltyHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; break;
+                            case SandwichFlavor.Humongo: ingr1 = PicnicFillings.Cheese; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.SpicyHerbaMystica; break;
+                            case SandwichFlavor.Teensy: ingr1 = PicnicFillings.Watercress; ingr2 = PicnicCondiments.SourHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; break;
+                        }
+                        Settings.PicnicFilters.AmountOfIngredientsToHold = 3;
+                    }
+                    break;
+                case SandwichSelection.Fire:
+                    {
+                        switch (type)
+                        {
+                            case SandwichFlavor.Encounter: ingr1 = PicnicFillings.Basil; ingr2 = PicnicCondiments.SaltyHerbaMystica; ingr3 = PicnicCondiments.SweetHerbaMystica; Settings.PicnicFilters.AmountOfIngredientsToHold = 4; break;
+                            case SandwichFlavor.Humongo: ingr1 = PicnicFillings.Kiwi; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.CurryPowder; Settings.PicnicFilters.AmountOfIngredientsToHold = 3; break;
+                            case SandwichFlavor.Teensy: ingr1 = PicnicFillings.RedBellPepper; ingr2 = PicnicCondiments.SourHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; Settings.PicnicFilters.AmountOfIngredientsToHold = 3; break;
+                        }
+                    }
+                    break;
+                case SandwichSelection.Water:
+                    {
+                        switch (type)
+                        {
+                            case SandwichFlavor.Encounter: ingr1 = PicnicFillings.Cucumber; ingr2 = PicnicCondiments.SaltyHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; break;
+                            case SandwichFlavor.Humongo: ingr1 = PicnicFillings.Cucumber; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.SpicyHerbaMystica; break;
+                            case SandwichFlavor.Teensy: ingr1 = PicnicFillings.Cucumber; ingr2 = PicnicCondiments.SourHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; break;
+                        }
+                        Settings.PicnicFilters.AmountOfIngredientsToHold = 3;
+                    }
+                    break;
+                case SandwichSelection.Grass:
+                    {
+                        switch (type)
+                        {
+                            case SandwichFlavor.Encounter: ingr1 = PicnicFillings.Lettuce; ingr2 = PicnicCondiments.SourHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; break;
+                            case SandwichFlavor.Humongo: ingr1 = PicnicFillings.Jalapeno; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.SourHerbaMystica; ingr4 = PicnicCondiments.ChiliSauce; break;
+                            case SandwichFlavor.Teensy: ingr1 = PicnicFillings.Lettuce; ingr2 = PicnicCondiments.SourHerbaMystica; ingr3 = PicnicCondiments.SourHerbaMystica; break;
+                        }
+                        Settings.PicnicFilters.AmountOfIngredientsToHold = 3;
+                    }
+                    break;
+                case SandwichSelection.Flying:
+                    {
+                        switch (type)
+                        {
+                            case SandwichFlavor.Encounter: ingr1 = PicnicFillings.Prosciutto; ingr2 = PicnicCondiments.SaltyHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; break;
+                            case SandwichFlavor.Humongo: ingr1 = PicnicFillings.Prosciutto; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.SpicyHerbaMystica; break;
+                            case SandwichFlavor.Teensy: ingr1 = PicnicFillings.Apple; ingr2 = PicnicCondiments.SourHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; break;
+                        }
+                        Settings.PicnicFilters.AmountOfIngredientsToHold = 3;
+                    }
+                    break;
+                case SandwichSelection.Fighting:
+                    {
+                        switch (type)
+                        {
+                            case SandwichFlavor.Encounter: ingr1 = PicnicFillings.Pickle; ingr2 = PicnicCondiments.SaltyHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; Settings.PicnicFilters.AmountOfIngredientsToHold = 3; break;
+                            case SandwichFlavor.Humongo: ingr1 = PicnicFillings.PotatoTortilla; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.SpicyHerbaMystica; Settings.PicnicFilters.AmountOfIngredientsToHold = 1; break;
+                            case SandwichFlavor.Teensy: ingr1 = PicnicFillings.Strawberry; ingr2 = PicnicCondiments.SourHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; Settings.PicnicFilters.AmountOfIngredientsToHold = 3; break;
+                        }
+                    }
+                    break;
+                case SandwichSelection.Poison:
+                    {
+                        switch (type)
+                        {
+                            case SandwichFlavor.Encounter: ingr1 = PicnicFillings.Noodles; ingr2 = PicnicCondiments.SaltyHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; break;
+                            case SandwichFlavor.Humongo: ingr1 = PicnicFillings.Noodles; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.SpicyHerbaMystica; break;
+                            case SandwichFlavor.Teensy: ingr1 = PicnicFillings.Noodles; ingr2 = PicnicCondiments.SourHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; break;
+                        }
+                        Settings.PicnicFilters.AmountOfIngredientsToHold = 1;
+                    }
+                    break;
+                case SandwichSelection.Electric:
+                    {
+                        switch (type)
+                        {
+                            case SandwichFlavor.Encounter: ingr1 = PicnicFillings.YellowBellPepper; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; break;
+                            case SandwichFlavor.Humongo: ingr1 = PicnicFillings.Watercress; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.Jam; break;
+                            case SandwichFlavor.Teensy: ingr1 = PicnicFillings.YellowBellPepper; ingr2 = PicnicCondiments.SourHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; break;
+                        }
+                        Settings.PicnicFilters.AmountOfIngredientsToHold = 3;
+                    }
+                    break;
+                case SandwichSelection.Ground:
+                    {
+                        switch (type)
+                        {
+                            case SandwichFlavor.Encounter: ingr1 = PicnicFillings.Ham; ingr2 = PicnicCondiments.SaltyHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; break;
+                            case SandwichFlavor.Humongo: ingr1 = PicnicFillings.Ham; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.SpicyHerbaMystica; break;
+                            case SandwichFlavor.Teensy: ingr1 = PicnicFillings.Pineapple; ingr2 = PicnicCondiments.SourHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; break;
+                        }
+                        Settings.PicnicFilters.AmountOfIngredientsToHold = 3;
+                    }
+                    break;
+                case SandwichSelection.Rock:
+                    {
+                        switch (type)
+                        {
+                            case SandwichFlavor.Encounter: ingr1 = PicnicFillings.Jalapeno; ingr2 = PicnicCondiments.SaltyHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; break;
+                            case SandwichFlavor.Humongo: ingr1 = PicnicFillings.Bacon; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.SpicyHerbaMystica; break;
+                            case SandwichFlavor.Teensy: ingr1 = PicnicFillings.Bacon; ingr2 = PicnicCondiments.SourHerbaMystica; ingr3 = PicnicCondiments.SourHerbaMystica; break;
+                        }
+                        Settings.PicnicFilters.AmountOfIngredientsToHold = 3;
+                    }
+                    break;
+                case SandwichSelection.Psychic:
+                    {
+                        switch (type)
+                        {
+                            case SandwichFlavor.Encounter: ingr1 = PicnicFillings.Onion; ingr2 = PicnicCondiments.SaltyHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; Settings.PicnicFilters.AmountOfIngredientsToHold = 3; break;
+                            case SandwichFlavor.Humongo: ingr1 = PicnicFillings.Onion; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; Settings.PicnicFilters.AmountOfIngredientsToHold = 3; break;
+                            case SandwichFlavor.Teensy: ingr1 = PicnicFillings.Basil; ingr2 = PicnicCondiments.BitterHerbaMystica; ingr3 = PicnicCondiments.SourHerbaMystica; ingr4 = PicnicCondiments.Vinegar; Settings.PicnicFilters.AmountOfIngredientsToHold = 4; break;
+                        }
+                    }
+                    break;
+                case SandwichSelection.Ice:
+                    {
+                        switch (type)
+                        {
+                            case SandwichFlavor.Encounter: ingr1 = PicnicFillings.KlawfStick; ingr2 = PicnicCondiments.SaltyHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; break;
+                            case SandwichFlavor.Humongo: ingr1 = PicnicFillings.Apple; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.Salt; ingr4 = PicnicCondiments.Pepper; break;
+                            case SandwichFlavor.Teensy: ingr1 = PicnicFillings.KlawfStick; ingr2 = PicnicCondiments.BitterHerbaMystica; ingr3 = PicnicCondiments.SourHerbaMystica; break;
+                        }
+                        Settings.PicnicFilters.AmountOfIngredientsToHold = 3;
+                    }
+                    break;
+                case SandwichSelection.Bug:
+                    {
+                        switch (type)
+                        {
+                            case SandwichFlavor.Encounter: ingr1 = PicnicFillings.CherryTomatoes; ingr2 = PicnicCondiments.SaltyHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; Settings.PicnicFilters.AmountOfIngredientsToHold = 3; break;
+                            case SandwichFlavor.Humongo: ingr1 = PicnicFillings.PotatoSalad; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.SpicyHerbaMystica; Settings.PicnicFilters.AmountOfIngredientsToHold = 1; break;
+                            case SandwichFlavor.Teensy: ingr1 = PicnicFillings.PotatoSalad; ingr2 = PicnicCondiments.SourHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; Settings.PicnicFilters.AmountOfIngredientsToHold = 1; break;
+                        }
+                    }
+                    break;
+                case SandwichSelection.Ghost:
+                    {
+                        switch (type)
+                        {
+                            case SandwichFlavor.Encounter: ingr1 = PicnicFillings.RedOnion; ingr2 = PicnicCondiments.SaltyHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; break;
+                            case SandwichFlavor.Humongo: ingr1 = PicnicFillings.RedOnion; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.Salt; break;
+                            case SandwichFlavor.Teensy: ingr1 = PicnicFillings.RedOnion; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.SourHerbaMystica; break;
+                        }
+                        Settings.PicnicFilters.AmountOfIngredientsToHold = 3;
+                    }
+                    break;
+                case SandwichSelection.Steel:
+                    {
+                        switch (type)
+                        {
+                            case SandwichFlavor.Encounter: ingr1 = PicnicFillings.Hamburger; ingr2 = PicnicCondiments.SaltyHerbaMystica; ingr3 = PicnicCondiments.SweetHerbaMystica; break;
+                            case SandwichFlavor.Humongo: ingr1 = PicnicFillings.Hamburger; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.BitterHerbaMystica; ingr4 = PicnicCondiments.ChiliSauce; break;
+                            case SandwichFlavor.Teensy: ingr1 = PicnicFillings.Hamburger; ingr2 = PicnicCondiments.SourHerbaMystica; ingr3 = PicnicCondiments.SourHerbaMystica; break;
+                        }
+                        Settings.PicnicFilters.AmountOfIngredientsToHold = 1;
+                    }
+                    break;
+                case SandwichSelection.Dragon:
+                    {
+                        switch (type)
+                        {
+                            case SandwichFlavor.Encounter: ingr1 = PicnicFillings.Avocado; ingr2 = PicnicCondiments.SaltyHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; break;
+                            case SandwichFlavor.Humongo: ingr1 = PicnicFillings.Chorizo; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.Pepper; break;
+                            case SandwichFlavor.Teensy: ingr1 = PicnicFillings.Avocado; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.SourHerbaMystica; break;
+                        }
+                        Settings.PicnicFilters.AmountOfIngredientsToHold = 3;
+                    }
+                    break;
+                case SandwichSelection.Dark:
+                    {
+                        switch (type)
+                        {
+                            case SandwichFlavor.Encounter: ingr1 = PicnicFillings.SmokedFillet; ingr2 = PicnicCondiments.SaltyHerbaMystica; ingr3 = PicnicCondiments.SweetHerbaMystica; break;
+                            case SandwichFlavor.Humongo: ingr1 = PicnicFillings.SmokedFillet; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.SpicyHerbaMystica; break;
+                            case SandwichFlavor.Teensy: ingr1 = PicnicFillings.Avocado; ingr2 = PicnicCondiments.SourHerbaMystica; ingr3 = PicnicCondiments.SourHerbaMystica; break;
+                        }
+                        Settings.PicnicFilters.AmountOfIngredientsToHold = 3;
+                    }
+                    break;
+                case SandwichSelection.Fairy:
+                    {
+                        switch (type)
+                        {
+                            case SandwichFlavor.Encounter: ingr1 = PicnicFillings.Tomato; ingr2 = PicnicCondiments.SaltyHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; break;
+                            case SandwichFlavor.Humongo: ingr1 = PicnicFillings.Tomato; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.SpicyHerbaMystica; break;
+                            case SandwichFlavor.Teensy: ingr1 = PicnicFillings.Avocado; ingr2 = PicnicCondiments.SourHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; break;
+                        }
+                        Settings.PicnicFilters.AmountOfIngredientsToHold = 3;
+                    }
+                    break;
+                case SandwichSelection.Custom: ingr1 = Settings.PicnicFilters.Item1; ingr2 = Settings.PicnicFilters.Item2; ingr3 = Settings.PicnicFilters.Item3; break;
+            }
+            return ((int)ingr1, (int)ingr2, (int)ingr3, (int)ingr4);
         }
     }
 }

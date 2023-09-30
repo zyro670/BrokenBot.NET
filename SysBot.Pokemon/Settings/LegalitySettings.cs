@@ -53,14 +53,17 @@ namespace SysBot.Pokemon
         [Category(Generate), Description("Force the specified ball if legal.")]
         public bool ForceSpecifiedBall { get; set; } = true;
 
+        [Category(Generate), Description("Assumes level 50 sets are level 100 competitive sets.")]
+        public bool ForceLevel100for50 { get; set; }
+
         [Category(Generate), Description("The order in which Pokémon encounter types are attempted.")]
         public List<EncounterTypeGroup> PrioritizeEncounters { get; set; } = new List<EncounterTypeGroup>() { EncounterTypeGroup.Egg, EncounterTypeGroup.Slot, EncounterTypeGroup.Static, EncounterTypeGroup.Mystery, EncounterTypeGroup.Trade };
 
-        [Category(Generate), Description("Allow XOROSHIRO when generating Gen 8 Raid Pokémon.")]
-        public bool UseXOROSHIRO { get; set; } = true;
-
         [Category(Generate), Description("Adds Battle Version for games that support it (SWSH only) for using past-gen Pokémon in online competitive play.")]
         public bool SetBattleVersion { get; set; }
+
+        [Category(Generate), Description("Allows generating transfer-only Pokémon. They will not have a HOME tracker and will not be able to enter HOME.")]
+        public bool AllowHOMETransferGeneration { get; set; } = true;
 
         [Category(Generate), Description("Bot will create an Easter Egg Pokémon if provided an illegal set.")]
         public bool EnableEasterEggs { get; set; }

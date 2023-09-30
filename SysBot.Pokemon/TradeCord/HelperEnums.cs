@@ -220,6 +220,12 @@
         Dragapult = 887,
         Eternatus = 890,
         Spectrier = 897,
+        Meowscarada = 908,
+        Skeledirge = 911,
+        Quaquaval = 914,
+        Ceruledge = 937,
+        Annihilape = 979,
+
     }
 
     public enum PokePets : ushort
@@ -432,6 +438,108 @@
         Dragapult = 887,
     }
 
+    public enum HouseParty : ushort
+    {
+        Rattata = 19,
+        Raticate = 20,
+        Pikachu = 25,
+        Raichu = 26,
+        Sandshrew = 27,
+        Sandslash = 28,
+        Vulpix = 37,
+        Ninetales = 38,
+        Diglett = 50,
+        Dugtrio = 51,
+        Meowth = 52,
+        Persian = 53,
+        Growlithe = 58,
+        Arcanine = 59,
+        Geodude = 74,
+        Graveler = 75,
+        Golem = 76,
+        Ponyta = 77,
+        Rapidash = 78,
+        Slowpoke = 79,
+        Slowbro = 80,
+        Farfetchd = 83,
+        Grimer = 88,
+        Muk = 89,
+        Voltorb = 100,
+        Electrode = 101,
+        Exeggutor = 103,
+        Marowak = 105,
+        Weezing = 110,
+        MrMime = 122,
+        Tauros = 128,
+        Articuno = 144,
+        Zapdos = 145,
+        Moltres = 146,
+        Typhlosion = 157,
+        Wooper = 194,
+        Slowking = 199,
+        Unown = 201,
+        Qwilfish = 211,
+        Sneasel = 215,
+        Corsola = 222,
+        Zigzagoon = 263,
+        Linoone = 264,
+        Castform = 351,
+        Kyogre = 382,
+        Groudon = 383,
+        Rayquaza = 384,
+        Deoxys = 386,
+        Burmy = 412,
+        Wormadam = 413,
+        Cherrim = 421,
+        Shellos = 422,
+        Gastrodon = 423,
+        Rotom = 479,
+        Dialga = 483,
+        Palkia = 484,
+        Giratina = 487,
+        Shaymin = 492,
+        Arceus = 493,
+        Samurott = 503,
+        Lilligant = 549,
+        Basculin = 550,
+        Darumaka = 554,
+        Darmanitan = 555,
+        Yamask = 562,
+        Zorua = 570,
+        Zoroark = 571,
+        Deerling = 585,
+        Sawsbuck = 586,
+        Stunfisk = 618,
+        Braviary = 628,
+        Tornadus = 641,
+        Thundurus = 642,
+        Landorus = 645,
+        Genesect = 649,
+        Greninja = 658,
+        Vivillon = 666,
+        Flabébé = 669,
+        Floette = 670,
+        Florges = 671,
+        Furfrou = 676,
+        Sliggoo = 705,
+        Goodra = 706,
+        Avalugg = 713,
+        Decidueye = 724,
+        Oricorio = 741,
+        Lycanroc = 745,
+        Silvally = 773,
+        Sinistea = 854,
+        Alcremie = 869,
+        Enamorus = 905,
+        Maushold = 925,
+        Squawkabilly = 931,
+        Palafin = 964,
+        Tatsugiri = 978,
+        Dudunsparce = 982,
+        Koraidon = 1007,
+        Miraidon = 1008,
+    }
+
     public enum TCCommandContext
     {
         Catch,
@@ -467,6 +575,7 @@
     public enum TCItems
     {
         // Hack
+        MarkCharm = -3,
         ShinyCharm = -2,
         Sweets = -1,
 
@@ -537,6 +646,12 @@
         ChippedPot = 1254,
         GalaricaCuff = 1582,
         GalaricaWreath = 1592,
+
+        GriseousCore = 1779,
+        MaliciousArmor = 1861,
+        GimmighoulCoin = 2137,
+        AuspiciousArmor = 2344,
+        LeadersCrest = 2345,
     }
 
     public enum AlcremieForms
@@ -559,6 +674,8 @@
         Kanto = 0,
         Alola = 1,
         Galar = 2,
+        Hisui = 3,
+        Paldea = 4,
     }
 
     public enum TimeOfDay
@@ -619,29 +736,8 @@
         Adult,
     }
 
-    public enum PicnicIngredients
+    public enum PicnicFillings
     {
-        Baguette = 1888,
-        Mayonnaise = 1889,
-        Ketchup = 1890,
-        Mustard = 1891,
-        Butter = 1892,
-        PeanuteButter = 1893,
-        ChiliSauce = 1894,
-        Salt = 1895,
-        Pepper = 1896,
-        Yogurt = 1897,
-        WhippedCream = 1898,
-        CreamCheese = 1899,
-        Jam = 1900,
-        Marmalade = 1901,
-        OliveOil = 1902,
-        Vinegar = 1903,
-        SweetHerbaMystica = 1904,
-        SaltyHerbaMystica = 1905,
-        SourHerbaMystica = 1906,
-        BitterHerbaMystica = 1907,
-        SpicyHerbaMystica = 1908,
         Lettuce = 1909,
         Tomato = 1910,
         CherryTomatoes = 1911,
@@ -680,5 +776,62 @@
         Wasabi = 1944,
         Watercress = 1945,
         Basil = 1946,
+    }
+
+    public enum PicnicCondiments
+    {
+        Baguette = 1888,
+        Mayonnaise = 1889,
+        Ketchup = 1890,
+        Mustard = 1891,
+        Butter = 1892,
+        PeanuteButter = 1893,
+        ChiliSauce = 1894,
+        Salt = 1895,
+        Pepper = 1896,
+        Yogurt = 1897,
+        WhippedCream = 1898,
+        CreamCheese = 1899,
+        Jam = 1900,
+        Marmalade = 1901,
+        OliveOil = 1902,
+        Vinegar = 1903,
+        SweetHerbaMystica = 1904,
+        SaltyHerbaMystica = 1905,
+        SourHerbaMystica = 1906,
+        BitterHerbaMystica = 1907,
+        SpicyHerbaMystica = 1908,    
+        HorseRadish = 1942,
+        CurryPowder = 1943,
+    }
+
+    public enum SandwichSelection
+    {
+        Normal = 0,
+        Fire = 1,
+        Water = 2,
+        Grass = 3,
+        Flying = 4,
+        Fighting = 5,
+        Poison = 6,
+        Electric = 7,
+        Ground = 8,
+        Rock = 9,
+        Psychic = 10,
+        Ice = 11,
+        Bug = 12,
+        Ghost = 13,
+        Steel = 14,
+        Dragon = 15,
+        Dark = 16,
+        Fairy = 17,
+        Custom = 18,
+    }
+
+    public enum SandwichFlavor
+    {
+        Encounter = 0,
+        Humongo = 1,
+        Teensy = 2,
     }
 }

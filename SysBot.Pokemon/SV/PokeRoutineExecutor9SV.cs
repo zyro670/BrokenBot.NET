@@ -256,18 +256,18 @@ namespace SysBot.Pokemon
             return await IsOnOverworld(offset, token).ConfigureAwait(false);
         }
 
-        // Usually 0x9-0xA if fully loaded into Poké Portal.
+        // 0x10 if fully loaded into Poké Portal.
         public async Task<bool> IsInPokePortal(ulong offset, CancellationToken token)
         {
             var data = await SwitchConnection.ReadBytesAbsoluteAsync(offset, 1, token).ConfigureAwait(false);
-            return data[0] >= 9;
+            return data[0] == 0x10;
         }
 
-        // Usually 4-6 in a box.
+        // 0x14 in a box and during trades, trade evolutions, and move learning.
         public async Task<bool> IsInBox(ulong offset, CancellationToken token)
         {
             var data = await SwitchConnection.ReadBytesAbsoluteAsync(offset, 1, token).ConfigureAwait(false);
-            return data[0] < 8;
+            return data[0] == 0x14;
         }
 
         public async Task<TextSpeedOption> GetTextSpeed(CancellationToken token)
@@ -278,44 +278,8 @@ namespace SysBot.Pokemon
 
 
         // Zyro additions
-        public async Task<ulong> GetPointerAddress(string pointer, CancellationToken token, bool heaprealtive = false) //Code from LiveHex
+        public async Task SetBoxPokemonEgg(PK9 pkm, ulong ofs, CancellationToken token)
         {
-            var ptr = pointer;
-            if (string.IsNullOrWhiteSpace(ptr) || ptr.IndexOfAny(new char[] { '-', '/', '*' }) != -1)
-                return 0;
-            while (ptr.Contains("]]"))
-                ptr = ptr.Replace("]]", "]+0]");
-            uint finadd = 0;
-            if (!ptr.EndsWith("]"))
-            {
-                finadd = Util.GetHexValue(ptr.Split('+').Last());
-                ptr = ptr[..ptr.LastIndexOf('+')];
-            }
-            var jumps = ptr.Replace("main", "").Replace("[", "").Replace("]", "").Split(new[] { "+" }, StringSplitOptions.RemoveEmptyEntries);
-            if (jumps.Length == 0)
-                return 0;
-
-            var initaddress = Util.GetHexValue(jumps[0].Trim());
-            ulong address = BitConverter.ToUInt64(await SwitchConnection.ReadBytesMainAsync(initaddress, 0x8, token).ConfigureAwait(false), 0);
-            foreach (var j in jumps)
-            {
-                var val = Util.GetHexValue(j.Trim());
-                if (val == initaddress)
-                    continue;
-                address = BitConverter.ToUInt64(await SwitchConnection.ReadBytesAbsoluteAsync(address + val, 0x8, token).ConfigureAwait(false), 0);
-            }
-            address += finadd;
-            if (heaprealtive)
-            {
-                ulong heap = await SwitchConnection.GetHeapBaseAsync(token).ConfigureAwait(false);
-                address -= heap;
-            }
-            return address;
-        }
-
-        public async Task SetBoxPokemonEgg(PK9 pkm, int box, int slot, CancellationToken token)
-        {
-            var ofs = await GetPointerAddress("[[[main+44BFBA8]+130]+9B0]", token).ConfigureAwait(false);
             pkm.ResetPartyStats();
             await SwitchConnection.WriteBytesAbsoluteAsync(pkm.EncryptedPartyData, ofs, token).ConfigureAwait(false);
         }
@@ -325,7 +289,8 @@ namespace SysBot.Pokemon
             Log("Saving the game...");
             await Click(X, 2_000, token).ConfigureAwait(false);
             await Click(R, 1_800, token).ConfigureAwait(false);
-            await Click(A, 7_000, token).ConfigureAwait(false);
+            await Click(A, 1_000, token).ConfigureAwait(false);
+            await Task.Delay(6_000, token).ConfigureAwait(false);
             await Click(B, 1_500, token).ConfigureAwait(false);
         }
 
@@ -353,7 +318,7 @@ namespace SysBot.Pokemon
                 returnOfs = address;
                 Log($"Init Address found at {returnOfs}");
             }
-  
+
             var header = await SwitchConnection.ReadBytesAbsoluteAsync(returnOfs, 5, token).ConfigureAwait(false);
             header = DecryptBlock(block.Key, header);
             var size = ReadUInt32LittleEndian(header.AsSpan()[1..]);
@@ -579,8 +544,8 @@ namespace SysBot.Pokemon
         {
             string[] raidDescription = Array.Empty<string>();
 
-            if (description.Length > 0)            
-                raidDescription = description.ToArray();         
+            if (description.Length > 0)
+                raidDescription = description.ToArray();
 
             string markEntryText = "";
             string markTitle = "";
@@ -601,10 +566,10 @@ namespace SysBot.Pokemon
             string nature = $"{(Nature)pk.Nature}";
             string genderSymbol = pk.Gender == 0 ? "♂" : pk.Gender == 1 ? "♀" : "⚥";
             string genderText = $"{(Gender)pk.Gender}";
-            string ability = $"{(Ability)pk.Ability}";
+            string ability = $"{GameInfo.GetStrings(1).Ability[pk.Ability]}";
 
-            if (pk.IV_HP == 31 && pk.IV_ATK == 31 && pk.IV_DEF == 31 && pk.IV_SPA == 31 && pk.IV_SPD == 31 && pk.IV_SPE == 31)            
-                MaxIV = "6IV";            
+            if (pk.IV_HP == 31 && pk.IV_ATK == 31 && pk.IV_DEF == 31 && pk.IV_SPA == 31 && pk.IV_SPD == 31 && pk.IV_SPE == 31)
+                MaxIV = "6IV";
 
             StopConditionSettings.HasMark((IRibbonIndex)pk, out RibbonIndex mark);
             if (mark == RibbonIndex.MarkMightiest)
@@ -626,12 +591,12 @@ namespace SysBot.Pokemon
             }
 
             for (int i = 0; i < raidDescription.Length; i++)
-            raidDescription[i] = raidDescription[i].Replace("{markEntryText}", markEntryText)
-                    .Replace("{markTitle}", markTitle).Replace("{scaleText}", scaleText).Replace("{scaleNumber}", scaleNumber).Replace("{shinySymbol}", shinySymbol).Replace("{shinySymbolText}", shinySymbolText)
-                    .Replace("{shinyText}", shiny).Replace("{species}", species).Replace("{IVList}", IVList).Replace("{MaxIV}",MaxIV).Replace("{HP}", HP).Replace("{ATK}", ATK).Replace("{DEF}", DEF).Replace("{SPA}", SPA)
-                    .Replace("{SPD}", SPD).Replace("{SPE}", SPE).Replace("{nature}", nature).Replace("{ability}", ability).Replace("{genderSymbol}", genderSymbol).Replace("{genderText}", genderText);
+                raidDescription[i] = raidDescription[i].Replace("{markEntryText}", markEntryText)
+                        .Replace("{markTitle}", markTitle).Replace("{scaleText}", scaleText).Replace("{scaleNumber}", scaleNumber).Replace("{shinySymbol}", shinySymbol).Replace("{shinySymbolText}", shinySymbolText)
+                        .Replace("{shinyText}", shiny).Replace("{species}", species).Replace("{IVList}", IVList).Replace("{MaxIV}", MaxIV).Replace("{HP}", HP).Replace("{ATK}", ATK).Replace("{DEF}", DEF).Replace("{SPA}", SPA)
+                        .Replace("{SPD}", SPD).Replace("{SPE}", SPE).Replace("{nature}", nature).Replace("{ability}", ability).Replace("{genderSymbol}", genderSymbol).Replace("{genderText}", genderText);
 
-            return (raidDescription);
+            return raidDescription;
         }
     }
 }

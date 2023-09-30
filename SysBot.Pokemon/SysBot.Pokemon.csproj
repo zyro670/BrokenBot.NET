@@ -33,7 +33,7 @@
 		<PackageReference Include="FlatSharp.Runtime" Version="7.1.0" />
 		<PackageReference Include="MathNet.Numerics" Version="5.0.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
-		<PackageReference Include="PKHeX.Core" Version="23.6.3" />
+		<PackageReference Include="PKHeX.Core" Version="23.9.25" />
 		<PackageReference Include="KdSoft.FlatBuffers" Version="1.12.0" />
 		<PackageReference Include="System.Data.SQLite" Version="1.0.117" />
 		<ProjectReference Include="..\SysBot.Base\SysBot.Base.csproj" />

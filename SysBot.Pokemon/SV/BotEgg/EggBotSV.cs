@@ -1,6 +1,7 @@
 ﻿using PKHeX.Core;
 using SysBot.Base;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,6 +17,7 @@ namespace SysBot.Pokemon
         private readonly IDumper DumpSetting;
         private readonly int[] DesiredMinIVs;
         private readonly int[] DesiredMaxIVs;
+        private readonly List<int[]> DesiredIVs = new();
         private readonly EggSettingsSV Settings;
         public ICountSettings Counts => Settings;
 
@@ -25,12 +27,11 @@ namespace SysBot.Pokemon
             Settings = Hub.Config.EggSV;
             DumpSetting = Hub.Config.Folder;
             StopConditionSettings.InitializeTargetIVs(Hub.Config, out DesiredMinIVs, out DesiredMaxIVs);
+            InitializeTargetIVs(Settings, out DesiredIVs);
         }
 
         private int eggcount = 0;
         private int sandwichcount = 0;
-        private const int InjectBox = 0;
-        private const int InjectSlot = 0;
         private PK9 prevShiny = new();
         private static readonly PK9 Blank = new();
         private readonly byte[] BlankVal = { 0x01 };        
@@ -105,7 +106,7 @@ namespace SysBot.Pokemon
 
         private async Task SetupBoxState(CancellationToken token)
         {
-            var existing = await ReadBoxPokemon(InjectBox, InjectSlot, token).ConfigureAwait(false);
+            var existing = await ReadBoxPokemon(0, 0, token).ConfigureAwait(false);
             if (existing.Species != 0 && existing.ChecksumValid)
             {
                 Log("Destination slot is occupied! Dumping the Pokémon found there...");
@@ -113,7 +114,7 @@ namespace SysBot.Pokemon
             }
 
             Log("Clearing destination slot to start the bot.");
-            await SetBoxPokemonEgg(Blank, InjectBox, InjectSlot, token).ConfigureAwait(false);
+            await SetBoxPokemonEgg(Blank, BoxStartOffset, token).ConfigureAwait(false);
         }
 
         private bool IsWaiting;
@@ -183,7 +184,7 @@ namespace SysBot.Pokemon
                         pk = await ReadPokemonSV(Offsets.EggData, 344, token).ConfigureAwait(false);
                         if (mode == EggMode.WaitAndClose)
                         {
-                            if (waiting == 120)
+                            if (waiting == 180)
                             {
                                 Log("3 minutes have passed without an egg.  Attempting full recovery.");
                                 await ReopenPicnic(token).ConfigureAwait(false);
@@ -277,14 +278,39 @@ namespace SysBot.Pokemon
             await Click(DDOWN, 0_250, token).ConfigureAwait(false);
             await Click(DDOWN, 0_250, token).ConfigureAwait(false);
             await Click(A, 7_000, token).ConfigureAwait(false);
-        }        
+        }
 
         private async Task<bool> CheckEncounter(string print, PK9 pk)
         {
             var token = CancellationToken.None;
-            var url = string.Empty;
+            string? url;
 
-            if (!StopConditionSettings.EncounterFound(pk, DesiredMinIVs, DesiredMaxIVs, Hub.Config.StopConditions, null))
+            bool invalid = false;
+            bool[] results = EggFound(pk, DesiredIVs, Settings);
+            List<EggFetchStopConditionsCatgeory> list = Settings.StopConditions;
+            for (int r = 0; r < results.Length; r++)
+            {
+                if (results[r] == false)
+                    continue;
+
+                invalid = true;
+            }
+
+            if (invalid == false)
+            {
+                foreach (var param in list)
+                {
+                    if (param.ShinyTarget is TargetShinyType.AnyShiny or TargetShinyType.StarOnly or TargetShinyType.SquareOnly && pk.IsShiny)
+                    {
+                        url = TradeExtensions<PK9>.PokeImg(pk, false, false);
+                        EchoUtil.EchoEmbed("", print, url, "", false);
+                        break;
+                    }
+                }
+                return true;
+            }
+
+            /*if (!StopConditionSettings.EncounterFound(pk, DesiredMinIVs, DesiredMaxIVs, Hub.Config.StopConditions, null))
             {
                 if (Hub.Config.StopConditions.ShinyTarget is TargetShinyType.AnyShiny or TargetShinyType.StarOnly or TargetShinyType.SquareOnly && pk.IsShiny)
                 {
@@ -293,7 +319,7 @@ namespace SysBot.Pokemon
                 }
 
                 return true; //No match, return true to keep scanning
-            }
+            }*/
 
             if (Settings.MinMaxScaleOnly && pk.Scale > 0 && pk.Scale < 255)
             {
@@ -334,6 +360,9 @@ namespace SysBot.Pokemon
                     return true; // 1/100 condition unsatisfied, continue scanning
                 }
             }
+
+            if (Settings.ForceDump)
+                ForcifyEgg(pk);
 
             if (mode == ContinueAfterMatch.StopExit) // Stop & Exit: Condition satisfied.  Stop scanning and disconnect the bot
             {
@@ -482,11 +511,42 @@ namespace SysBot.Pokemon
                         DumpPokemon(DumpSetting.DumpFolder, "eggs", dumpmon);
                         await Task.Delay(1_500, token).ConfigureAwait(false);
                         if (match == true)
-                            await SetBoxPokemonEgg(Blank, InjectBox, InjectSlot, token).ConfigureAwait(false);
+                            await SetBoxPokemonEgg(Blank, BoxStartOffset, token).ConfigureAwait(false);
                     }
                     text = await SwitchConnection.ReadBytesAbsoluteAsync(TextBoxOffset, 4, token).ConfigureAwait(false);
                 }
             }
+        }
+
+        private void ForcifyEgg(PK9 pk)
+        {
+            pk.IsEgg = true;
+            pk.Nickname = "Egg";
+            pk.Met_Location = 0;
+            pk.Egg_Location = 30023;
+            pk.MetDate = DateOnly.Parse("2023/02/17");
+            pk.EggMetDate = pk.MetDate;
+            pk.OT_Name = "ZYZYZYZY";
+            pk.HeldItem = 0;
+            pk.CurrentLevel = 1;
+            pk.EXP = 0;
+            pk.Met_Level = 1;
+            pk.CurrentHandler = 0;
+            pk.OT_Friendship = 1;
+            pk.HT_Name = "";
+            pk.HT_Friendship = 0;
+            pk.ClearMemories();
+            pk.StatNature = pk.Nature;
+            pk.SetEVs(new int[] { 0, 0, 0, 0, 0, 0 });
+            pk.SetMarking(0, 0);
+            pk.SetMarking(1, 0);
+            pk.SetMarking(2, 0);
+            pk.SetMarking(3, 0);
+            pk.SetMarking(4, 0);
+            pk.SetMarking(5, 0);
+            pk.ClearInvalidMoves();            
+
+            DumpPokemon(DumpSetting.DumpFolder, "forced-eggs", pk);
         }
     }
 }

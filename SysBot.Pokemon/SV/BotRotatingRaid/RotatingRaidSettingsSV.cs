@@ -12,7 +12,7 @@ namespace SysBot.Pokemon
         private const string Hosting = nameof(Hosting);
         private const string Counts = nameof(Counts);
         private const string FeatureToggle = nameof(FeatureToggle);
-        public override string ToString() => "RaidBotSV Settings";
+        public override string ToString() => "RotatingRaidtSV Settings";
 
         [Category(FeatureToggle), Description("URL to Pokémon Automation's Tera Ban List json (or one matching the required structure).")]
         public string BanListURL { get; set; } = "https://raw.githubusercontent.com/PokemonAutomation/ServerConfigs-PA-SHA/main/PokemonScarletViolet/TeraAutoHost-BanList.json";
@@ -28,6 +28,9 @@ namespace SysBot.Pokemon
 
         [Category(Hosting), Description("Raid embed parameters.")]
         public List<RotatingRaidParameters> RaidEmbedParameters { get; set; } = new();
+
+        [Category(Hosting), Description("Enter the total number of raids to host before the bot automatically stops. Default is 0 to ignore this setting.")]
+        public int TotalRaidsToHost { get; set; } = 0;
 
         [Category(Hosting), Description("Catch limit per player before they get added to the ban list automatically. If set to 0 this setting will be ignored.")]
         public int CatchLimit { get; set; } = 0;
@@ -50,7 +53,7 @@ namespace SysBot.Pokemon
         [Category(Hosting), Description("Users NIDs here are banned raiders.")]
         public RemoteControlAccessList RaiderBanList { get; set; } = new() { AllowIfEmpty = false };
 
-        [Category(Hosting), Description("When enabled, the bot will restore current day seed to tomorrow's day seed.")]
+        [Category(Hosting), Description("When enabled, the bot will inject the current day seed to tomorrow's day seed.")]
         public bool KeepDaySeed { get; set; } = false;
 
         [Category(FeatureToggle), Description("Set your Switch Date/Time format in the Date/Time settings. The day will automatically rollback by 1 if the Date changes.")]
@@ -142,11 +145,14 @@ namespace SysBot.Pokemon
             [Category(Hosting), Description("OpenLobby - Opens the Lobby after x Empty Lobbies\nSkipRaid - Moves on after x losses/empty Lobbies\nContinue - Continues hosting the raid")]
             public LobbyMethodOptions LobbyMethodOptions { get; set; } = LobbyMethodOptions.OpenLobby;
 
-            [Category(Hosting), Description("Empty raid limit per parameter before the bot hosts and uncoded raid. Default is 3 raids.")]
+            [Category(Hosting), Description("Empty raid limit per parameter before the bot hosts an uncoded raid. Default is 3 raids.")]
             public int EmptyRaidLimit { get; set; } = 3;
 
             [Category(Hosting), Description("Empty/Lost raid limit per parameter before the bot moves on to the next one. Default is 3 raids.")]
             public int SkipRaidLimit { get; set; } = 3;
+
+            [Category(FeatureToggle), Description("Set the action you would want your bot to perform. MashA presses A every 3.5s, while TurboA will press A every 1.5s.")]
+            public RaidAction Action { get; set; } = RaidAction.AFK;
         }
 
         public class CategoryConverter<T> : TypeConverter

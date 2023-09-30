@@ -19,4 +19,11 @@
         SkipRaid,
         ContinueRaid,
     }
+
+    public enum RaidAction
+    {
+        AFK,
+        MashA,
+        TurboA,
+    }
 }

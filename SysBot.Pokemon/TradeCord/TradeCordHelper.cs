@@ -7,6 +7,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Data.SQLite;
+using SysBot.Base;
+using MathNet.Numerics;
+using System.Text.RegularExpressions;
 
 namespace SysBot.Pokemon
 {
@@ -76,7 +79,7 @@ namespace SysBot.Pokemon
                     bool pla = typeof(T) == typeof(PA8);
                     if (pla)
                     {
-                        Base.LogUtil.LogError("PLA is currently not supported, shutting down.", "[TradeCord]");
+                        LogUtil.LogError("PLA is currently not supported, shutting down.", "[TradeCord]");
                         Environment.Exit(0);
                     }
 
@@ -87,7 +90,7 @@ namespace SysBot.Pokemon
                         TCInitialized = true;
                     else
                     {
-                        Base.LogUtil.LogError("Another TradeCord instance is already running! Killing the process.", "[TradeCord]");
+                        LogUtil.LogError("Another TradeCord instance is already running! Killing the process.", "[TradeCord]");
                         Environment.Exit(0);
                     }
 
@@ -233,7 +236,7 @@ namespace SysBot.Pokemon
             }
         }
 
-        private Results CatchHandler(TCUser user, int format = 8)
+        private Results CatchHandler(TCUser user, int format = 9)
         {
             Results result = new();
             string eggMsg = string.Empty;
@@ -266,7 +269,7 @@ namespace SysBot.Pokemon
                 var trainerInfo = TrainerInfoToStringArray(user.TrainerInfo, Game);
                 if (Rng.EggRNG >= 100 - Settings.EggRate && canGenerate)
                 {
-                    result.EggPoke = EggProcess(user.Daycare, evos, balls, 8, trainerInfo, out eggMsg);
+                    result.EggPoke = EggProcess(user.Daycare, evos, balls, Game is GameVersion.SV ? 9 : 8, trainerInfo, out eggMsg);
                     if (!new LegalityAnalysis(result.EggPoke).Valid)
                     {
                         result.Message = $"Oops, something went wrong when generating an egg!" +
@@ -302,7 +305,7 @@ namespace SysBot.Pokemon
                     else if (boostProc)
                         Rng.SpeciesRNG = user.Perks.SpeciesBoost;
 
-                    var speciesName = SpeciesName.GetSpeciesNameGeneration(Rng.SpeciesRNG, 2, 8);
+                    var speciesName = $"{SpeciesName.GetSpeciesNameGeneration(Rng.SpeciesRNG, 2, 9)}{TradeExtensions<T>.FormOutput(result.Poke.Species, result.Poke.Form, out _)}";
                     if (CherishOnly.Contains(Rng.SpeciesRNG) || Rng.CherishRNG >= 100 - Settings.CherishRate || mg != default)
                     {
                         var mgRng = mg == default ? MysteryGiftRng(Settings) : mg;
@@ -310,13 +313,25 @@ namespace SysBot.Pokemon
                         {
                             _ = Enum.TryParse(user.TrainerInfo.OTGender, out Gender gender);
                             _ = Enum.TryParse(user.TrainerInfo.Language, out LanguageID language);
-                            var info = new SimpleTrainerInfo { Gender = (int)gender, Language = (int)language, OT = user.TrainerInfo.OTName, TID16 = user.TrainerInfo.TID16, SID16 = user.TrainerInfo.SID16, Context = Game is GameVersion.BDSP ? EntityContext.Gen8b : EntityContext.Gen8, Generation = format };
+                            var info = new SimpleTrainerInfo { Gender = (int)gender, Language = (int)language, OT = user.TrainerInfo.OTName, TID16 = user.TrainerInfo.TID16, SID16 = user.TrainerInfo.SID16, Context = Game is GameVersion.BDSP ? EntityContext.Gen8b : Game is GameVersion.SV ? EntityContext.Gen9 : EntityContext.Gen8, Generation = format };
                             result.Poke = TradeExtensions<T>.CherishHandler(mgRng, info);
                         }
                     }
 
                     if (result.Poke.Species is 0)
-                        result.Poke = Game is GameVersion.BDSP ? SetProcessBDSP(speciesName, trainerInfo, eventForm) : SetProcessSWSH(speciesName, trainerInfo, eventForm);
+                        result.Poke = Game is GameVersion.BDSP ? SetProcessBDSP(speciesName, trainerInfo, eventForm) : Game is GameVersion.SV ? SetProcessSV(speciesName, trainerInfo, eventForm) : SetProcessSWSH(speciesName, trainerInfo, eventForm);
+
+                    if (result.Poke.Species is ((ushort)Species.Hoopa) or ((ushort)Species.Meloetta))
+                        result.Poke.Form = 0;
+
+                    if (result.Poke.Species is >= (ushort)Species.Sprigatito and <= (ushort)Species.Quaquaval && result.Poke.Ball == (int)Ball.Premier)
+                        result.Poke.Ball = (int)Ball.Poke;
+
+                        if (!new LegalityAnalysis(result.Poke).Valid)
+                        result.Poke = LegalityFixFailure(result.Poke);
+
+                    if (!new LegalityAnalysis(result.Poke).Valid)
+                        result.Poke = (T)AutoLegalityWrapper.LegalizePokemon(result.Poke);
 
                     if (!new LegalityAnalysis(result.Poke).Valid)
                     {
@@ -324,6 +339,7 @@ namespace SysBot.Pokemon
                             $"\nSpecies: {speciesName}" +
                             $"\nForm: {result.Poke.Form}" +
                             $"\nShiny: {Rng.ShinyRNG >= 200 - Settings.StarShinyRate}";
+
                         return false;
                     }
 
@@ -481,7 +497,8 @@ namespace SysBot.Pokemon
                 string nickname = input;
                 input = ListNameSanitize(input);
                 bool speciesAndForm = input.Contains('-');
-                bool isSpecies = SpeciesName.GetSpeciesID(speciesAndForm ? input.Split('-')[0] : input) > 0;
+                var speciesID = TradeExtensions<T>.EnumParse<Species>(speciesAndForm ? input.Split('-')[0] : input);
+                bool isSpecies = (ushort)speciesID > 0;
                 bool isBall = Enum.TryParse(input, true, out Ball enumBall);
                 bool isShiny = filters.FirstOrDefault(x => x == "Shiny") != default;
                 bool gmax = filters.FirstOrDefault(x => x == "Gmax") != default;
@@ -654,8 +671,8 @@ namespace SysBot.Pokemon
                 result.SQLCommands.Add(DBCommandConstructor("catches", "", $"where user_id = ? and id in ({questionM})", names, obj, SQLTableContext.Delete));
                 result.SQLCommands.Add(DBCommandConstructor("binary_catches", "", $"where user_id = ? and id in ({questionM})", names, obj, SQLTableContext.Delete));
 
-                var specID = SpeciesName.GetSpeciesID(speciesAndForm ? input.Split('-')[0] : input, 2);
-                bool isLegend = IsLegendaryOrMythical((ushort)specID);
+                var speciesID = TradeExtensions<T>.EnumParse<Species>(speciesAndForm ? input.Split('-')[0] : input);
+                bool isLegend = IsLegendaryOrMythical((ushort)speciesID);
                 string ballStr = ball != Ball.None ? $"Pokémon in {ball} Ball" : "";
                 string generalOutput = input == "Shinies" ? "shiny Pokémon" : input == "Events" ? "non-shiny event Pokémon" : input == "Legendaries" ? "non-shiny legendary Pokémon" : ball != Ball.None ? ballStr : $"non-shiny {input}";
                 string exclude = ball is Ball.Cherish || input == "Events" ? ", legendaries," : input == "Legendaries" ? ", events," : $", events,{(isLegend ? "" : " legendaries,")}";
@@ -901,12 +918,12 @@ namespace SysBot.Pokemon
                 result.SQLCommands.Add(DBCommandConstructor("binary_catches", "", "where user_id = ? and id = ?", names, obj, SQLTableContext.Delete));
                 user.Catches.Remove(match.ID);
 
-                var specID = SpeciesName.GetSpeciesID(match.Species);
+                var parse = TradeExtensions<T>.EnumParse<Species>(match.Species);
                 var missingEntries = GetMissingDexEntries(m_user.Dex.Entries).Count;
 
                 result.Message = $"You gifted your {(match.Shiny ? "★" : "")}{match.Species}{match.Form} to {m_user.UserInfo.Username}. New ID is {newID}.";
                 if (m_user.Dex.DexCompletionCount is 0 || (m_user.Dex.DexCompletionCount < 20 && missingEntries <= 50))
-                    result.Message += DexCount(m_user, result, (ushort)specID, m_user.UserInfo.Username);
+                    result.Message += DexCount(m_user, result, (ushort)parse, m_user.UserInfo.Username);
 
                 return true;
             }
@@ -1390,7 +1407,7 @@ namespace SysBot.Pokemon
                 if (!alc)
                     alcremie = AlcremieForms.None;
 
-                bool reg = Enum.TryParse(input, true, out RegionalFormArgument regional) && (int)regional <= 2;
+                bool reg = Enum.TryParse(input, true, out RegionalFormArgument regional) && (int)regional <= 4;
                 if (!reg)
                     regional = RegionalFormArgument.None;
 
@@ -2086,6 +2103,60 @@ namespace SysBot.Pokemon
             if (pk.FatefulEncounter || result != "Regenerated")
                 return pk;
             else return RngRoutineBDSP(pk, shiny);
+        }
+
+        private T SetProcessSV(string speciesName, string[] trainerInfo, byte eventForm)
+        {
+            Shiny shiny = Rng.ShinyRNG >= 200 - Settings.SquareShinyRate ? Shiny.AlwaysSquare : Rng.ShinyRNG >= 200 - Settings.StarShinyRate ? Shiny.AlwaysStar : Shiny.Never;
+            string shinyType = shiny is not Shiny.Never ? "\nShiny: Yes" : "";
+
+            if (Rng.SpeciesRNG is (ushort)Species.NidoranF or (ushort)Species.NidoranM)
+                speciesName = speciesName.Remove(speciesName.Length - 1);
+
+            TradeExtensions<T>.FormOutput(Rng.SpeciesRNG, 0, out string[] forms);
+            var formIDs = Dex[Rng.SpeciesRNG].ToArray();
+            var formRng = formIDs[Random.Next(formIDs.Length)];
+            var form = eventForm is 255 ? forms[formRng] : forms[eventForm];
+
+            string formHack = Rng.SpeciesRNG switch
+            {
+                (ushort)Species.NidoranF or (ushort)Species.NidoranM => Rng.SpeciesRNG is (ushort)Species.NidoranF ? "-F" : "-M",
+                (ushort)Species.Giratina => Random.Next(11) < 5 ? "" : "-Origin @ Griseous Core",
+                _ when form is not "" => $"-{form}",
+                _ => "",
+            };
+
+            if (formHack != "" && Rng.SpeciesRNG is (ushort)Species.Arceus)
+                formHack += ArceusPlates[eventForm is not 255 ? eventForm : formRng];
+
+            if (TradeExtensions<T>.ShinyLockCheck(Rng.SpeciesRNG, formHack))
+            {
+                shinyType = "";
+                shiny = Shiny.Never;
+            }
+
+            var showdown = $"{speciesName}{formHack}{shinyType}\n{string.Join("", trainerInfo)}";
+            var balls = TradeExtensions<T>.GetLegalBalls(showdown);
+            var ball = balls.Length > 0 ? $"\nBall: {balls[Random.Next(balls.Length)]}" : "";
+
+            var set = new ShowdownSet($"{showdown}{ball}");
+            var template = AutoLegalityWrapper.GetTemplate(set);
+            var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
+            var pk = (T)sav.GetLegal(template, out string result);
+
+            int attempts = 0;
+            while (result != "Regenerated" && attempts < 5)
+            {
+                set = new ShowdownSet($"{showdown}{ball}");
+                template = AutoLegalityWrapper.GetTemplate(set);
+                sav = AutoLegalityWrapper.GetTrainerInfo<T>();
+                pk = (T)sav.GetLegal(template, out result);
+                attempts++;
+            }
+
+            if (pk.FatefulEncounter || result != "Regenerated")
+                return pk;
+            else return RngRoutineSV(pk, shiny);
         }
 
         private void BuddySystem(TCUser user, Results result, out string buddyMsg)

@@ -288,7 +288,8 @@ namespace SysBot.Pokemon
             LastTradeDistributionFixed = poke.Type == PokeTradeType.Random && !Hub.Config.Distribution.RandomCode;
 
             // Search for a trade partner for a Link Trade.
-            await Click(A, 1_000, token).ConfigureAwait(false);
+            await Click(A, 0_500, token).ConfigureAwait(false);
+            await Click(A, 0_500, token).ConfigureAwait(false);
 
             // Clear it so we can detect it loading.
             await ClearTradePartnerNID(TradePartnerNIDOffset, token).ConfigureAwait(false);
@@ -526,17 +527,16 @@ namespace SysBot.Pokemon
                 if (attempts >= 30)
                     break;
 
-                await Click(B, 1_300, token).ConfigureAwait(false);
+                await Click(B, 1_000, token).ConfigureAwait(false);
                 if (await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
                     break;
 
-                await Click(B, 2_000, token).ConfigureAwait(false);
+                await Click(B, 1_000, token).ConfigureAwait(false);
                 if (await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
                     break;
 
-                await Click(A, 1_300, token).ConfigureAwait(false);
-                if (await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
-                    break;
+                if (await IsInBox(PortalOffset, token).ConfigureAwait(false))
+                    await Click(A, 1_000, token).ConfigureAwait(false);
             }
 
             // We didn't make it for some reason.
@@ -562,7 +562,7 @@ namespace SysBot.Pokemon
             var attempts = 0;
             while (await IsInPokePortal(PortalOffset, token).ConfigureAwait(false))
             {
-                await Click(B, 1_500, token).ConfigureAwait(false);
+                await Click(B, 2_500, token).ConfigureAwait(false);
                 if (++attempts >= 30)
                 {
                     Log("Failed to recover to Poké Portal.");
@@ -669,6 +669,7 @@ namespace SysBot.Pokemon
 
         private async Task ExitTradeToPortal(bool unexpected, CancellationToken token)
         {
+            await Task.Delay(1_000, token).ConfigureAwait(false);
             if (await IsInPokePortal(PortalOffset, token).ConfigureAwait(false))
                 return;
 
@@ -684,21 +685,21 @@ namespace SysBot.Pokemon
                 await Click(B, 1_000, token).ConfigureAwait(false);
                 if (!await IsInBox(PortalOffset, token).ConfigureAwait(false))
                 {
-                    await Task.Delay(5_000, token).ConfigureAwait(false);
+                    await Task.Delay(1_000, token).ConfigureAwait(false);
                     break;
                 }
 
                 await Click(A, 1_000, token).ConfigureAwait(false);
                 if (!await IsInBox(PortalOffset, token).ConfigureAwait(false))
                 {
-                    await Task.Delay(5_000, token).ConfigureAwait(false);
+                    await Task.Delay(1_000, token).ConfigureAwait(false);
                     break;
                 }
 
                 await Click(B, 1_000, token).ConfigureAwait(false);
                 if (!await IsInBox(PortalOffset, token).ConfigureAwait(false))
                 {
-                    await Task.Delay(5_000, token).ConfigureAwait(false);
+                    await Task.Delay(1_000, token).ConfigureAwait(false);
                     break;
                 }
 
@@ -732,7 +733,6 @@ namespace SysBot.Pokemon
                     return;
                 }
             }
-            await Task.Delay(2_000, token).ConfigureAwait(false);
         }
 
         // These don't change per session and we access them frequently, so set these each time we start.
@@ -866,9 +866,10 @@ namespace SysBot.Pokemon
                     msg += $"Family of 3 Maus!";
                 if ((Species)pk.Species is Species.Maushold && pk.EncryptionConstant % 100 != 0)
                     msg += $"Family of 4 Maus!";
+                string scale = $"\nScale: {PokeSizeDetailedUtil.GetSizeRating(pk.Scale)} ({pk.Scale})";
                 string TIDFormatted = pk.Generation >= 7 ? $"{pk.TrainerTID7:000000}" : $"{pk.TID16:00000}";
                 detail.SendNotification(this, $"Displaying: {(pk.ShinyXor == 0 ? "■ - " : pk.ShinyXor <= 16 ? "★ - " : "")}{SpeciesName.GetSpeciesNameGeneration(pk.Species, 2, 9) + TradeExtensions<PK9>.FormOutput(pk.Species, pk.Form, out _)}{gender}\n{pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}\n" +
-                    $"Ability: {(Ability)pk.Ability} | {(Nature)pk.Nature} Nature | Ball: {(Ball)pk.Ball}\nTrainer Info: {pk.OT_Name}/{TIDFormatted}\n" +
+                    $"Ability: {(Ability)pk.Ability} | {(Nature)pk.Nature} Nature | Ball: {(Ball)pk.Ball}{scale}\nTrainer Info: {pk.OT_Name}/{TIDFormatted}\n" +
                     $"{(StopConditionSettings.HasMark(pk, out RibbonIndex mark) ? $"**Pokémon Mark: {mark.ToString().Replace("Mark", "")}{Environment.NewLine}**" : "")}Scale: {size}\n{msg}");
                 Log($"Displaying {SpeciesName.GetSpeciesNameGeneration(pk.Species, 2, 9) + TradeExtensions<PK9>.FormOutput(pk.Species, pk.Form, out _)}{gender}\n{pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}\n{(Nature)pk.Nature} - {(Ball)pk.Ball} - {pk.OT_Name}/{TIDFormatted}");
                 ctr++;

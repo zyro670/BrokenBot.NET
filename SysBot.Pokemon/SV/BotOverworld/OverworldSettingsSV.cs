@@ -18,7 +18,7 @@ namespace SysBot.Pokemon
         [Category(Overworld), Description("If not blank will check for a match from Stop Conditions plus the Species listed here. Do not include spaces for Species name and separate species with a comma. Ex: IronThorns,Cetoddle,Pikachu,RoaringMoon")]
         public string SpeciesToHunt { get; set; } = string.Empty;
 
-        [Category(Overworld), Description("When enabled, the bot will stop on any Special Marks Only, ignoring Uncommon, all Time, and all Weather marks.")]
+        [Category(Overworld), Description("When enabled, the bot will stop on any Special Marks Only, ignoring Uncommon, all Time, and all Weather marks. Encounters with Min/Max Scale will be considered as having a special mark.")]
         public bool SpecialMarksOnly { get; set; } = false;
 
         [Category(Overworld), Description("Select which location you are scanning.")]
@@ -30,11 +30,8 @@ namespace SysBot.Pokemon
         [Category(Overworld), Description("When enabled, the bot will stop for 3 Segment Dunsparce or Family of Three Maus and matches StopConditions.")]
         public bool StopOnOneInOneHundredOnly { get; set; } = false;
 
-        [Category(Overworld), Description("When enabled, the bot will make a sandwich. If false the bot will stop after 30 minutes.")]
-        public bool MakeASandwich { get; set; } = true;
-
-        [Category(Overworld), Description("Some locations take a little longer to load in spawns, set this to wait longer than default time. 1000ms = 1s. [Default: 0ms]")]
-        public int WaitTimeBeforeSaving { get; set; } = 0;
+        [Category(Overworld), Description("Select the type of hunt you want to participate in. [Default: MakeASandwich].")]
+        public Selection PicnicSelection { get; set; } = Selection.MakeASandwich;
 
         [Category(Overworld), Description("Picnic Filters"), DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
         public PicnicFiltersCategory PicnicFilters { get; set; } = new();
@@ -45,6 +42,9 @@ namespace SysBot.Pokemon
         [Category(Overworld), Description("Movement Filters"), DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
         public MovementFiltersCategory MovementFilters { get; set; } = new();
 
+        [Category(Overworld), Description("When enabled, the bot will attempt to collide to your match. As collision is not 100% in SV unlike other games, results may vary. Restart your game if you are somewhere weird.")]
+        public bool Collide { get; set; } = false;
+
         [Category(Overworld), Description("When enabled, the screen will be turned off during normal bot loop operation to save power.")]
         public bool ScreenOff { get; set; }
 
@@ -53,23 +53,35 @@ namespace SysBot.Pokemon
         {
             public override string ToString() => "Picnic Conditions";
 
+            [Category(Overworld), Description("Select the type of sandwich you want to make. Refer to the wiki for important information.")]
+            public SandwichSelection TypeOfSandwich { get; set; } = SandwichSelection.Normal;
+
+            [Category(Overworld), Description("Select the flavor of sandwich you want to make. Refer to the wiki for important information.")]
+            public SandwichFlavor SandwichFlavor { get; set; } = SandwichFlavor.Encounter;
+
             [Category(Overworld), Description("When enabled, the bot will click DUP on Item 1.")]
             public bool Item1DUP { get; set; } = false;
 
-            [Category(Overworld), Description("Amount of clicks to get to Item 1.")]
-            public int Item1Clicks { get; set; } = 0;
+            [Category(Overworld), Description("Item 1.")]
+            public PicnicFillings Item1 { get; set; } = PicnicFillings.Lettuce;
 
             [Category(Overworld), Description("When enabled, the bot will click DUP on Item 2.")]
             public bool Item2DUP { get; set; } = true;
 
-            [Category(Overworld), Description("Amount of clicks to get to Item 2.")]
-            public int Item2Clicks { get; set; } = 0;
+            [Category(Overworld), Description("Item 2.")]
+            public PicnicCondiments Item2 { get; set; } = PicnicCondiments.Mayonnaise;
 
             [Category(Overworld), Description("When enabled, the bot will click DUP on Item 3.")]
             public bool Item3DUP { get; set; } = true;
 
-            [Category(Overworld), Description("Amount of clicks to get to Item 3.")]
-            public int Item3Clicks { get; set; } = 0;
+            [Category(Overworld), Description("Item 3.")]
+            public PicnicCondiments Item3 { get; set; } = PicnicCondiments.Mayonnaise;
+
+            [Category(Overworld), Description("When enabled, the bot will click DUP on Item 4.")]
+            public bool Item4DUP { get; set; } = true;
+
+            [Category(Overworld), Description("Item 4.")]
+            public PicnicCondiments Item4 { get; set; } = PicnicCondiments.Mayonnaise;
 
             [Category(Overworld), Description("Amount of ingredients to hold.")]
             public int AmountOfIngredientsToHold { get; set; } = 3;
@@ -170,5 +182,11 @@ namespace SysBot.Pokemon
             TownBorder = 6,
         }
 
+        public enum Selection
+        {
+            MakeASandwich = 0,
+            NoSandwich = 1,
+            StopAt30Min = 2,
+        }
     }
 }

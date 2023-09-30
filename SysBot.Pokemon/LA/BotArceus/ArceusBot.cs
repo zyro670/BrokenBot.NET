@@ -10,6 +10,7 @@ using ResultsUtil = SysBot.Base.ResultsUtil;
 using static SysBot.Base.SwitchButton;
 using static SysBot.Base.SwitchStick;
 using static SysBot.Pokemon.PokeDataOffsetsLA;
+using SysBot.Base;
 
 namespace SysBot.Pokemon
 {
@@ -20,9 +21,6 @@ namespace SysBot.Pokemon
         private readonly int[] DesiredMinIVs;
         private readonly int[] DesiredMaxIVs;
         private readonly ArceusBotSettings Settings;
-        public static bool EmbedsInitialized { get; set; }
-        public static readonly List<(PA8?, bool)> EmbedMons = new();
-        public static CancellationTokenSource EmbedSource { get; set; } = new();
         public ICountSettings Counts => Settings;
 
         public ArceusBot(PokeBotState cfg, PokeTradeHub<PA8> hub) : base(cfg)
@@ -298,7 +296,9 @@ namespace SysBot.Pokemon
                                 bool huntedspecies = monlist.Contains($"{(Species)match.Species}");
                                 if (!huntedspecies)
                                 {
-                                    EmbedMons.Add((match, false));
+                                    string url = TradeExtensions<PK9>.PokeImg(match, false, false);
+                                    var print = Hub.Config.StopConditions.GetAlphaPrintName(match);
+                                    EchoUtil.EchoEmbed("", print, url, "", false);
                                     Log(logs);
                                     break;
                                 }
@@ -312,7 +312,9 @@ namespace SysBot.Pokemon
                                 await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0xD65F03C0), MainNsoBase + InvincibleTrainer2, token).ConfigureAwait(false);
 
                                 Log($"Found an Alpha {(Species)match.Species}. Storing its coordinates...\nPress continue if a desired encounter to teleport to, otherwise toss to toss.\nReference the image guide if needed: https://imgur.com/a/OyBIIbR");
-                                EmbedMons.Add((match, true));
+                                string url = TradeExtensions<PK9>.PokeImg(match, false, false);
+                                var print = Hub.Config.StopConditions.GetAlphaPrintName(match);
+                                EchoUtil.EchoEmbed(Hub.Config.StopConditions.MatchFoundEchoMention, print, url, "", true);
                                 FillDistortionCoords(i);
                                 IsWaiting = true;
                                 IsWaitingConfirmation = true;
@@ -336,17 +338,23 @@ namespace SysBot.Pokemon
                     {
                         if (match.IsShiny)
                         {
+                            string url = string.Empty;
+                            string print = string.Empty;
                             if (Settings.DistortionConditions.ShinyAlphaOnly)
                             {
                                 if (!match.IsAlpha)
                                 {
-                                    EmbedMons.Add((match, false));
+                                    url = TradeExtensions<PK9>.PokeImg(match, false, false);
+                                    print = Hub.Config.StopConditions.GetAlphaPrintName(match);
+                                    EchoUtil.EchoEmbed("", print, url, "", false);
                                     break;
                                 }
                             }
                             Log(loglist.Last());
 
-                            EmbedMons.Add((match, true));
+                            url = TradeExtensions<PK9>.PokeImg(match, false, false);
+                            print = Hub.Config.StopConditions.GetAlphaPrintName(match);
+                            EchoUtil.EchoEmbed(Hub.Config.StopConditions.MatchFoundEchoMention, print, url, "", true);
                             Log($"\nReference the image guide if needed: https://imgur.com/a/OyBIIbR");
                             Settings.AddCompletedShinyAlphaFound();
 
@@ -740,7 +748,8 @@ namespace SysBot.Pokemon
                             if (pk.IsShiny)
                             {
                                 Log($"In battle with {print}!");
-                                EmbedMons.Add((pk, true));
+                                string url = TradeExtensions<PK9>.PokeImg(pk, false, false);
+                                EchoUtil.EchoEmbed(Hub.Config.StopConditions.MatchFoundEchoMention, print, url, "", true);
                                 Settings.AddCompletedShinyAlphaFound();
 
                                 if (DumpSetting.Dump && !string.IsNullOrEmpty(DumpSetting.DumpFolder))
@@ -969,7 +978,8 @@ namespace SysBot.Pokemon
                             if (pk.IsShiny)
                             {
                                 Log($"In battle with {print}!");
-                                EmbedMons.Add((pk, true));
+                                string url = TradeExtensions<PK9>.PokeImg(pk, false, false);
+                                EchoUtil.EchoEmbed(Hub.Config.StopConditions.MatchFoundEchoMention, print, url, "", true);
                                 Settings.AddCompletedShinyAlphaFound();
 
                                 if (DumpSetting.Dump && !string.IsNullOrEmpty(DumpSetting.DumpFolder))
@@ -1269,7 +1279,7 @@ namespace SysBot.Pokemon
                 var group_seed = (BitConverter.ToUInt64(GeneratorSeed, 0) - 0x82A2B175229D6A5B) & 0xFFFFFFFFFFFFFFFF;
                 GenerateNextShiny(0, group_seed);
             }
-        }        
+        }
 
         private async Task OtherLegendsReset(CancellationToken token)
         {
@@ -1735,11 +1745,13 @@ namespace SysBot.Pokemon
                 pk.IV_SPA = gen.IVs[3];
                 pk.IV_SPD = gen.IVs[4];
                 pk.IV_SPE = gen.IVs[5];
-                pk.Nature = (int)gen.nature;               
+                pk.Nature = (int)gen.nature;
                 if (StopConditionSettings.EncounterFound(pk, DesiredMinIVs, DesiredMaxIVs, Hub.Config.StopConditions, null))
                 {
                     Settings.AlphaScanConditions.StopOnMatch = true;
-                    EmbedMons.Add((pk, true));
+                    string url = TradeExtensions<PK9>.PokeImg(pk, false, false);
+                    var print = Hub.Config.StopConditions.GetAlphaPrintName(pk);
+                    EchoUtil.EchoEmbed(Hub.Config.StopConditions.MatchFoundEchoMention, print, url, "", true);
                 }
                 Log($"\n{(Species)pk.Species}\nEC: {pk.EncryptionConstant:X8}\nPID: {pk.PID:X8}\nIVs: {pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}\nNature: {(Nature)pk.Nature}\nGenerator Seed: {generator_seed:X16}");
             }
@@ -1761,7 +1773,7 @@ namespace SysBot.Pokemon
                 mainrng.Next();
                 mainrng = new Xoroshiro128Plus(mainrng.Next());
             }
-            
+
             if (Settings.BotType == ArceusMode.GenieScanner || Settings.BotType == ArceusMode.OtherLegendReset)
             {
                 Species species = Species.None;
@@ -1799,7 +1811,7 @@ namespace SysBot.Pokemon
                     var rng = new Xoroshiro128Plus(generator_seed);
                     rng.Next();
 
-                    var genderratio = Settings.SpecialConditions.TypeOfLegend is LegendsOnMap.Heatran ? 127 : 0;
+                    var genderratio = Settings.SpecialConditions.TypeOfLegend is LegendsOnMap.Heatran ? 127 : -1;
                     var gen = GenerateFromSeed(rng.Next(), 1, 3, genderratio);
                     pk.Species = (ushort)species;
                     pk.EncryptionConstant = gen.EC;
@@ -1810,16 +1822,18 @@ namespace SysBot.Pokemon
                     pk.IV_SPA = gen.IVs[3];
                     pk.IV_SPD = gen.IVs[4];
                     pk.IV_SPE = gen.IVs[5];
-                    pk.Nature = (int)gen.nature;      
-                    
+                    pk.Nature = gen.nature;
+
                     if (StopConditionSettings.EncounterFound(pk, DesiredMinIVs, DesiredMaxIVs, Hub.Config.StopConditions, null))
                     {
-                        Log($"\nAdvance: {i} - {species}\nEC: {pk.EncryptionConstant:X8}\nPID: {pk.PID:X8}\nIVs: {pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}\nNature: {(Nature)pk.Nature}\nGenerator Seed: {generator_seed:X16}");
+                        Log($"\nAdvance: {i} - {species}\nEC: {pk.EncryptionConstant:X8}\nPID: {pk.PID:X8}\nIVs: {pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}\nNature: {GameInfo.GetStrings(1).Natures[pk.Nature]}\nGenerator Seed: {generator_seed:X16}");
                         Settings.AlphaScanConditions.StopOnMatch = true;
-                        EmbedMons.Add((pk, true));
+                        string url = TradeExtensions<PK9>.PokeImg(pk, false, false);
+                        var print = Hub.Config.StopConditions.GetAlphaPrintName(pk);
+                        EchoUtil.EchoEmbed(Hub.Config.StopConditions.MatchFoundEchoMention, print, url, "", true);
                         return (newseed, pk);
                     }
-                    Log($"\nAdvance: {i} - {species}\nEC: {pk.EncryptionConstant:X8}\nPID: {pk.PID:X8}\nIVs: {pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}\nNature: {(Nature)pk.Nature}\nGenerator Seed: {generator_seed:X16}");
+                    Log($"\nAdvance: {i} - {species}\nEC: {pk.EncryptionConstant:X8}\nPID: {pk.PID:X8}\nIVs: {pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}\nNature: {GameInfo.GetStrings(1).Natures[pk.Nature]}\nGenerator Seed: {generator_seed:X16}");
 
                     mainrng = new Xoroshiro128Plus(mainrng.Next());
                 }
@@ -1945,7 +1959,6 @@ namespace SysBot.Pokemon
                 }
                 IsWaiting = false;
             }
-            EmbedMons.Add((null, false));
         }
 
         private static (int, int) GrabEncounterSum(ulong encslot, ulong bonusslot)
@@ -1989,6 +2002,8 @@ namespace SysBot.Pokemon
 
         private async Task CheckEmbed(PA8 pk, string map, string spawn, CancellationToken token)
         {
+            string url = string.Empty;
+            var print = $"{Hub.Config.StopConditions.GetSpecialPrintName(pk)}";
             string[] list = Settings.SpeciesToHunt.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
             bool huntedspecies = list.Contains($"{(Species)pk.Species}");
             if (string.IsNullOrEmpty(map) && Hub.Config.ArceusLA.OutbreakConditions.TypeOfScan == OutbreakScanType.OutbreakOnly)
@@ -2003,11 +2018,16 @@ namespace SysBot.Pokemon
             if (list.Length != 0)
             {
                 if (!huntedspecies || huntedspecies && Settings.OutbreakConditions.AlphaShinyOnly && !pk.IsAlpha)
-                    EmbedMons.Add((pk, false));
+                {
+                    url = TradeExtensions<PK9>.PokeImg(pk, false, false);
+                    EchoUtil.EchoEmbed("", print, url, "", false);
+                }
 
                 if (huntedspecies && Settings.OutbreakConditions.AlphaShinyOnly && pk.IsAlpha || huntedspecies && !Settings.OutbreakConditions.AlphaShinyOnly && pk.IsShiny)
                 {
-                    EmbedMons.Add((pk, true));
+                    url = TradeExtensions<PK9>.PokeImg(pk, false, false);
+                    print = Hub.Config.StopConditions.GetAlphaPrintName(pk);
+                    EchoUtil.EchoEmbed(Hub.Config.StopConditions.MatchFoundEchoMention, print, url, "", true);
                     match = true;
                 }
             }
@@ -2015,10 +2035,14 @@ namespace SysBot.Pokemon
             if (list.Length == 0 && !Settings.OutbreakConditions.CheckBoxes)
             {
                 if (Settings.OutbreakConditions.AlphaShinyOnly && !pk.IsAlpha)
-                    EmbedMons.Add((pk, false));
+                {
+                    url = TradeExtensions<PK9>.PokeImg(pk, false, false);
+                    EchoUtil.EchoEmbed("", print, url, "", false);
+                }
                 else
                 {
-                    EmbedMons.Add((pk, true));
+                    url = TradeExtensions<PK9>.PokeImg(pk, false, false);
+                    EchoUtil.EchoEmbed(Hub.Config.StopConditions.MatchFoundEchoMention, print, url, "", true);
                     match = true;
                 }
             }
@@ -2036,7 +2060,8 @@ namespace SysBot.Pokemon
                         if (f == 0)
                         {
                             Log($"Found a {(Species)pk.Species}! It's something we don't have!\nAdding it to our boxlist!");
-                            EmbedMons.Add((pk, true));
+                            url = TradeExtensions<PK9>.PokeImg(pk, false, false);
+                            EchoUtil.EchoEmbed(Hub.Config.StopConditions.MatchFoundEchoMention, print, url, "", true);
                             match = true;
                             boxlist.Add(pk);
                         }
@@ -2046,7 +2071,8 @@ namespace SysBot.Pokemon
                     {
                         if (n == 0)
                         {
-                            EmbedMons.Add((pk, false));
+                            url = TradeExtensions<PK9>.PokeImg(pk, false, false);
+                            EchoUtil.EchoEmbed("", print, url, "", false);
                             n++;
                         }
                     }
@@ -2358,58 +2384,6 @@ namespace SysBot.Pokemon
             }
         }
 
-        private async Task PerformMultiUnownScan(CancellationToken token)
-        {
-            while (!token.IsCancellationRequested)
-            {
-                int minCount = 2;
-                int maxCount = 3;
-
-                SlotDetail[] slots = new SlotDetail[28 * 2];
-                ulong key = (ulong)(0x12431B1B11245678 + Util.Rand.Next(1, 999999999));
-                for (int i = 0; i < slots.Length / 2; i++)
-                {
-                    var name = $"Unown{(i == 0 ? "" : $"-{i}")}";
-                    slots[i] = new(100, name, false, new[] { 25, 25 }, 0);
-                    slots[i + 28] = new(001, name, true, new[] { 25, 25 }, 3);
-                }
-                SetFakeTable(slots, key);
-
-                for (int i = 0; i < 2; i++)
-                {
-                    string log = string.Empty;
-                    var groupID = (int)Settings.MultiScanConditions.MultiSpecies;
-                    var ofs = new long[] { 0x42A6EE0, 0x330, 0x70 + (groupID + i) * 0x440 + 0x20 };
-                    var countofs = new long[] { 0x42A6EE0, 0x330, 0x70 + (groupID + i) * 0x440 + 0x20 + 0x3F0 };
-                    var total = new long[] { 0x42A6EE0, 0x330, 0x70 + (groupID + i) * 0x440 + 0x20 + 0x3F8 };
-                    var multiptr = await SwitchConnection.PointerAll(ofs, token).ConfigureAwait(false);
-                    var GeneratorSeed = BitConverter.ToUInt64(await SwitchConnection.ReadBytesAbsoluteAsync(multiptr, 8, token).ConfigureAwait(false), 0);
-                    var countptr = await SwitchConnection.PointerAll(countofs, token).ConfigureAwait(false);
-                    var countSeed = BitConverter.ToUInt64(await SwitchConnection.ReadBytesAbsoluteAsync(countptr, 8, token).ConfigureAwait(false), 0);
-                    var countotal = await SwitchConnection.PointerAll(total, token).ConfigureAwait(false);
-                    int totalcount = BitConverter.ToUInt16(await SwitchConnection.ReadBytesAbsoluteAsync(countotal, 2, token).ConfigureAwait(false), 0);
-                    var group_seed = (GeneratorSeed - 0x82A2B175229D6A5B) & 0xFFFFFFFFFFFFFFFF;
-                    Log($"Spawner Seed: {group_seed:X16} - CountSeed: {countSeed} Count: {totalcount}");
-                    var details = new SpawnCount(maxCount, minCount, countSeed);
-                    var set = new SpawnSet(key, 0);
-                    var spawner = SpawnInfo.GetLoop(details, set, SpawnType.Regular);
-
-                    var results = Permuter.Permute(spawner, group_seed, 12);
-                    if (!results.HasResults)
-                        log += $"\nNo results found within {Settings.MultiScanConditions.Advances} advances :(";
-                    else
-                    {
-                        var lines = results.GetLines();
-                        foreach (var line in lines)
-                            log += "\n" + $"Unown Group: {i + 1}\n" + line;
-                    }
-                    ResultsUtil.Log($"{log}", "");
-                }
-                IsWaiting = true;
-                while (IsWaiting)
-                    await Task.Delay(1_000, token).ConfigureAwait(false);
-            }
-        }
         private async Task PerformMMOScan(PokedexSaveData dex, CancellationToken token)
         {
             List<string> logs = new();
@@ -2513,9 +2487,13 @@ namespace SysBot.Pokemon
                         if (list.Contains(s.ToString()))
                         {
                             afk = true;
-                            PA8 s1 = new();
-                            s1.Species = (ushort)s;
-                            EmbedMons.Add((s1, true));
+                            PA8 s1 = new()
+                            {
+                                Species = (ushort)s
+                            };
+                            string url = TradeExtensions<PK9>.PokeImg(s1, false, false);
+                            var print = Hub.Config.StopConditions.GetAlphaPrintName(s1);
+                            EchoUtil.EchoEmbed(Hub.Config.StopConditions.MatchFoundEchoMention, print, url, "", true);
                             Settings.AddCompletedShinyAlphaFound();
                         }
                     }
@@ -2532,7 +2510,7 @@ namespace SysBot.Pokemon
                 {
                     IsWaiting = true;
                     while (IsWaiting)
-                        await Task.Delay(1_000).ConfigureAwait(false);
+                        await Task.Delay(1_000, token).ConfigureAwait(false);
                 }
                 IsWaiting = false;
             }
@@ -2569,7 +2547,7 @@ namespace SysBot.Pokemon
                 Log("No match found, resetting.");
                 await Click(B, 1_000, token).ConfigureAwait(false);
                 await CloseGame(Hub.Config, token).ConfigureAwait(false);
-                await StartGame(Hub.Config, token).ConfigureAwait(false);                
+                await StartGame(Hub.Config, token).ConfigureAwait(false);
                 attempts++;
             }
         }
@@ -2587,6 +2565,6 @@ namespace SysBot.Pokemon
                 boxlist.Add(new PA8(dataSlice));
             }
             return boxlist;
-        }        
+        }
     }
 }

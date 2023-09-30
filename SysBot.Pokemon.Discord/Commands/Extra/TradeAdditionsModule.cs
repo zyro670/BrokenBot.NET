@@ -20,7 +20,6 @@ namespace SysBot.Pokemon.Discord
         private readonly ExtraCommandUtil<T> Util = new();
         private readonly LairBotSettings LairSettings = SysCord<T>.Runner.Hub.Config.LairSWSH;
         private readonly RollingRaidSettings RollingRaidSettings = SysCord<T>.Runner.Hub.Config.RollingRaidSWSH;
-        private readonly ArceusBotSettings ArceusSettings = SysCord<T>.Runner.Hub.Config.ArceusLA;
 
         [Command("giveawayqueue")]
         [Alias("gaq")]
@@ -492,121 +491,7 @@ namespace SysBot.Pokemon.Discord
         }
 
 
-        // NotTrade Additions
-        [Command("arceusEmbed")]
-        [Alias("ae")]
-        [Summary("Initialize posting of ArceusBot embeds to specified Discord channels.")]
-        [RequireOwner]
-        public async Task InitializArceusEmbeds()
-        {
-            if (ArceusSettings.ArceusEmbedChannels == string.Empty)
-            {
-                await ReplyAsync("No channels to post embeds in.").ConfigureAwait(false);
-                return;
-            }
-
-            List<ulong> channels = new();
-            foreach (var channel in ArceusSettings.ArceusEmbedChannels.Split(',', ' '))
-            {
-                if (ulong.TryParse(channel, out ulong result) && !channels.Contains(result))
-                    channels.Add(result);
-            }
-
-            if (channels.Count == 0)
-            {
-                await ReplyAsync("No valid channels found.").ConfigureAwait(false);
-                return;
-            }
-
-            await ReplyAsync(!ArceusBot.EmbedsInitialized ? "Arceus Embed task started!" : "Arceus Embed task stopped!").ConfigureAwait(false);
-            if (ArceusBot.EmbedsInitialized)
-                ArceusBot.EmbedSource.Cancel();
-            else _ = Task.Run(async () => await ArceusEmbedLoop(channels, ArceusBot.EmbedSource.Token).ConfigureAwait(false));
-            ArceusBot.EmbedsInitialized ^= true;
-        }
-
-        private async Task ArceusEmbedLoop(List<ulong> channels, CancellationToken token)
-        {
-            var ping = SysCord<T>.Runner.Hub.Config.StopConditions.MatchFoundEchoMention;
-            while (!ArceusBot.EmbedSource.IsCancellationRequested)
-            {
-                if (ArceusBot.EmbedMons.Count > 0)
-                {
-                    var mons = ArceusBot.EmbedMons;
-                    for (int i = 0; i < mons.Count; i++)
-                    {
-                        if (mons[i].Item1 == null)
-                        {
-                            ArceusBot.EmbedMons.Remove(mons[i]);
-                            continue;
-                        }
-
-                        PA8 mon = mons[i].Item1 ?? new();
-                        var url = TradeExtensions<PA8>.PokeImg(mon, mon.CanGigantamax, SysCord<T>.Runner.Hub.Config.TradeCord.UseFullSizeImages);
-                        string shinyurl = "https://img.favpng.com/6/14/25/computer-icons-icon-design-photography-royalty-free-png-favpng-mtjTHeWQe8FUAUB3RdJ3B2KJG.jpg";
-                        var location = Hub.Config.ArceusLA.SpecialConditions.ScanLocation;
-                        string msg = mons[i].Item2 ? "Match found!" : "Unwanted match...";
-                        if (Hub.Config.ArceusLA.DistortionConditions.ShinyAlphaOnly && !mon.IsAlpha && Hub.Config.ArceusLA.BotType == ArceusMode.DistortionReader)
-                            msg = "Not an Alpha...";
-
-                        string stats;
-                        if (Hub.Config.ArceusLA.SpeciesToHunt.Length == 0 || mon.IVTotal != 0)
-                            stats = $"{(mon.ShinyXor == 0 ? "■ - " : mon.ShinyXor <= 16 ? "★ - " : "")}{SpeciesName.GetSpeciesNameGeneration(mon.Species, 2, 8)}{TradeExtensions<T>.FormOutput(mon.Species, mon.Form, out _)}\nIVs: {string.Join("/", mon.IVs)}\nNature: {(Nature)mon.Nature}";
-                        else
-                        {
-                            stats = "Hunting for a special Alpha!";
-                            shinyurl = "https://previews.123rf.com/images/fokaspokas/fokaspokas1809/fokaspokas180901587/109973633-loupe-search-or-magnifying-linear-icon-thin-outline-black-glass-icon-with-soft-shadow-on-transparent.jpg";
-                        }
-
-                        if (mon.IsAlpha)
-                            shinyurl = "https://cdn.discordapp.com/emojis/944278189000228894.webp?size=96&quality=lossless";
-
-                        if (mons[i].Item2)
-                            shinyurl = "https://i.imgur.com/T8vEiIk.jpg";
-                        else
-                            shinyurl = $"https://i.imgur.com/t2M8qF4.png";
-
-                        var author = new EmbedAuthorBuilder { IconUrl = shinyurl, Name = msg };
-                        var footer = new EmbedFooterBuilder
-                        {
-                            Text = Hub.Config.ArceusLA.BotType switch
-                            {
-                                ArceusMode.DistortionReader => "Found in a space-time distortion.",
-                                ArceusMode.MassiveOutbreakHunter when Hub.Config.ArceusLA.OutbreakConditions.TypeOfScan == OutbreakScanType.OutbreakOnly => "Found in a mass outbreak.",
-                                ArceusMode.MassiveOutbreakHunter when (Species)mon.Species is Species.Shieldon or Species.Bastiodon or Species.Cranidos or Species.Rampardos or Species.Scizor or Species.Sneasel or
-                                Species.Weavile or Species.Magnemite or Species.Magneton or Species.Magnezone or Species.Sylveon or Species.Leafeon or Species.Glaceon or Species.Flareon or Species.Jolteon or Species.Vaporeon
-                                or Species.Umbreon or Species.Espeon => "Found in a space-time distortion.",
-                                ArceusMode.GenieScanner => "Found a genie in a cloud",
-                                ArceusMode.ManaphyReset => "Found a in a cave",
-                                _ => "Found in a massive mass outbreak.",
-                            }
-                        };
-
-                        var embed = new EmbedBuilder { Color = Color.Gold, ThumbnailUrl = url }.WithAuthor(author).WithDescription(stats).WithFooter(footer);
-                        var guilds = Context.Client.Guilds;
-                        foreach (var guild in guilds)
-                        {
-                            foreach (var channel in channels)
-                            {
-                                var ch = guild.Channels.FirstOrDefault(x => x.Id == channel);
-                                if (ch != default && ch is ISocketMessageChannel sock)
-                                {
-                                    try
-                                    {
-                                        await sock.SendMessageAsync(mons[i].Item2 ? ping : "", embed: embed.Build()).ConfigureAwait(false);
-                                    }
-                                    catch { }
-                                }
-                            }
-                        }
-                        ArceusBot.EmbedMons.Remove(mons[i]);
-                    }
-                }
-                else await Task.Delay(1_000, token).ConfigureAwait(false);
-            }
-            ArceusBot.EmbedSource = new();
-        }
-
+        // NotTrade Additions       
         [Command("repeek")]
         [Summary("Take and send a screenshot from the specified Switch.")]
         [RequireOwner]
@@ -756,8 +641,8 @@ namespace SysBot.Pokemon.Discord
                 var msg = $"Raid for {raid.Title} | {raid.Seed:X8} is now {m}!";
                 await ReplyAsync(msg).ConfigureAwait(false);
             }
-            else            
-                await ReplyAsync("Invalid raid parameter Index.").ConfigureAwait(false);            
+            else
+                await ReplyAsync("Invalid raid parameter Index.").ConfigureAwait(false);
         }
 
         [Command("changeRaidParamTitle")]
@@ -833,6 +718,7 @@ namespace SysBot.Pokemon.Discord
             var embed = new EmbedBuilder();
             List<string> cmds = new()
             {
+                "$scl - Sets the catch limit for your raids.\n",
                 "$crb - Clear all in raider ban list.\n",
                 "$vrl - View all raids in the list.\n",
                 "$arp - Add parameter to the collection.\nEx: [Command] [Index] [Species] [Difficulty]\n",
@@ -850,6 +736,40 @@ namespace SysBot.Pokemon.Discord
                 x.IsInline = false;
             });
             await ReplyAsync("Here's your raid help!", embed: embed.Build()).ConfigureAwait(false);
+        }
+
+        [Command("unbanraider")]
+        [Alias("ubr")]
+        [Summary("Removes the specificed NID from the banlist for Raids in SV.")]
+        [RequireSudo]
+        public async Task UnbanRaider([Summary("Removes the specificed NID from the banlist for Raids in SV.")] string nid)
+        {
+            var list = SysCord<T>.Runner.Hub.Config.RaidSV.RaiderBanList.List.ToArray();
+            string msg = $"{Context.User.Mention} no user found with that NID.";
+            for (int i = 0; i < list.Length; i++)
+                if ($"{list[i].ID}".Equals(nid))
+                {
+                    msg = $"{Context.User.Mention} user {list[i].Name} - {list[i].ID} has been unbanned.";
+                    SysCord<T>.Runner.Hub.Config.RaidSV.RaiderBanList.List.ToList().Remove(list[i]);
+                }
+            await ReplyAsync(msg).ConfigureAwait(false);
+        }
+
+        [Command("unbanrotatingraider")]
+        [Alias("ubrr")]
+        [Summary("Removes the specificed NID from the banlist for Raids in SV.")]
+        [RequireSudo]
+        public async Task UnbanRotatingRaider([Summary("Removes the specificed NID from the banlist for Raids in SV.")] string nid)
+        {
+            var list = SysCord<T>.Runner.Hub.Config.RotatingRaidSV.RaiderBanList.List.ToArray();
+            string msg = $"{Context.User.Mention} no user found with that NID.";
+            for (int i = 0; i < list.Length; i++)
+                if ($"{list[i].ID}".Equals(nid))
+                {
+                    msg = $"{Context.User.Mention} user {list[i].Name} - {list[i].ID} has been unbanned.";
+                    SysCord<T>.Runner.Hub.Config.RotatingRaidSV.RaiderBanList.List.ToList().Remove(list[i]);
+                }
+            await ReplyAsync(msg).ConfigureAwait(false);
         }
     }
 }

@@ -3,6 +3,7 @@ using Discord.Commands;
 using Discord.Net;
 using Discord.WebSocket;
 using PKHeX.Core;
+using System;
 using System.Threading.Tasks;
 
 namespace SysBot.Pokemon.Discord
@@ -22,7 +23,9 @@ namespace SysBot.Pokemon.Discord
             IUserMessage test;
             try
             {
-                const string helper = "I've added you to the queue! I'll message you here when your trade is starting.";
+                var disclaimer = $"Be aware that any Pokémon traded to a game where they are not originally found in will not be able to be transferred to HOME. This includes event versions of Pokémon from previous generations that are available in the game.";
+                var helpermsg = "I've added you to the queue! I'll message you here when your trade is starting.";
+                string helper = type == PokeTradeType.TradeCord ? $"{helpermsg}\n{disclaimer}" : helpermsg;
                 test = await trader.SendMessageAsync(helper).ConfigureAwait(false);
             }
             catch (HttpException ex)

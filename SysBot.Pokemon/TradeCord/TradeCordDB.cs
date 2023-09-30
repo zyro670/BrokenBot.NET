@@ -69,7 +69,7 @@ namespace SysBot.Pokemon
 
             bool goMew = pkm.Species is (ushort)Species.Mew && enc.Version is GameVersion.GO && pkm.IsShiny;
             bool goOther = (pkm.Species is (ushort)Species.Victini or (ushort)Species.Jirachi or (ushort)Species.Celebi or (ushort)Species.Genesect) && enc.Version is GameVersion.GO;
-            if (enc is EncounterSlotGO slotGO && !goMew && !goOther)
+            if (enc is EncounterSlot8GO slotGO && !goMew && !goOther)
                 pkm.SetRandomIVsGO(slotGO.Type.GetMinIV());
             else if (enc is EncounterStatic8N static8N)
                 pkm.SetRandomIVs(static8N.FlawlessIVCount + 1);
@@ -159,6 +159,53 @@ namespace SysBot.Pokemon
                 pkm.StatNature = pkm.Nature;
                 if (enc is EncounterSlot8b slot8)
                     pkm.SetAbilityIndex(slot8.Ability is AbilityPermission.Any12H && slot8.CanUseRadar && !slot8.EggEncounter ? Random.Next(3) : slot8.Ability is AbilityPermission.Any12 ? Random.Next(2) : slot8.Ability is AbilityPermission.OnlyFirst ? 0 : slot8.Ability is AbilityPermission.OnlySecond ? 1 : 2);
+                else if (!IsLegendaryOrMythical(pkm.Species))
+                    pkm.SetAbilityIndex(Random.Next(2));
+
+                pkm.SetRandomIVs(Random.Next(3, 7));
+                if (shiny is Shiny.AlwaysSquare)
+                    CommonEdits.SetShiny(pkm, shiny);
+            }
+
+            pkm = (T)TradeExtensions<T>.TrashBytes(pkm);
+            pkm.CurrentFriendship = pkm.PersonalInfo.BaseFriendship;
+            return pkm;
+        }
+
+        protected T RngRoutineSV(T pkm, Shiny shiny)
+        {
+            pkm.Move1_PPUps = pkm.Move2_PPUps = pkm.Move3_PPUps = pkm.Move4_PPUps = 0;
+            pkm.SetMaximumPPCurrent(pkm.Moves);
+            pkm.ClearHyperTraining();
+
+            var la = new LegalityAnalysis(pkm);
+            var enc = la.Info.EncounterMatch;
+            var evoChain = la.Info.EvoChainsAllGens.Gen9.FirstOrDefault(x => x.Species == pkm.Species);
+            pkm.CurrentLevel = enc.LevelMin < evoChain.LevelMin ? evoChain.LevelMin : enc.LevelMin;
+
+            while (!new LegalityAnalysis(pkm).Valid)
+            {
+                pkm.CurrentLevel += 1;
+                if (pkm.CurrentLevel >= 100)
+                    return pkm;
+            }
+
+            la = new LegalityAnalysis(pkm);
+            if (!la.Valid)
+            {
+                pkm.SetSuggestedMoves();
+                Span<ushort> relearn = stackalloc ushort[4];
+                la.GetSuggestedRelearnMoves(relearn, enc);
+                pkm.SetRelearnMoves(relearn);
+            }
+            pkm.HealPP();
+
+            if (enc is not EncounterStatic9 && !pkm.FatefulEncounter)
+            {
+                pkm.Nature = Random.Next(25);
+                pkm.StatNature = pkm.Nature;
+                if (enc is EncounterSlot9 slot9)
+                    pkm.SetAbilityIndex(slot9.Ability is AbilityPermission.Any12H && !slot9.EggEncounter ? Random.Next(3) : slot9.Ability is AbilityPermission.Any12 ? Random.Next(2) : slot9.Ability is AbilityPermission.OnlyFirst ? 0 : slot9.Ability is AbilityPermission.OnlySecond ? 1 : 2);
                 else if (!IsLegendaryOrMythical(pkm.Species))
                     pkm.SetAbilityIndex(Random.Next(2));
 
@@ -344,7 +391,7 @@ namespace SysBot.Pokemon
             msg = string.Empty;
             shedinja = null;
             var tree = EvolutionTree.GetEvolutionTree(pk.Context);
-            var evos = tree.GetEvolutions(pk.Species, pk.Form).ToArray();
+            var evos = tree.Forward.GetEvolutions(pk.Species, pk.Form).ToArray();
 
             bool hasEvo = evos.Length > 0;
             if (!hasEvo)
@@ -384,6 +431,11 @@ namespace SysBot.Pokemon
                 return false;
             }
 
+            List<ALMTraceback> tb = new()
+            {
+                new() { Identifier = TracebackType.Trainer, Comment = "Modified handler to HT" }
+            };
+
             switch (result.EvoType)
             {
                 case EvolutionType.Trade:
@@ -394,7 +446,7 @@ namespace SysBot.Pokemon
                         clone.OT_Name = "Nishikigoi";
                         var trainer = new PokeTrainerDetails(clone);
                         var encShelm = new LegalityAnalysis(pk).EncounterMatch;
-                        pk.SetHandlerandMemory(trainer, encShelm);
+                        pk.SetHandlerandMemory(trainer, encShelm, tb);
                     }; break;
                 case EvolutionType.Spin:
                     {
@@ -469,7 +521,7 @@ namespace SysBot.Pokemon
                 pk.Met_Level = 1;
                 pk.SetEggMetData(GameVersion.UM, (GameVersion)version);
                 enc = new LegalityAnalysis(pk).EncounterMatch;
-                pk.SetHandlerandMemory(sav, enc);
+                pk.SetHandlerandMemory(sav, enc, tb);
                 if (pk is PK8 pk8)
                 {
                     pk8.HeightScalar = 0;
@@ -479,7 +531,7 @@ namespace SysBot.Pokemon
                 if (pk.Ball is (int)Ball.Sport || (pk.WasEgg && pk.Ball is (int)Ball.Master))
                     pk.SetSuggestedBall(true);
             }
-            else pk.SetHandlerandMemory(sav, enc);
+            else pk.SetHandlerandMemory(sav, enc, tb);
 
             var index = pk.PersonalInfo.GetIndexOfAbility(pk.Ability);
             pk.Species = result.EvolvesInto;
@@ -661,12 +713,12 @@ namespace SysBot.Pokemon
         private bool SameEvoTree(PKM pkm1, PKM pkm2)
         {
             var tree = EvolutionTree.GetEvolutionTree(pkm1.Context);
-            var evos = tree.GetValidPreEvolutions(pkm1, 100, 8, true);
+            var evos = tree.Reverse.GetPreEvolutions(pkm1.Species, pkm1.Form).Select(e => new EvoCriteria { Species = e.Species, Form = e.Form }).ToArray();
             var encs = EncounterGenerator.GetGenerator(Game).GetPossible(pkm1, evos, Game, EncounterTypeGroup.Egg).ToArray();
             var base1 = encs.Length > 0 ? encs[^1].Species : -1;
 
             tree = EvolutionTree.GetEvolutionTree(pkm2.Context);
-            evos = tree.GetValidPreEvolutions(pkm2, 100, 8, true);
+            evos = tree.Reverse.GetPreEvolutions(pkm2.Species, pkm2.Form).Select(e => new EvoCriteria { Species = e.Species, Form = e.Form }).ToArray();
             encs = EncounterGenerator.GetGenerator(Game).GetPossible(pkm2, evos, Game, EncounterTypeGroup.Egg).ToArray();
             var base2 = encs.Length > 0 ? encs[^1].Species : -2;
 
@@ -686,21 +738,20 @@ namespace SysBot.Pokemon
                     (ushort)Species.Lycanroc or (ushort)Species.Slowbro or (ushort)Species.Darmanitan when list[i].Form is 2 => 1,
                     (ushort)Species.Lycanroc when list[i].Form is 1 => 0,
                     (ushort)Species.Sinistea or (ushort)Species.Polteageist or (ushort)Species.Rotom or (ushort)Species.Pikachu or (ushort)Species.Raichu or (ushort)Species.Marowak or (ushort)Species.Exeggutor or (ushort)Species.Weezing or (ushort)Species.Alcremie => 0,
-                    (ushort)Species.MrMime when list[i].Form is 1 => 0,
+                    (ushort)Species.MrMime => list[i].Form == 1 ? (byte)0 : list[i].Form,
                     _ => list[i].Form,
                 };
 
                 if (list[i].Species is (ushort)Species.Rotom && list[i].Form > 0)
                     list[i].Form = 0;
 
-                EvoCriteria evo = default;
-                var preEvos = EvolutionTree.GetEvolutionTree(list[i].Context).GetValidPreEvolutions(list[i], 100, 8, true).ToList().FindAll(x => x.LevelMin is 1);
-                if (preEvos.Count is 0)
+                var tree = EvolutionTree.GetEvolutionTree(list[i].Context); // Obtain the correct evolution tree for the context
+                var preEvos = tree.Reverse.GetPreEvolutions(list[i].Species, list[i].Form).Where(x => x.Form == form).ToList(); // Obtain the reverse evolution paths
+                var filteredPreEvos = preEvos.ToList();
+                if (!filteredPreEvos.Any())
                     continue;
-                else evo = preEvos.LastOrDefault(x => x.Form == form);
-
-                if (evo != default)
-                    criteriaList.Add(evo);
+                var evo = filteredPreEvos.LastOrDefault();
+                criteriaList.Add(new EvoCriteria { Species = evo.Species, Form = evo.Form });
             }
             return criteriaList;
         }
@@ -771,6 +822,7 @@ namespace SysBot.Pokemon
                     PokeEventType.PokePets => Enum.IsDefined(typeof(PokePets), Rng.SpeciesRNG),
                     PokeEventType.RodentLite => Enum.IsDefined(typeof(RodentLite), Rng.SpeciesRNG),
                     PokeEventType.ClickbaitArticle => Enum.IsDefined(typeof(Clickbait), Rng.SpeciesRNG),
+                    PokeEventType.HouseParty => Enum.IsDefined(typeof(HouseParty), Rng.SpeciesRNG),
                     PokeEventType.EventPoke => mg != default,
                     _ => type == eventType,
                 };
@@ -779,7 +831,8 @@ namespace SysBot.Pokemon
 
         private bool IsCottonCandy(ushort species, byte form)
         {
-            var color = (PersonalColor)(Game is GameVersion.SWSH ? PersonalTable.SWSH.GetFormEntry(species, form).Color : PersonalTable.BDSP.GetFormEntry(species, form).Color);
+            var color = (PersonalColor)(Game is GameVersion.SWSH ? PersonalTable.SWSH.GetFormEntry(species, form).Color : Game is GameVersion.SV ? PersonalTable.SV.GetFormEntry(species, form).Color : 
+                PersonalTable.BDSP.GetFormEntry(species, form).Color);
             return (ShinyMap[(Species)species] is PersonalColor.Blue or PersonalColor.Red or PersonalColor.Pink or PersonalColor.Purple or PersonalColor.Yellow) &&
                 (color is PersonalColor.Blue or PersonalColor.Red or PersonalColor.Pink or PersonalColor.Purple or PersonalColor.Yellow);
         }

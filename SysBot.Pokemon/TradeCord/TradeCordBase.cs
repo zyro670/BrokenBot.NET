@@ -65,7 +65,7 @@ namespace SysBot.Pokemon
 
         public TradeCordBase()
         {
-            Game = typeof(T) == typeof(PK8) ? GameVersion.SWSH : GameVersion.BDSP;
+            Game = typeof(T) == typeof(PK8) ? GameVersion.SWSH : typeof(T) == typeof(PK9) ? GameVersion.SV : GameVersion.BDSP;
             if (Dex.Count is 0)
                 Dex = GetPokedex();
             Evolutions = EvolutionRequirements();
@@ -97,7 +97,7 @@ namespace SysBot.Pokemon
 
             try
             {
-                DatabasePath = Game == GameVersion.SWSH ? "TradeCord/TradeCordDB_SWSH.db" : "TradeCord/TradeCordDB_BDSP.db";
+                DatabasePath = Game == GameVersion.SWSH ? "TradeCord/TradeCordDB_SWSH.db" : Game == GameVersion.SV ? "TradeCord/TradeCordDB_SV.db" : "TradeCord/TradeCordDB_BDSP.db";
                 Connection = new($"Data Source={DatabasePath};Version=3;");
                 Connection.Open();
                 Connected = true;
@@ -443,16 +443,16 @@ namespace SysBot.Pokemon
         {
             try
             {
-                var dbPath = typeof(T) == typeof(PK8) ? "TradeCord/TradeCordDB_SWSH.db" : "TradeCord/TradeCordDB_BDSP.db";
-                var bckPath = typeof(T) == typeof(PK8) ? "TradeCord/TradeCordDB_SWSH_backup.db" : "TradeCord/TradeCordDB_BDSP_backup.db";
+                var dbPath = typeof(T) == typeof(PK8) ? "TradeCord/TradeCordDB_SWSH.db" : typeof(T) == typeof(PK9) ? "TradeCord/TradeCordDB_SV.db" : "TradeCord/TradeCordDB_BDSP.db";
+                var bckPath = typeof(T) == typeof(PK8) ? "TradeCord/TradeCordDB_SWSH_backup.db" : typeof(T) == typeof(PK9) ? "TradeCord/TradeCordDB_SV.db" : "TradeCord/TradeCordDB_BDSP_backup.db";
                 var bckPath2 = $"{bckPath}2";
                 TradeCordHelper<T>.VacuumLock = true;
                 Thread.Sleep(0_500);
 
-                if (File.Exists(bckPath))
+                if (System.IO.File.Exists(bckPath))
                 {
-                    File.Copy(bckPath, bckPath2, true);
-                    File.Delete(bckPath);
+                    System.IO.File.Copy(bckPath, bckPath2, true);
+                    System.IO.File.Delete(bckPath);
                 }
 
                 var cmd = Connection.CreateCommand();
@@ -461,9 +461,9 @@ namespace SysBot.Pokemon
                 Connection.Dispose();
                 Connected = false;
 
-                File.Copy(bckPath, dbPath, true);
-                if (File.Exists(bckPath2))
-                    File.Delete(bckPath2);
+                System.IO.File.Copy(bckPath, dbPath, true);
+                if (System.IO.File.Exists(bckPath2))
+                    System.IO.File.Delete(bckPath2);
             }
             catch (Exception ex)
             {
@@ -531,7 +531,7 @@ namespace SysBot.Pokemon
                     for (int f = 0; f < forms.Length; f++)
                     {
                         var form = TradeExtensions<T>.FormOutput(species, forms[f], out _);
-                        var name = SpeciesName.GetSpeciesNameGeneration(species, 2, 8);
+                        var name = SpeciesName.GetSpeciesNameGeneration(species, 2, 9);
                         bool gmax = Game == GameVersion.SWSH && new ShowdownSet($"{name}{form}").CanToggleGigantamax(species, forms[f]);
                         string gmaxFlavor = gmax ? DexText(species, forms[f], true) : "";
                         string flavor = DexText(species, forms[f], false);
@@ -613,6 +613,27 @@ namespace SysBot.Pokemon
                     TradeCordBase<T>.LegalityFixBDSP();
                 }
             }
+            else if (Game == GameVersion.SV)
+            {
+                cmd.CommandText = "create table if not exists legality_fix(issue text not null, fixed int default 0)";
+                cmd.ExecuteNonQuery();
+
+                cmd.CommandText = "insert into legality_fix(issue,fixed) select 'poke_balls', 0 where not exists(select 1 from legality_fix where issue = 'poke_balls')";
+                cmd.ExecuteNonQuery();
+
+                bool wasFixedBalls = false;
+                cmd.CommandText = "select * from legality_fix where issue = 'poke_balls'";
+                var reader = cmd.ExecuteReader();
+                if (reader.Read())
+                    wasFixedBalls = (int)reader["fixed"] == 1;
+                reader.Close();
+
+                if (!wasFixedBalls)
+                {
+                    Base.LogUtil.LogInfo("Checking for SV Poke Ball and contest stat errors...", "[SQLite]");
+                    TradeCordBase<T>.LegalityFixSV();
+                }
+            }
 
             cmd.CommandText = "select receive_ping from users";
             try
@@ -692,8 +713,8 @@ namespace SysBot.Pokemon
 
         private string DexText(ushort species, byte form, bool gmax)
         {
-            bool patterns = form > 0 && species is (ushort)Arceus or (ushort)Unown or (ushort)Deoxys or (ushort)Burmy or (ushort)Wormadam or (ushort)Mothim or (ushort)Vivillon or (ushort)Furfrou;
-            if (FormInfo.IsBattleOnlyForm(species, form, 8) || FormInfo.IsFusedForm(species, form, 8) || FormInfo.IsTotemForm(species, form, EntityContext.Gen8) || FormInfo.IsLordForm(species, form, EntityContext.Gen8) || patterns)
+            //bool patterns = form > 0 && species is (ushort)Arceus or (ushort)Unown or (ushort)Deoxys or (ushort)Burmy or (ushort)Wormadam or (ushort)Mothim or (ushort)Vivillon or (ushort)Furfrou;
+            if (FormInfo.IsBattleOnlyForm(species, form, 9) || FormInfo.IsFusedForm(species, form, 9) || FormInfo.IsTotemForm(species, form, EntityContext.Gen9) || FormInfo.IsLordForm(species, form, EntityContext.Gen9))// || patterns)
                 return "";
 
             var resourcePath = "SysBot.Pokemon.TradeCord.Resources.DexFlavor.txt";
@@ -703,7 +724,7 @@ namespace SysBot.Pokemon
 
             if (!gmax)
             {
-                var index = species is (ushort)Slowbro && form is 2 ? 0 : form - 1;
+                var index = species is (ushort)Slowbro && form is 2 ? 0 : species is (ushort)Tauros && form is 1 ? 0 : species is (ushort)Tauros && form is 2 ? 1 : species is (ushort)Tauros && form is 3 ? 2 : form - 1;
                 if (form > 0)
                     return reader.ReadToEnd().Split('_')[1].Split('\n')[species].Split('|')[index].Replace("'", "''");
                 else return reader.ReadToEnd().Split('\n')[species].Replace("'", "''");
@@ -716,7 +737,7 @@ namespace SysBot.Pokemon
         private Dictionary<ushort, IReadOnlyCollection<byte>> GetPokedex()
         {
             Dictionary<ushort, IReadOnlyCollection<byte>> dex = new();
-            var livingDex = Game is GameVersion.SWSH ? new SAV8SWSH().GetLivingDex().OrderBySpecies() : new SAV8BS().GetLivingDex().OrderBySpecies();
+            var livingDex = Game is GameVersion.SWSH ? new SAV8SWSH().GetLivingDex().OrderBySpecies() : Game is GameVersion.SV ? new SAV9SV().GetLivingDex().OrderBySpecies() : new SAV8BS().GetLivingDex().OrderBySpecies();
             var groups = livingDex.GroupBy(p => p.Species).ToArray();
 
             for (int i = 0; i < groups.Length; i++)
@@ -743,7 +764,7 @@ namespace SysBot.Pokemon
         {
             baseSpecies = 0;
             baseForm = 0;
-            var name = SpeciesName.GetSpeciesNameGeneration(species, 2, 8);
+            var name = SpeciesName.GetSpeciesNameGeneration(species, 2, Game == GameVersion.SV ? 9 : 8);
             var formStr = TradeExtensions<T>.FormOutput(species, form, out _);
             if (name.Contains("Nidoran"))
                 name = name.Remove(name.Length - 1);
@@ -756,8 +777,10 @@ namespace SysBot.Pokemon
                 return false;
 
             var table = EvolutionTree.GetEvolutionTree(pkm.Context);
-            var evos = table.GetValidPreEvolutions(pkm, 100);
-            var encs = EncounterGenerator.GetGenerator(Game).GetPossible(pkm, evos, Game, EncounterTypeGroup.Egg).ToArray();
+            var preEvolutions = table.Reverse.GetPreEvolutions(pkm.Species, pkm.Form).Where(x => x.Form == pkm.Form).Select(x => new EvoCriteria { Species = x.Species, Form = x.Form }).ToArray();
+            var evos = table.Forward.GetEvolutions(pkm.Species, pkm.Form);
+
+            var encs = EncounterGenerator.GetGenerator(Game).GetPossible(pkm, preEvolutions, Game, EncounterTypeGroup.Egg).ToArray();
             if (encs.Length is 0 || !Breeding.CanHatchAsEgg(species) || !Breeding.CanHatchAsEgg(species, form, pkm.Context))
                 return false;
 
@@ -790,7 +813,11 @@ namespace SysBot.Pokemon
                     var sav = new SimpleTrainerInfo() { OT = pk.OT_Name, Gender = pk.OT_Gender, Generation = pk.Generation, Language = pk.Language, SID16 = pk.SID16, TID16 = pk.TID16 };
                     var results = la.Results.FirstOrDefault(x => !x.Valid && x.Identifier != CheckIdentifier.Memory);
                     var enc = new LegalityAnalysis(pk).EncounterMatch;
-                    pk.SetHandlerandMemory(sav, enc);
+                    List<ALMTraceback> tb = new()
+                    {
+                        new() { Identifier = TracebackType.Trainer, Comment = "Modified handler to HT" }
+                    };
+                    pk.SetHandlerandMemory(sav, enc, tb);
                     if (results != default)
                     {
                         switch (results.Identifier)
@@ -828,7 +855,7 @@ namespace SysBot.Pokemon
                                         else pk.SetDefaultNickname(la);
 
                                         enc = new LegalityAnalysis(pk).EncounterMatch;
-                                        pk.SetHandlerandMemory(sav, enc);
+                                        pk.SetHandlerandMemory(sav, enc, tb);
                                     }
                                     else pk.SetDefaultNickname(la);
                                 }; break;
@@ -917,7 +944,7 @@ namespace SysBot.Pokemon
                 if ((pk.Nickname == nick || nickname == nick || nickname == "Egg") && !pk.IsEgg)
                 {
                     pk.IsNicknamed = false;
-                    pk.Nickname = SpeciesName.GetSpeciesNameGeneration(pk.Species, pk.Language, 8);
+                    pk.Nickname = SpeciesName.GetSpeciesNameGeneration(pk.Species, pk.Language, 9);
                     var la = new LegalityAnalysis(pk);
                     if (la.Valid)
                     {
@@ -1074,6 +1101,173 @@ namespace SysBot.Pokemon
             Base.EchoUtil.Echo($"Scan complete! Updated {updated} records.");
         }
 
+        public T LegalityFixFailure(T pk)
+        {
+            T returnpk = new();
+            var la = new LegalityAnalysis(pk);
+            if (!la.Valid)
+            {
+                var results = la.Results.ToList().FindAll(x => !x.Valid && x.Identifier is CheckIdentifier.Ball || x.Identifier is CheckIdentifier.Memory || x.Identifier is CheckIdentifier.Encounter);
+                if (results.Count > 0)
+                {
+                    foreach (var result in results)
+                    {
+                        switch (result.Identifier)
+                        {
+                            case CheckIdentifier.Ball:
+                                {
+                                    var balls = TradeExtensions<T>.GetLegalBalls(ShowdownParsing.GetShowdownText(pk)).ToList();
+                                    if ((balls.Contains(Ball.Master) || balls.Contains(Ball.Cherish)) && (pk.WasEgg || pk.WasTradedEgg))
+                                    {
+                                        balls.Remove(Ball.Master);
+                                        balls.Remove(Ball.Cherish);
+                                    }
+                                    pk.Ball = (int)balls[Random.Next(balls.Count)];
+                                }; break;
+                            case CheckIdentifier.Memory: pk.SetSuggestedMemories(); pk.SetSuggestedContestStats(la.EncounterMatch); break;
+                            case CheckIdentifier.Encounter when results.FirstOrDefault(x => x.Identifier is CheckIdentifier.Ball || x.Identifier is CheckIdentifier.Memory) == default:
+                                {
+                                    List<string> extra = new();
+                                    extra.AddRange(new string[]
+                                    {
+                                            $"Ball: {(Ball)pk.Ball}",
+                                            $"OT: {pk.OT_Name}",
+                                            $"OTGender: {(Gender)pk.OT_Gender}",
+                                            $"TID: {pk.TID16}",
+                                            $"SID: {pk.SID16}",
+                                            $"Language: {(LanguageID)pk.Language}",
+                                    });
+
+                                    var showdown = ShowdownParsing.GetShowdownText(pk).Replace("\r", "").Split('\n').ToList();
+                                    showdown.InsertRange(1, extra);
+                                    var set = new ShowdownSet(string.Join("\r\n", showdown));
+                                    var template = AutoLegalityWrapper.GetTemplate(set);
+                                    var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
+                                    pk = (T)sav.GetLegal(template, out _);
+                                }; break;
+                        }
+                    }
+                }
+            }
+            returnpk = pk;
+            return returnpk;
+        }
+
+        private static void LegalityFixSV()
+        {
+            Base.EchoUtil.Echo("Beginning to scan for and fix legality errors. This may take a while.");
+            int updated = 0;
+            List<SQLCommand> cmds = new();
+            var cmd = Connection.CreateCommand();
+
+            cmd.CommandText = "select * from binary_catches";
+            var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                bool write = false;
+                ulong user_id = ulong.Parse(reader["user_id"].ToString()!);
+                int catch_id = (int)reader["id"];
+                var pk = (T?)EntityFormat.GetFromBytes((byte[])reader["data"]) ?? new();
+
+                var la = new LegalityAnalysis(pk);
+                if (!la.Valid)
+                {
+                    var results = la.Results.ToList().FindAll(x => !x.Valid && x.Identifier is CheckIdentifier.Ball || x.Identifier is CheckIdentifier.Memory || x.Identifier is CheckIdentifier.Encounter);
+                    if (results.Count > 0)
+                    {
+                        foreach (var result in results)
+                        {
+                            switch (result.Identifier)
+                            {
+                                case CheckIdentifier.Ball:
+                                    {
+                                        var balls = TradeExtensions<T>.GetLegalBalls(ShowdownParsing.GetShowdownText(pk)).ToList();
+                                        if ((balls.Contains(Ball.Master) || balls.Contains(Ball.Cherish)) && (pk.WasEgg || pk.WasTradedEgg))
+                                        {
+                                            balls.Remove(Ball.Master);
+                                            balls.Remove(Ball.Cherish);
+                                        }
+                                        pk.Ball = (int)balls[Random.Next(balls.Count)];
+                                    }; break;
+                                case CheckIdentifier.Memory: pk.SetSuggestedMemories(); pk.SetSuggestedContestStats(la.EncounterMatch); break;
+                                case CheckIdentifier.Encounter when results.FirstOrDefault(x => x.Identifier is CheckIdentifier.Ball || x.Identifier is CheckIdentifier.Memory) == default:
+                                    {
+                                        List<string> extra = new();
+                                        extra.AddRange(new string[]
+                                        {
+                                            $"Ball: {(Ball)pk.Ball}",
+                                            $"OT: {pk.OT_Name}",
+                                            $"OTGender: {(Gender)pk.OT_Gender}",
+                                            $"TID: {pk.TID16}",
+                                            $"SID: {pk.SID16}",
+                                            $"Language: {(LanguageID)pk.Language}",
+                                        });
+
+                                        var showdown = ShowdownParsing.GetShowdownText(pk).Replace("\r", "").Split('\n').ToList();
+                                        showdown.InsertRange(1, extra);
+                                        var set = new ShowdownSet(string.Join("\r\n", showdown));
+                                        var template = AutoLegalityWrapper.GetTemplate(set);
+                                        var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
+                                        pk = (T)sav.GetLegal(template, out _);
+                                    }; break;
+                            }
+                        }
+                    }
+
+                    la = new LegalityAnalysis(pk);
+                    if (!la.Valid)
+                    {
+                        Base.LogUtil.LogError($"Catch {catch_id} (user {user_id}) is illegal, trying to legalize.", "[SQLite]");
+                        pk = (T)AutoLegalityWrapper.LegalizePokemon(pk);
+                        if (!new LegalityAnalysis(pk).Valid)
+                        {
+                            Base.LogUtil.LogError($"Failed to legalize, removing entry...\n{la.Report()}", "[SQLite]");
+                            var namesR = new string[] { "@user_id", "@id" };
+                            var objR = new object[] { user_id, catch_id };
+                            cmds.Add(new() { CommandText = "delete from binary_catches where user_id = ? and id = ?", Names = namesR, Values = objR });
+                            cmds.Add(new() { CommandText = "delete from catches where user_id = ? and id = ?", Names = namesR, Values = objR });
+                            updated++;
+                            continue;
+                        }
+                    }
+                    else write = true;
+                }
+
+                if (write)
+                {
+                    var form = TradeExtensions<PK9>.FormOutput(pk.Species, pk.Form, out _);
+                    var names = new string[] { "@data", "@user_id", "@id" };
+                    var obj = new object[] { pk.DecryptedPartyData, user_id, catch_id };
+                    cmds.Add(new() { CommandText = "update binary_catches set data = ? where user_id = ? and id = ?", Names = names, Values = obj });
+
+                    names = new string[] { "@is_shiny", "@ball", "@nickname", "@form", "@is_egg", "@is_event", "@user_id", "@id" };
+                    obj = new object[] { pk.IsShiny, $"{(Ball)pk.Ball}", pk.Nickname, form, pk.IsEgg, pk.FatefulEncounter, user_id, catch_id };
+                    cmds.Add(new() { CommandText = "update catches set is_shiny = ?, ball = ?, nickname = ?, form = ?, is_egg = ?, is_event = ? where user_id = ? and id = ?", Names = names, Values = obj });
+                    updated++;
+                }
+            }
+            reader.Close();
+
+            if (updated >= 0)
+            {
+                using var tran = Connection.BeginTransaction();
+                for (int i = 0; i < cmds.Count; i++)
+                {
+                    cmd = Connection.CreateCommand();
+                    cmd.Transaction = tran;
+                    cmd.CommandText = cmds[i].CommandText;
+                    var parameters = TradeCordBase<T>.ParameterConstructor(cmds[i].Names!, cmds[i].Values!);
+                    cmd.Parameters.AddRange(parameters);
+                    cmd.ExecuteNonQuery();
+                }
+
+                cmd.CommandText = $"update legality_fix set fixed = 1 where issue = 'poke_balls'";
+                cmd.ExecuteNonQuery();
+                tran.Commit();
+            }
+            Base.EchoUtil.Echo($"Scan complete! Updated {updated} records.");
+        }
+
         private void GmaxFix()
         {
             Base.EchoUtil.Echo("Beginning to scan for improper Gmax flags. This may take a while.");
@@ -1156,7 +1350,7 @@ namespace SysBot.Pokemon
         {
             var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
             var list = new List<EvolutionTemplate>();
-            for (ushort i = 1; i < (Game is GameVersion.BDSP ? 494 : 899); i++)
+            for (ushort i = 1; i < (Game is GameVersion.BDSP ? 494 : Game is GameVersion.SV ? 1017 : 899); i++)
             {
                 var temp = new T { Species = i };
                 for (byte f = 0; f < temp.PersonalInfo.FormCount; f++)
@@ -1173,19 +1367,19 @@ namespace SysBot.Pokemon
                         _ => "",
                     };
 
-                    var set = new ShowdownSet($"{SpeciesName.GetSpeciesNameGeneration(i, 2, 8)}{TradeExtensions<T>.FormOutput(i, f, out _)}{gender}");
+                    var set = new ShowdownSet($"{SpeciesName.GetSpeciesNameGeneration(i, 2, Game is GameVersion.SV ? 9 : 8)}{TradeExtensions<T>.FormOutput(i, f, out _)}{gender}");
                     var templateS = AutoLegalityWrapper.GetTemplate(set);
                     var blank = sav.GetLegal(templateS, out string result);
                     if (result != "Regenerated")
                         continue;
 
                     var evoTree = EvolutionTree.GetEvolutionTree(blank.Context);
-                    var preEvos = evoTree.GetValidPreEvolutions(blank, 100, 8, true);
-                    var evos = evoTree.GetEvolutions(blank.Species, blank.Form);
+                    var preEvos = evoTree.Reverse.GetPreEvolutions(i, f).Where(x => x.Form == f).Select(x => new EvoCriteria { Species = x.Species, Form = x.Form }).ToList();
+                    var evos = evoTree.Forward.GetEvolutions(blank.Species, blank.Form);
 
-                    if (preEvos.Length >= 2 && evos.Count() is 0)
+                    if (preEvos.Count >= 2 && evos.Count() is 0)
                     {
-                        for (int c = 0; c < preEvos.Length; c++)
+                        for (int c = 0; c < preEvos.Count; c++)
                         {
                             var evoType = preEvos[c].Method;
                             TCItems item = TCItems.None;
@@ -1204,7 +1398,7 @@ namespace SysBot.Pokemon
                                 EvolvesInto = (ushort)(baseSp ? -1 : preEvos[c - 1].Species),
                                 EvolvedForm = (byte)(baseSp ? -1 : preEvos[c - 1].Form),
                                 EvolvesAtLevel = (ushort)(baseSp ? -1 : preEvos[c - 1].LevelMin),
-                                EvoType = (int)evoType is 255 ? EvolutionType.None : evoType,
+                                EvoType = evoType == EvolutionType.Invalid ? EvolutionType.None : evoType,
                                 Item = item,
                                 DayTime = GetEvoTime(evoType),
                             };
@@ -1265,6 +1459,17 @@ namespace SysBot.Pokemon
                 (ushort)Porygon2 => TCItems.Upgrade,
                 (ushort)Slurpuff => TCItems.WhippedDream,
                 (ushort)Alcremie => TCItems.Sweets,
+
+                // SV Additions
+                (ushort)Cetitan => TCItems.IceStone,
+                (ushort)Scovillain => TCItems.FireStone,
+                (ushort)Bellibolt => TCItems.ThunderStone,
+                (ushort)Crabominable => TCItems.IceStone,
+                (ushort)Armarouge => TCItems.AuspiciousArmor,
+                (ushort)Ceruledge => TCItems.MaliciousArmor,
+                (ushort)Gholdengo => TCItems.GimmighoulCoin,
+                (ushort)Kingambit => TCItems.LeadersCrest,
+
                 _ => TCItems.None,
             };
         }

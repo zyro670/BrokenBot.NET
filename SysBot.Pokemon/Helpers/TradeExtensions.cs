@@ -29,14 +29,20 @@ namespace SysBot.Pokemon
 
         public static readonly int[] Amped = { 3, 4, 2, 8, 9, 19, 22, 11, 13, 14, 0, 6, 24 };
         public static readonly int[] LowKey = { 1, 5, 7, 10, 12, 15, 16, 17, 18, 20, 21, 23 };
-        public static readonly ushort[] ShinyLock = {  (ushort)Species.Victini, (ushort)Species.Keldeo, (ushort)Species.Volcanion, (ushort)Species.Cosmog, (ushort)Species.Cosmoem, (ushort)Species.Magearna, (ushort)Species.Marshadow, (ushort)Species.Eternatus,
-                                                    (ushort)Species.Kubfu, (ushort)Species.Urshifu, (ushort)Species.Zarude, (ushort)Species.Glastrier, (ushort)Species.Spectrier, (ushort)Species.Calyrex };
+        public static readonly ushort[] ShinyLock = {  (ushort)Species.Victini, (ushort)Species.Hoopa, (ushort)Species.Keldeo, (ushort)Species.Volcanion, (ushort)Species.Cosmog, (ushort)Species.Cosmoem, (ushort)Species.Magearna, (ushort)Species.Marshadow, (ushort)Species.Eternatus,
+        (ushort)Species.Kubfu, (ushort)Species.Urshifu, (ushort)Species.Zarude, (ushort)Species.Glastrier, (ushort)Species.Spectrier, (ushort)Species.Calyrex, (ushort)Species.Enamorus, (ushort)Species.WalkingWake, (ushort)Species.IronLeaves,
+        (ushort)Species.ChienPao, (ushort)Species.WoChien, (ushort)Species.TingLu, (ushort)Species.ChiYu, (ushort)Species.Koraidon, (ushort)Species.Miraidon};
+        public static readonly ushort[] MegaPrimals = { (ushort)Species.Venusaur, (ushort)Species.Charizard, (ushort)Species.Blastoise, (ushort)Species.Beedrill, (ushort)Species.Pidgeot, (ushort)Species.Alakazam,
+        (ushort)Species.Slowbro, (ushort)Species.Gengar, (ushort)Species.Kangaskhan, (ushort)Species.Pinsir, (ushort)Species.Gyarados, (ushort)Species.Aerodactyl, (ushort)Species.Mewtwo, (ushort)Species.Ampharos,
+        (ushort)Species.Steelix, (ushort)Species.Scizor, (ushort)Species.Heracross, (ushort)Species.Houndoom, (ushort)Species.Tyranitar, (ushort)Species.Sceptile, (ushort)Species.Blaziken, (ushort)Species.Swampert,
+        (ushort)Species.Gardevoir, (ushort)Species.Sableye, (ushort)Species.Mawile, (ushort)Species.Aggron, (ushort)Species.Medicham, (ushort)Species.Manectric, (ushort)Species.Sharpedo, (ushort)Species.Camerupt,
+        (ushort)Species.Altaria, (ushort)Species.Banette, (ushort)Species.Absol, (ushort)Species.Glalie, (ushort)Species.Salamence, (ushort)Species.Metagross, (ushort)Species.Latias, (ushort)Species.Latios,
+        (ushort)Species.Rayquaza, (ushort)Species.Lopunny, (ushort)Species.Garchomp, (ushort)Species.Lucario, (ushort)Species.Abomasnow, (ushort)Species.Gallade, (ushort)Species.Audino, (ushort)Species.Diancie,
+        (ushort)Species.Kyogre, (ushort)Species.Groudon};
 
         public static bool ShinyLockCheck(ushort species, string form, string ball = "")
         {
             if (ShinyLock.Contains(species))
-                return true;
-            else if (form != "" && (species is (int)Species.Zapdos or (int)Species.Moltres or (int)Species.Articuno))
                 return true;
             else if (ball.Contains("Beast") && (species is (int)Species.Poipole or (int)Species.Naganadel))
                 return true;
@@ -45,6 +51,15 @@ namespace SysBot.Pokemon
             else if (species is (int)Species.Pikachu && form != "" && form != "-Partner")
                 return true;
             else if ((species is (ushort)Species.Zacian or (ushort)Species.Zamazenta) && !ball.Contains("Cherish"))
+                return true;
+            else if (species is (ushort)Species.Gimmighoul && form != "-Roaming")
+                return true;
+            else return false;
+        }
+
+        public static bool MegaPrimalCheck(ushort species)
+        {
+            if (MegaPrimals.Contains(species))
                 return true;
             else return false;
         }
@@ -59,7 +74,7 @@ namespace SysBot.Pokemon
             var templ = AutoLegalityWrapper.GetTemplate(set);
             var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
             var pk = (T)sav.GetLegal(templ, out string res);
-            
+
             if (res != "Regenerated")
             {
                 Base.LogUtil.LogError($"Failed to generate a template for legal Poke Balls: \n{showdown}", "[GetLegalBalls]");
@@ -204,7 +219,7 @@ namespace SysBot.Pokemon
 
             var la = new LegalityAnalysis(pk);
             var enc = la.EncounterMatch;
-            pk.CurrentFriendship = enc is EncounterStatic s ? s.EggCycles : pk.PersonalInfo.HatchCycles;
+            pk.CurrentFriendship = enc is IHatchCycle s ? s.EggCycles : pk.PersonalInfo.HatchCycles;
 
             Span<ushort> relearn = stackalloc ushort[4];
             la.GetSuggestedRelearnMoves(relearn, enc);
@@ -214,7 +229,11 @@ namespace SysBot.Pokemon
             pk.Move1_PPUps = pk.Move2_PPUps = pk.Move3_PPUps = pk.Move4_PPUps = 0;
             pk.SetMaximumPPCurrent(pk.Moves);
             pk.SetSuggestedHyperTrainingData();
-            pk.SetSuggestedRibbons(template, enc);
+            List<ALMTraceback> tb = new()
+            {
+                new() { Identifier = TracebackType.Encounter, Comment = $"Encounter: {enc}" }
+            };
+            pk.SetSuggestedRibbons(template, enc, true, tb);
         }
 
         public static void EncounterLogs(PKM pk, string filepath = "")
@@ -382,11 +401,15 @@ namespace SysBot.Pokemon
             var mgPkm = mg.ConvertToPKM(info);
             bool canConvert = EntityConverter.IsConvertibleToFormat(mgPkm, info.Generation);
             mgPkm = canConvert ? EntityConverter.ConvertToType(mgPkm, typeof(T), out result) : mgPkm;
+            List<ALMTraceback> tb = new()
+            {
+                new() { Identifier = TracebackType.Trainer, Comment = "Modified handler to HT" }
+            };
 
             if (mgPkm is not null && result is EntityConverterResult.Success)
             {
                 var enc = new LegalityAnalysis(mgPkm).EncounterMatch;
-                mgPkm.SetHandlerandMemory(info, enc);
+                mgPkm.SetHandlerandMemory(info, enc, tb);
 
                 if (mgPkm.TID16 is 0 && mgPkm.SID16 is 0)
                 {
@@ -488,11 +511,12 @@ namespace SysBot.Pokemon
 
         public static bool DifferentFamily(IReadOnlyList<T> pkms)
         {
-            var criteriaList = new List<EvoCriteria>();
-            for (int i = 0; i < pkms.Count; i++)
+            var criteriaList = new List<(ushort Species, byte Form)>();
+            foreach (var pkm in pkms)
             {
-                var tree = EvolutionTree.GetEvolutionTree(pkms[i].Context);
-                criteriaList.Add(tree.GetValidPreEvolutions(pkms[i], 100, 8, true).Last());
+                var tree = EvolutionTree.GetEvolutionTree(pkm.Context);
+                var validPreEvolutions = tree.Reverse.GetPreEvolutions(pkm.Species, pkm.Form).ToList();
+                criteriaList.Add((validPreEvolutions.Last().Species, validPreEvolutions.Last().Form));
             }
 
             bool different = criteriaList.Skip(1).Any(x => x.Species != criteriaList.First().Species);

@@ -37,8 +37,6 @@ namespace SysBot.Pokemon
         private ulong MainNsoBase;
         private ulong CaughtFlag;
         private ulong BattleCheck;
-        private const int InjectBox = 0;
-        private const int InjectSlot = 0;
         private int kocount = 0;
         private uint StartingOffset = 0x4505B880;
         private uint KCoordIncrement = 192;
@@ -1222,7 +1220,7 @@ namespace SysBot.Pokemon
         {
             await SetCurrentBox(0, token).ConfigureAwait(false);
             string battlepk = string.Empty;
-            var existing = await ReadBoxPokemon(InjectBox, InjectSlot, token).ConfigureAwait(false);
+            var existing = await ReadBoxPokemon(0, 0, token).ConfigureAwait(false);
             if (existing.Species != 0 && existing.ChecksumValid)
             {
                 Log("Destination slot is occupied! Dumping the Pokémon found there...");
@@ -1242,7 +1240,7 @@ namespace SysBot.Pokemon
             var template = AutoLegalityWrapper.GetTemplate(set);
             var sav = await IdentifyTrainer(token).ConfigureAwait(false);
             PK8 pk = (PK8)sav.GetLegal(template, out _);
-            await SetBoxPokemon(pk, InjectBox, InjectSlot, token, sav).ConfigureAwait(false);
+            await SetBoxPokemon(pk, 0, 0, token, sav).ConfigureAwait(false);
             // Begin swapping mon over for encounter
             Log($"Swapping {Settings.BallTosser.ReplacePartySlot} with a battle ready {Settings.BallTosser.DesiredFighter}!");
             await Click(DRIGHT, 1_000, token).ConfigureAwait(false);

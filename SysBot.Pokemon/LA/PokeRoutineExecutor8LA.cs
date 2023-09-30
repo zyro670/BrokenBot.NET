@@ -312,14 +312,14 @@ namespace SysBot.Pokemon
             return (xor ^ (xor >> 16)) & 0xFFFF;
         }
 
-        public (bool shiny, uint shinyXor, uint EC, uint PID, int[] IVs, ulong ability, int gender, Nature nature, ulong newseed) GenerateFromSeed(ulong seed, int rolls, int guranteedivs, in int genderRatio)
+        public (bool shiny, uint shinyXor, uint EC, uint PID, int[] IVs, ulong ability, int gender, int nature, ulong newseed) GenerateFromSeed(ulong seed, int rolls, int guranteedivs, in int genderRatio)
         {
             bool shiny = false;
             uint EC;
             uint pid = 0;
             ulong ability;
             int gender;
-            Nature nature;
+            int nature;
             ulong newseed = 0;
             uint shinyXor = 17;
             var rng = new Xoroshiro128Plus(seed);
@@ -354,7 +354,7 @@ namespace SysBot.Pokemon
                 if (ivs[i] == UNSET)
                     ivs[i] = (int)rng.NextInt(32);
             }
-            ability = rng.Next() & GetMask(2);
+            ability = rng.NextInt(2);
             gender = genderRatio switch
             {
                 PersonalInfo.RatioMagicGenderless => 2,
@@ -362,18 +362,8 @@ namespace SysBot.Pokemon
                 PersonalInfo.RatioMagicMale => 0,
                 _ => (int)rng.NextInt(252) + 1 < genderRatio ? (byte)1 : (byte)0,
             };
-            nature = (Nature)(rng.NextInt(25));
+            nature = (int)rng.NextInt(25);
             return (shiny, shinyXor, EC, pid, ivs, ability, gender, nature, newseed);
-        }
-
-        public uint GetMask(uint maximum)
-        {
-            maximum -= 1;
-            for (int i = 0; i < 6; i++)
-            {
-                maximum |= maximum >> (1 << i);
-            }
-            return maximum;
         }
 
         public async Task<bool> CheckForCharm(CancellationToken token)

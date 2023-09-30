@@ -87,5 +87,6 @@ namespace SysBot.Pokemon
         Halloween = 23,
         CottonCandy = 24,
         PokePets = 25,
+        HouseParty = 26,
     }
 }

@@ -22,8 +22,7 @@ namespace SysBot.Pokemon
         private static void InitializeAutoLegality(LegalitySettings cfg)
         {
             InitializeCoreStrings();
-            if (!EncounterEvent.Initialized)
-                EncounterEvent.RefreshMGDB(cfg.MGDBPath);
+            EncounterEvent.RefreshMGDB(cfg.MGDBPath);
             InitializeTrainerDatabase(cfg);
             InitializeSettings(cfg);
         }
@@ -36,7 +35,7 @@ namespace SysBot.Pokemon
             APILegality.SetAllLegalRibbons = cfg.SetAllLegalRibbons;
             APILegality.SetMatchingBalls = cfg.SetMatchingBalls;
             APILegality.ForceSpecifiedBall = cfg.ForceSpecifiedBall;
-            APILegality.UseXOROSHIRO = cfg.UseXOROSHIRO;
+            APILegality.ForceLevel100for50 = cfg.ForceLevel100for50;
             Legalizer.EnableEasterEggs = cfg.EnableEasterEggs;
             APILegality.AllowTrainerOverride = cfg.AllowTrainerDataOverride;
             APILegality.AllowBatchCommands = cfg.AllowBatchCommands;
@@ -44,6 +43,9 @@ namespace SysBot.Pokemon
             APILegality.PrioritizeGameVersion = cfg.PrioritizeGameVersion;
             APILegality.SetBattleVersion = cfg.SetBattleVersion;
             APILegality.Timeout = cfg.Timeout;
+
+            if (!(APILegality.AllowHOMETransferGeneration = cfg.AllowHOMETransferGeneration))
+                typeof(ParseSettings).GetProperty(nameof(ParseSettings.Gen8TransferTrackerNotPresent))!.SetValue(null, Severity.Invalid);
 
             // We need all the encounter types present, so add the missing ones at the end.
             var missing = EncounterPriority.Except(cfg.PrioritizeEncounters);
@@ -106,7 +108,7 @@ namespace SysBot.Pokemon
 
         public static bool IsFixedOT(IEncounterTemplate t, PKM pkm) => t switch
         {
-            EncounterTrade tr => tr.HasTrainerName,
+            IFixedTrainer tr => tr.IsFixedTrainer,
             MysteryGift g => !g.EggEncounter && g switch
             {
                 WC8 wc8 => wc8.GetHasOT(pkm.Language),
@@ -135,9 +137,16 @@ namespace SysBot.Pokemon
 
         public static PKM GetLegal(this ITrainerInfo sav, IBattleTemplate set, out string res)
         {
-            var result = sav.GetLegalFromSet(set, out var type);
-            res = type.ToString();
-            return result;
+            var result = sav.GetLegalFromSet(set);
+            res = result.Status switch
+            {
+                LegalizationResult.Regenerated => "Regenerated",
+                LegalizationResult.Failed => "Failed",
+                LegalizationResult.Timeout => "Timeout",
+                LegalizationResult.VersionMismatch => "VersionMismatch",
+                _ => "",
+            };
+            return result.Created;
         }
 
         public static string GetLegalizationHint(IBattleTemplate set, ITrainerInfo sav, PKM pk) => set.SetAnalysis(sav, pk);

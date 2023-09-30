@@ -127,7 +127,7 @@ namespace SysBot.Pokemon
         {
             TradeMethod.LinkTrade => LinkTradePartnerNameOffset,
             TradeMethod.SurpriseTrade => SurpriseTradePartnerNameOffset,
-            _ => throw new ArgumentException(nameof(tradeMethod)),
+            _ => throw new ArgumentException("Trainer name offset is not available for this trade method.", nameof(tradeMethod)),
         };
 
         public static uint GetTrainerTIDSIDOffset(TradeMethod tradeMethod) => tradeMethod switch

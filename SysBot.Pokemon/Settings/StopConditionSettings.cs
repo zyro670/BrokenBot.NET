@@ -189,7 +189,7 @@ namespace SysBot.Pokemon
             }
             if (pk is PK9 pk9)
             {
-                set += $"\nScale: {PokeSizeDetailedUtil.GetSizeRating(pk9.Scale)}";
+                set += $"\nScale: {PokeSizeDetailedUtil.GetSizeRating(pk9.Scale)} ({pk9.Scale})";
             }
             return set;
         }

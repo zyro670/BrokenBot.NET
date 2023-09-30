@@ -82,6 +82,8 @@
 
         /// <summary> Perform various ways to encounter Pokémon in Scarlet and Violet. </summary>
         OverworldBot = 9002,
+
+        TIDResetBot = 9003,
     }
 
     public static class PokeRoutineTypeExtensions

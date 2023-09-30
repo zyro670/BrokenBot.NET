@@ -83,9 +83,13 @@ namespace SysBot.Pokemon.Discord
                 var ballImg = $"https://raw.githubusercontent.com/BakaKaito/HomeImages/main/Ballimg/50x50/" + $"{(Ball)fin.Ball}ball".ToLower() + ".png";
                 var gender = fin.Gender == 0 ? " - (M)" : fin.Gender == 1 ? " - (F)" : "";
                 var pokeImg = TradeExtensions<T>.PokeImg(fin, false, false);
+                string scale = "";
+                if (fin is PK9 fin9)
+                    scale = $"Scale: {PokeSizeDetailedUtil.GetSizeRating(fin9.Scale)} ({fin9.Scale})\n";
+
                 var trademessage = $"Pokémon IVs: {fin.IV_HP}/{fin.IV_ATK}/{fin.IV_DEF}/{fin.IV_SPA}/{fin.IV_SPD}/{fin.IV_SPE}\n" +
-                    $"Ability: {(Ability)fin.Ability}\n" +
-                    $"{(Nature)fin.Nature} Nature\n" +
+                    $"Ability: {GameInfo.GetStrings(1).Ability[fin.Ability]}\n" +
+                    $"{(Nature)fin.Nature} Nature\n{scale}" +
                     (StopConditionSettings.HasMark((IRibbonIndex)fin, out RibbonIndex mark) ? $"\nPokémon Mark: {mark.ToString().Replace("Mark", "")}{Environment.NewLine}" : "");
 
                 string markEntryText = "";

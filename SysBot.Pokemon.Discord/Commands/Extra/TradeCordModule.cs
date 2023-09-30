@@ -41,7 +41,7 @@ namespace SysBot.Pokemon.Discord
         public async Task EventVote()
         {
             bool bdsp = typeof(T) == typeof(PB8);
-            DateTime.TryParse(Info.Hub.Config.TradeCord.EventEnd, out DateTime endTime);
+            _ = DateTime.TryParse(Info.Hub.Config.TradeCord.EventEnd, out DateTime endTime);
             bool ended = (Hub.Config.TradeCord.EnableEvent && endTime != default && DateTime.Now > endTime) || !Hub.Config.TradeCord.EnableEvent;
             if (!ended)
             {
@@ -81,7 +81,7 @@ namespace SysBot.Pokemon.Discord
             }
 
             var ctx = new TradeCordHelper<T>.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.EventVote };
-            var result = await Helper.ProcessTradeCord(ctx, new string[] { }).ConfigureAwait(false);
+            var result = await Helper.ProcessTradeCord(ctx, Array.Empty<string>()).ConfigureAwait(false);
 
             var t = Task.Run(async () => await Util.EventVoteCalc(Context, events).ConfigureAwait(false));
             var index = t.Result;
@@ -160,7 +160,7 @@ namespace SysBot.Pokemon.Discord
 
             TradeCordCooldown(id);
             var ctx = new TradeCordHelper<T>.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.Catch };
-            var result = await Helper.ProcessTradeCord(ctx, new string[] { }).ConfigureAwait(false);
+            var result = await Helper.ProcessTradeCord(ctx, Array.Empty<string>()).ConfigureAwait(false);
 
             if (!result.Success)
             {
@@ -169,7 +169,7 @@ namespace SysBot.Pokemon.Discord
                 if (!Directory.Exists(folder))
                     Directory.CreateDirectory(folder);
 
-                if (result.Poke.Species != 0)
+                if (result.Poke.Species is not 0)
                 {
                     var la = new LegalityAnalysis(result.Poke);
                     if (!la.Valid)
@@ -181,7 +181,7 @@ namespace SysBot.Pokemon.Discord
                     }
                 }
 
-                if (result.EggPoke.Species != 0)
+                if (result.EggPoke.Species is not 0)
                 {
                     var la = new LegalityAnalysis(result.EggPoke);
                     if (!la.Valid)
@@ -198,12 +198,16 @@ namespace SysBot.Pokemon.Discord
             {
                 var rng = new Random();
                 var spookyRng = rng.Next(101);
-                var imgRng = rng.Next(5);
-                string[] sketchyCatches = { "https://i.imgur.com/BOb6IbW.png", "https://i.imgur.com/oSUQhYv.png", "https://i.imgur.com/81hlmGV.png", "https://i.imgur.com/7LBHLmf.png", "https://i.imgur.com/NEWEVtm.png" };
+                var imgRng = rng.Next(11);
+                string[] sketchyCatches = { "https://i.imgur.com/BOb6IbW.png", "https://i.imgur.com/oSUQhYv.png", "https://i.imgur.com/81hlmGV.png", "https://i.imgur.com/7LBHLmf.png", "https://i.imgur.com/NEWEVtm.png", "https://i.imgur.com/CVqOMrY.png", "https://i.imgur.com/Rqz0U0v.png", "https://i.imgur.com/5rC39Cb.png", "https://i.imgur.com/whtNgCL.png", "https://i.imgur.com/3EWCVeU.png", "https://i.imgur.com/pW30Qo3.png" };
+                string[] sketchyDescr = { "You run for dear life... but there is no escape from the Garfickle.", "You run for dear life while it pelts you with very crispy eggs.", "You run for dear life.", "You run for dear life but trip and fall into a koi pond. Through the water you can see it waiting for you to resurface... what do you do next?", "There is no running from God... not even the koi pond can save you. You accept your fate but it simply flies away.", 
+                    "Your soul shivers in fright as it moves towards you. You cannot throw a ball, a pokemon, anything. You shake in fear as it comes closer and whispers \"repeat\" into your ear... Dooming you to a cursed existence of repeating $k over and over again.", "The ball bounced off of it, it turned it's head towards you and uttered \"karp\". It started barreling at you on all fours at 100 miles an hour. You regret everything and try to run away.",
+                    "The ball split in half before it reached the pokemon. As you realize that it is not in fact a mew, it telepathically reaches out to you. In your head you hear \"Run and never look back\". You happily oblige as it glares at you.", $"The ball stopped in the air in front of it. It stares deep into your eyes and suddenly it all went black...\n{result.EmbedName} blacked out. When you awoke, it was gone along with $500.", "It breaks free and oinks at you. Before you can get another ball, it vanishes. You wonder; \"I bet it tastes good\".",
+                    "As it floats towards you, the sunlight begins to dim from the gases... it starts to fade to black... all you can hear are frogs croaking. You flee from the encounter... knowing it will always be following you.."};
                 var ball = (Ball)rng.Next(2, 26);
                 var speciesRand = TradeCordHelper<T>.Dex.Keys.ToArray()[rng.Next(TradeCordHelper<T>.Dex.Count)];
                 var descF = $"You threw {(ball == Ball.Ultra ? "an" : "a")} {ball} Ball at a wild {(spookyRng >= 90 ? "...whatever that thing is" : SpeciesName.GetSpeciesNameGeneration(speciesRand, 2, 8))}...";
-                msg = $"{(spookyRng >= 90 ? "One wiggle... Two... It breaks free and stares at you, smiling. You run for dear life." : "...but it managed to escape!")}";
+                msg = $"{(spookyRng >= 90 ? "One wiggle... Two... It breaks free and stares at you, smiling. " + sketchyDescr[imgRng] : "...but it managed to escape!")}";
 
                 if (spookyRng >= 90 && result.Item != string.Empty)
                 {
@@ -228,7 +232,7 @@ namespace SysBot.Pokemon.Discord
             }
 
             var nidoranGender = string.Empty;
-            var speciesName = SpeciesName.GetSpeciesNameGeneration(result.Poke.Species, 2, 8);
+            var speciesName = SpeciesName.GetSpeciesNameGeneration(result.Poke.Species, 2, 9);
             if (result.Poke.Species == 32 || result.Poke.Species == 29)
             {
                 nidoranGender = speciesName.Last().ToString();
@@ -237,10 +241,37 @@ namespace SysBot.Pokemon.Discord
 
             var form = nidoranGender != string.Empty ? nidoranGender : TradeExtensions<T>.FormOutput(result.Poke.Species, result.Poke.Form, out _);
             var finalName = speciesName + form;
+
+            var mpc = TradeExtensions<T>.MegaPrimalCheck(result.Poke.Species);
+            Random random = new();
+            var ogForm = 0;
+            var MegaPrimalRNG = (ushort)random.Next(101);
+            var has2forms = result.Poke.Species is (ushort)Species.Mewtwo or (ushort)Species.Charizard;
+            if (mpc && MegaPrimalRNG >= 75)
+            {
+                if (!has2forms)
+                {
+                    ogForm = result.Poke.Form;
+                    result.Poke.Form = 1;
+                }
+                if (has2forms)
+                {
+                    var f = (ushort)random.Next(2);
+                    ogForm = result.Poke.Form;
+                    if (f == 0)
+                        result.Poke.Form = 1;
+                    else
+                        result.Poke.Form = 2;
+                }
+            }
+
+            var mpform = result.Poke.Species is (ushort)Species.Kyogre or (ushort)Species.Groudon ? "Primal " : "Mega ";
+            var mpdesc = mpc && MegaPrimalRNG >= 75 ? mpform : "";
+            var mplow = mpc && MegaPrimalRNG >= 75 ? $"This encounter has caused it to convert all of its {mpform}Energy into Terastal Energy. It will never be able to Mega Evolve again." : "";
             var pokeImg = TradeExtensions<T>.PokeImg(result.Poke, result.Poke is PK8 pk8 && pk8.CanGigantamax, Hub.Config.TradeCord.UseFullSizeImages);
             var ballImg = $"https://raw.githubusercontent.com/BakaKaito/HomeImages/main/Ballimg/50x50/{((Ball)result.Poke.Ball).ToString().ToLower()}ball.png";
-            var desc = $"You threw {(result.Poke.Ball == 2 ? "an" : "a")} {(Ball)result.Poke.Ball} Ball at a {(result.Poke.IsShiny ? $"**shiny** wild **{finalName}**" : $"wild {finalName}")}...";
-
+            var desc = $"You threw {(result.Poke.Ball == 2 ? "an" : "a")} {(Ball)result.Poke.Ball} Ball at a {(result.Poke.IsShiny ? $"**shiny** wild **{mpdesc}{finalName}**" : $"wild {mpdesc}{finalName}")}...\n{mplow}";
+            result.Poke.Form = (byte)ogForm;
             var author = new EmbedAuthorBuilder { Name = name };
             var footer = new EmbedFooterBuilder
             {
@@ -401,6 +432,9 @@ namespace SysBot.Pokemon.Discord
         [RequireQueueRole(nameof(DiscordManager.RolesTradeCord))]
         public async Task DaycareInfo()
         {
+            await ReplyAsync("To follow the limitations set by the game, the daycare is currently closed.").ConfigureAwait(false);
+            return;
+
             string name = $"{Context.User.Username}'s Daycare Info";
             if (!TradeCordParanoiaChecks(out string msg))
             {
@@ -419,6 +453,9 @@ namespace SysBot.Pokemon.Discord
         [RequireQueueRole(nameof(DiscordManager.RolesTradeCord))]
         public async Task Daycare([Summary("Action to do (withdraw, deposit)")] string action, [Summary("Catch ID or elaborate action (\"All\" if withdrawing")] string id)
         {
+            await ReplyAsync("To follow the limitations set by the game, the daycare is currently closed.").ConfigureAwait(false);
+            return;
+
             string name = $"{Context.User.Username}'s Daycare";
             if (!TradeCordParanoiaChecks(out string msg))
             {
@@ -509,7 +546,7 @@ namespace SysBot.Pokemon.Discord
             var la = new LegalityAnalysis(pkm);
             if (!la.Valid || pkm is not T)
             {
-                msg = $"Please upload a legal Pokémon from {(typeof(T) == typeof(PK8) ? "Sword and Shield" : "Brilliant Diamond and Shining Pearl")}.";
+                msg = $"Please upload a legal Pokémon from {(typeof(T) == typeof(PK8) ? "Sword and Shield" : typeof(T) == typeof(PK9) ? "Scarlet and Violet" : "Brilliant Diamond and Shining Pearl")}.";
                 await Util.EmbedUtil(Context, name, msg).ConfigureAwait(false);
                 return;
             }
@@ -539,7 +576,7 @@ namespace SysBot.Pokemon.Discord
             }
 
             var ctx = new TradeCordHelper<T>.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.TrainerInfo };
-            var result = await Helper.ProcessTradeCord(ctx, new string[] { }).ConfigureAwait(false);
+            var result = await Helper.ProcessTradeCord(ctx, Array.Empty<string>()).ConfigureAwait(false);
             await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
         }
 
@@ -557,7 +594,7 @@ namespace SysBot.Pokemon.Discord
             }
 
             var ctx = new TradeCordHelper<T>.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.FavoritesInfo };
-            var result = await Helper.ProcessTradeCord(ctx, new string[] { }).ConfigureAwait(false);
+            var result = await Helper.ProcessTradeCord(ctx, Array.Empty<string>()).ConfigureAwait(false);
             if (!result.Success)
             {
                 await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
@@ -771,6 +808,9 @@ namespace SysBot.Pokemon.Discord
         [RequireQueueRole(nameof(DiscordManager.RolesTradeCord))]
         public async Task TradeCordEvolution([Remainder][Summary("Usable item or Alcremie form.")] string input = "")
         {
+            await ReplyAsync("To further bring the community together, evolutions has currently been turned off. ").ConfigureAwait(false);
+            return;
+
             string name = $"{Context.User.Username}'s Evolution";
             if (!TradeCordParanoiaChecks(out string msg))
             {
@@ -902,7 +942,7 @@ namespace SysBot.Pokemon.Discord
             }
 
             var ctx = new TradeCordHelper<T>.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.TakeItem };
-            var result = await Helper.ProcessTradeCord(ctx, new string[] { }).ConfigureAwait(false);
+            var result = await Helper.ProcessTradeCord(ctx, Array.Empty<string>()).ConfigureAwait(false);
             await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
         }
 
@@ -990,7 +1030,7 @@ namespace SysBot.Pokemon.Discord
             }
 
             var ctx = new TradeCordHelper<T>.TC_CommandContext { Username = Context.User.Username, ID = Context.User.Id, Context = TCCommandContext.EventPing };
-            var result = await Helper.ProcessTradeCord(ctx, new string[] { }).ConfigureAwait(false);
+            var result = await Helper.ProcessTradeCord(ctx, Array.Empty<string>()).ConfigureAwait(false);
             await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
         }
 
@@ -1030,7 +1070,7 @@ namespace SysBot.Pokemon.Discord
             await Util.EmbedUtil(Context, result.EmbedName, result.Message).ConfigureAwait(false);
         }
 
-        private void TradeCordCooldown(ulong id, bool clear = false)
+        private static void TradeCordCooldown(ulong id, bool clear = false)
         {
             if (Info.Hub.Config.TradeCord.TradeCordCooldown > 0)
             {

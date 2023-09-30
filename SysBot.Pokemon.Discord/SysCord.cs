@@ -145,7 +145,7 @@ namespace SysBot.Pokemon.Discord
 
             await _commands.AddModulesAsync(assembly, _services).ConfigureAwait(false);
             var genericTypes = assembly.DefinedTypes.Where(z => z.IsSubclassOf(typeof(ModuleBase<SocketCommandContext>)) && z.IsGenericType);
-            bool initTC = typeof(T) == typeof(PK8) || typeof(T) == typeof(PB8);
+            bool initTC = typeof(T) == typeof(PK8) || typeof(T) == typeof(PB8) || typeof(T) == typeof(PK9);
             foreach (var t in genericTypes)
             {
                 var genModule = t.MakeGenericType(typeof(T));

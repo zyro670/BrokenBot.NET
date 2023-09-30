@@ -85,7 +85,15 @@ namespace SysBot.Pokemon.Discord
                 else newShowdown[index] = "\nShiny: Star\r";
             }
 
-            var extra = new string[] { $"\nOT: {pkm.OT_Name}", $"\nTID: {pkm.GetDisplayTID()}", $"\nSID: {pkm.GetDisplaySID()}", $"{(pkm.IsEgg ? "\nIsEgg: Yes" : "")}" }; 
+            string mark = string.Empty;
+            if (pkm is PK9 pk9)
+            {
+                if (StopConditionSettings.HasMark(pk9, out RibbonIndex encmark))
+                    mark = $"\nPokémon has the **{encmark.ToString().Replace("Mark", "")} Mark**!";
+
+            }
+
+            var extra = new string[] { $"\nOT: {pkm.OT_Name}", $"\nTID: {pkm.GetDisplayTID()}", $"\nSID: {pkm.GetDisplaySID()}", $"{(pkm.IsEgg ? "\nIsEgg: Yes" : "")}", $"{mark.Trim()}" };
             newShowdown.InsertRange(1, extra);
             return Format.Code(string.Join("", newShowdown).Trim());
         }

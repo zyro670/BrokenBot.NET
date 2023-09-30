@@ -35,11 +35,17 @@ namespace SysBot.Pokemon
         [Category(Hosting), Description("When enabled, the bot will use the superior sprite art courtesy of SHA.")]
         public bool SpriteAlternateArt { get; set; } = true;
 
+        [Category(Hosting), Description("Enter the total number of raids to host before the bot automatically stops. Default is 0 to ignore this setting.")]
+        public int TotalRaidsToHost { get; set; } = 0;
+
         [Category(Hosting), Description("Catch limit per player before they get added to the ban list automatically. If set to 0 this setting will be ignored.")]
         public int CatchLimit { get; set; } = 0;
 
-        [Category(Hosting), Description("Empty raid limit per parameter before the bot hosts and uncoded raid. Default is 3 raids.")]
+        [Category(Hosting), Description("Empty raid limit per parameter before the bot hosts an uncoded raid. Default is 3 raids.")]
         public int EmptyRaidLimit { get; set; } = 3;
+
+        [Category(FeatureToggle), Description("Set the action you would want your bot to perform. MashA presses A every 3.5s, while TurboA will press A every 1.5s.")]
+        public RaidAction Action { get; set; } = RaidAction.AFK;
 
         [Category(Hosting), Description("Minimum amount of seconds to wait before starting a raid.")]
         public int TimeToWait { get; set; } = 90;
@@ -53,7 +59,7 @@ namespace SysBot.Pokemon
         [Category(Hosting), Description("Users NIDs here are banned raiders.")]
         public RemoteControlAccessList RaiderBanList { get; set; } = new() { AllowIfEmpty = false };
 
-        [Category(Hosting), Description("When enabled, the bot will restore current day seed to tomorrow's day seed.")]
+        [Category(Hosting), Description("When enabled, the bot will inject the current day seed to tomorrow's day seed.")]
         public bool KeepDaySeed { get; set; } = false;
 
         [Category(FeatureToggle), Description("Set your Switch Date/Time format in the Date/Time settings. The day will automatically rollback by 1 if the Date changes.")]
@@ -108,7 +114,7 @@ namespace SysBot.Pokemon
             public string[] PartyPK { get; set; } = Array.Empty<string>();
             public Species Species { get; set; } = Species.None;
             public int SpeciesForm { get; set; } = 0;
-            public string Seed { get; set; } = "0";
+            public string Seed { get; set; } = "00000000";
             public string Title { get; set; } = string.Empty;
         }
 
