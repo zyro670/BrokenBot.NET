@@ -67,7 +67,8 @@ namespace SysBot.Pokemon
                     return;
                 }
 
-                await PrepareIngredients(token).ConfigureAwait(false);
+                bool valid = await VerifyIngredients(token).ConfigureAwait(false);
+                if (!valid) return;
                 await ScanOverworld(token).ConfigureAwait(false);
             }
             catch (Exception e)
@@ -89,7 +90,7 @@ namespace SysBot.Pokemon
             await CleanExit(CancellationToken.None).ConfigureAwait(false);
         }
 
-        private async Task PrepareIngredients(CancellationToken token)
+        private async Task<bool> VerifyIngredients(CancellationToken token)
         {
             Ingredients = new int[4];
             Sequence = new int[4];
@@ -115,8 +116,15 @@ namespace SysBot.Pokemon
             // Grab fillings
             for (int i = 0; i < ingredients.Items.Length; i++) // Fillings
             {
-                if (ingredients.Items[i].Index >= 1909 && ingredients.Items[i].Index <= 1946 && ingredients.Items[i].Index != 0 && ingredients.Items[i].Count != 0)
+                if (ingredients.Items[i].Index >= 1909 && ingredients.Items[i].Index <= 1946 && ingredients.Items[i].Index != 0 && ingredients.Items[i].Count != 0 && ingredients.Items[i].Index != 1942 &&
+                    ingredients.Items[i].Index != 1943 && ingredients.Items[i].Index != 1944)
                     Fillings.Add(ingredients.Items[i].Index);
+            }
+
+            if (!Fillings.Contains((int)Settings.PicnicFilters.Item1))
+            {
+                Log($"{Settings.PicnicFilters.Item1} not found in our bag. Please try again after restocking.");
+                return false;
             }
 
             for (int f = 0; f < Fillings.Count; f++)
@@ -147,6 +155,12 @@ namespace SysBot.Pokemon
             {
                 if (ingredients.Items[i].Index >= 1904 && ingredients.Items[i].Index <= 1908 && ingredients.Items[i].Index != 0 && ingredients.Items[i].Count != 0)
                     Condiments.Add(ingredients.Items[i].Index);
+            }
+
+            if (!Condiments.Contains((int)Settings.PicnicFilters.Item2) || !Condiments.Contains((int)Settings.PicnicFilters.Item3) || !Condiments.Contains((int)Settings.PicnicFilters.Item4) && Settings.PicnicFilters.Item4 != 0)
+            {
+                Log($"Insufficient condiments in our bag. Please try again after restocking.");
+                return false;
             }
 
             for (int f = 0; f < Condiments.Count; f++)
@@ -202,6 +216,7 @@ namespace SysBot.Pokemon
                     }
                 }
             }
+            return true;
         }
 
         private async Task InitializeSessionOffsets(CancellationToken token)
@@ -1221,7 +1236,7 @@ namespace SysBot.Pokemon
                         {
                             case SandwichFlavor.Encounter: ingr1 = PicnicFillings.SmokedFillet; ingr2 = PicnicCondiments.SaltyHerbaMystica; ingr3 = PicnicCondiments.SweetHerbaMystica; break;
                             case SandwichFlavor.Humongo: ingr1 = PicnicFillings.SmokedFillet; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.SpicyHerbaMystica; break;
-                            case SandwichFlavor.Teensy: ingr1 = PicnicFillings.Avocado; ingr2 = PicnicCondiments.SourHerbaMystica; ingr3 = PicnicCondiments.SourHerbaMystica; break;
+                            case SandwichFlavor.Teensy: ingr1 = PicnicFillings.SmokedFillet; ingr2 = PicnicCondiments.SourHerbaMystica; ingr3 = PicnicCondiments.SourHerbaMystica; break;
                         }
                         Settings.PicnicFilters.AmountOfIngredientsToHold = 3;
                     }
@@ -1232,12 +1247,12 @@ namespace SysBot.Pokemon
                         {
                             case SandwichFlavor.Encounter: ingr1 = PicnicFillings.Tomato; ingr2 = PicnicCondiments.SaltyHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; break;
                             case SandwichFlavor.Humongo: ingr1 = PicnicFillings.Tomato; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.SpicyHerbaMystica; break;
-                            case SandwichFlavor.Teensy: ingr1 = PicnicFillings.Avocado; ingr2 = PicnicCondiments.SourHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; break;
+                            case SandwichFlavor.Teensy: ingr1 = PicnicFillings.Tomato; ingr2 = PicnicCondiments.SourHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; break;
                         }
                         Settings.PicnicFilters.AmountOfIngredientsToHold = 3;
                     }
                     break;
-                case SandwichSelection.Custom: ingr1 = Settings.PicnicFilters.Item1; ingr2 = Settings.PicnicFilters.Item2; ingr3 = Settings.PicnicFilters.Item3; break;
+                case SandwichSelection.Custom: ingr1 = Settings.PicnicFilters.Item1; ingr2 = Settings.PicnicFilters.Item2; ingr3 = Settings.PicnicFilters.Item3; ingr4 = Settings.PicnicFilters.Item4; break;
             }
             return ((int)ingr1, (int)ingr2, (int)ingr3, (int)ingr4);
         }

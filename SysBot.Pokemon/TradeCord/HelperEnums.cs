@@ -771,9 +771,6 @@
         Kiwi = 1939,
         Pineapple = 1940,
         Jalapeno = 1941,
-        Horseradish = 1942,
-        CurryPowder = 1943,
-        Wasabi = 1944,
         Watercress = 1945,
         Basil = 1946,
     }
@@ -803,6 +800,7 @@
         SpicyHerbaMystica = 1908,    
         HorseRadish = 1942,
         CurryPowder = 1943,
+        Wasabi = 1944,
     }
 
     public enum SandwichSelection

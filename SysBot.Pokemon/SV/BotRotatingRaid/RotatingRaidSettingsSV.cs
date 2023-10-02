@@ -12,10 +12,13 @@ namespace SysBot.Pokemon
         private const string Hosting = nameof(Hosting);
         private const string Counts = nameof(Counts);
         private const string FeatureToggle = nameof(FeatureToggle);
-        public override string ToString() => "RotatingRaidtSV Settings";
+        public override string ToString() => "RotatingRaidSV Settings";
 
         [Category(FeatureToggle), Description("URL to Pokémon Automation's Tera Ban List json (or one matching the required structure).")]
         public string BanListURL { get; set; } = "https://raw.githubusercontent.com/PokemonAutomation/ServerConfigs-PA-SHA/main/PokemonScarletViolet/TeraAutoHost-BanList.json";
+
+        [Category(FeatureToggle), Description("URL to Pokémon Automation's Tera Global Ban List json (or one matching the required structure).")]
+        public string GlobalBanListURL { get; set; } = "";
 
         [Category(Hosting), Description("Amount of raids before updating the ban list. If you want the global ban list off, set this to -1.")]
         public int RaidsBetweenUpdate { get; set; } = 3;

@@ -13,6 +13,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using RaidCrawler.Core.Structures;
 using pkNX.Structures.FlatBuffers.Gen9;
+using System.Net.Http;
+using Newtonsoft.Json;
 using static SysBot.Base.SwitchButton;
 
 namespace SysBot.Pokemon
@@ -30,7 +32,6 @@ namespace SysBot.Pokemon
             Settings = hub.Config.RaidSV;
         }
 
-        private int RaidsAtStart;
         private int RaidCount;
         private int WinCount;
         private int LossCount;
@@ -48,6 +49,7 @@ namespace SysBot.Pokemon
         private string[] PresetDescription = Array.Empty<string>();
         private string[] ModDescription = Array.Empty<string>();
         private readonly Dictionary<ulong, int> RaidTracker = new();
+        private List<BanList> GlobalBanList = new();
         private SAV9SV HostSAV = new();
         private DateTime StartTime = DateTime.Now;
         private RaidContainer? container;
@@ -188,6 +190,9 @@ namespace SysBot.Pokemon
                 else
                     Log($"Parameter for {Settings.RaidEmbedFilters.Species} set previously, skipping raid reads.");
 
+                if (!string.IsNullOrEmpty(Settings.GlobalBanListURL))
+                    await GrabGlobalBanlist(token).ConfigureAwait(false);
+
                 var currentSeed = BitConverter.ToUInt64(await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerP, 8, token).ConfigureAwait(false), 0);
                 if (TodaySeed != currentSeed)
                 {
@@ -206,8 +211,8 @@ namespace SysBot.Pokemon
                     continue;
                 }
 
-                // Get initial raid counts for comparison later.
-                await CountRaids(null, token).ConfigureAwait(false);
+                if (RaidCount == 0 && Settings.KeepDaySeed)
+                    OverrideTodaySeed();
 
                 if (Hub.Config.Stream.CreateAssets)
                     await GetRaidSprite(token).ConfigureAwait(false);
@@ -263,6 +268,18 @@ namespace SysBot.Pokemon
         public override async Task HardStop()
         {
             await CleanExit(CancellationToken.None).ConfigureAwait(false);
+        }
+
+        private async Task GrabGlobalBanlist(CancellationToken token)
+        {
+            using var httpClient = new HttpClient();
+            var url = Settings.GlobalBanListURL;
+            var data = await httpClient.GetStringAsync(url, token).ConfigureAwait(false);
+            GlobalBanList = JsonConvert.DeserializeObject<List<BanList>>(data)!;
+            if (GlobalBanList.Count is not 0)
+                Log($"There are {GlobalBanList.Count} entries on the global ban list.");
+            else
+                Log("Failed to fetch the global ban list. Ensure you have the correct URL.");
         }
 
         private async Task CompleteRaid(List<(ulong, TradeMyStatus)> trainers, CancellationToken token)
@@ -341,17 +358,29 @@ namespace SysBot.Pokemon
                 await Click(B, 0_500, token).ConfigureAwait(false);
                 await Click(DDOWN, 0_500, token).ConfigureAwait(false);
 
+                if (!await IsConnectedToLobby(token).ConfigureAwait(false) && await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
+                {
+                    Log("We lost the raid...");
+                    LossCount++;
+                }
+
+                if (!await IsConnectedToLobby(token).ConfigureAwait(false) && !await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
+                {
+                    Settings.AddCompletedRaids();
+                    Log("We defeated the raid boss!");
+                    WinCount++;
+                    if (trainers.Count > 0 && Settings.CatchLimit != 0)
+                        ApplyPenalty(trainers);
+
+                    await EnqueueEmbed(null, "", false, false, true, false, token).ConfigureAwait(false);
+                }
                 Log("Returning to overworld...");
                 while (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
                     await Click(A, 1_000, token).ConfigureAwait(false);
             }
 
-            await CountRaids(lobbyTrainersFinal, token).ConfigureAwait(false);
             await CloseGame(Hub.Config, token).ConfigureAwait(false);
             await StartGame(Hub.Config, token).ConfigureAwait(false);
-
-            if (Settings.KeepDaySeed)
-                OverrideTodaySeed();
         }
 
         private void ApplyPenalty(List<(ulong, TradeMyStatus)> trainers)
@@ -379,56 +408,6 @@ namespace SysBot.Pokemon
             List<long> ptr = new(Offsets.RaidBlockPointerP);
             ptr[2] += 0x8;
             await SwitchConnection.PointerPoke(todayoverride, ptr, CancellationToken.None).ConfigureAwait(false);
-        }
-
-        private async Task<bool> CountRaids(List<(ulong, TradeMyStatus)>? trainers, CancellationToken token)
-        {
-            List<uint> seeds = new();
-            var data = await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerP, 2304, token).ConfigureAwait(false);
-            for (int i = 0; i < 69; i++)
-            {
-                var seed = BitConverter.ToUInt32(data.Slice(32 + (i * 32), 4));
-                if (seed != 0)
-                    seeds.Add(seed);
-            }
-
-            data = await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerK, 0xC80, token).ConfigureAwait(false);
-            for (int i = 0; i < 25; i++)
-            {
-                var seed = BitConverter.ToUInt32(data.Slice(32 + (i * 32), 4));
-                if (seed != 0)
-                    seeds.Add(seed);
-            }
-
-            Log($"Active raid count: {seeds.Count}");
-            if (RaidCount == 0)
-            {
-                RaidsAtStart = seeds.Count;
-                if (Settings.KeepDaySeed)
-                    OverrideTodaySeed();
-                return true;
-            }
-
-            if (trainers is not null)
-            {
-                Log("Back in the overworld, checking if we won or lost.");
-                Settings.AddCompletedRaids();
-                if (RaidsAtStart > seeds.Count)
-                {
-                    Log("We defeated the raid boss!");
-                    WinCount++;
-                    if (trainers.Count > 0 && Settings.CatchLimit != 0 || TodaySeed != BitConverter.ToUInt64(data.Slice(0, 8)) && RaidsAtStart == seeds.Count && Settings.CatchLimit != 0)
-                        ApplyPenalty(trainers);
-
-                    await EnqueueEmbed(null, "", false, false, true, false, token).ConfigureAwait(false);
-                    return true;
-                }
-
-                Log("We lost the raid...");
-                LossCount++;
-
-            }
-            return false;
         }
 
         private async void InjectPartyPk(string battlepk)
@@ -542,7 +521,26 @@ namespace SysBot.Pokemon
             var msg = string.Empty;
             var banResultCC = Settings.RaidsBetweenUpdate == -1 ? (false, "") : await BanService.IsRaiderBanned(trainer.OT, Settings.BanListURL, Connection.Label, updateBanList).ConfigureAwait(false);
             var banResultCFW = RaiderBanList.List.FirstOrDefault(x => x.ID == nid);
-            bool isBanned = banResultCC.Item1 || banResultCFW != default;
+            var banGlobalCFW = false;
+            BanList user = new();
+            for (int i = 0; i < GlobalBanList.Count; i++)
+            {
+                var gNID = GlobalBanList[i].NIDs;
+                for (int g = 0; g < gNID.Length; g++)
+                {
+                    if (gNID[g] == nid)
+                    {
+                        Log($"NID: {nid} found on GlobalBanList.");
+                        if (GlobalBanList[i].enabled)
+                            banGlobalCFW = true;
+                        user = GlobalBanList[i];
+                        break;
+                    }
+                }
+                if (banGlobalCFW is true)
+                    break;
+            }
+            bool isBanned = banResultCFW != default || banGlobalCFW || banResultCC.Item1;
 
             bool blockResult = false;
             var blockCheck = RaidTracker.ContainsKey(nid);
@@ -575,7 +573,7 @@ namespace SysBot.Pokemon
 
             if (isBanned)
             {
-                msg = banResultCC.Item1 ? banResultCC.Item2 : $"Penalty #{val}\n{banResultCFW!.Name} was found in the host's ban list.\n{banResultCFW.Comment}";
+                msg = banResultCC.Item1 ? banResultCC.Item2 : banGlobalCFW ? $"{trainer.OT} was found in the global ban list.\nReason: {user.Comment}" : $"Penalty #{val}\n{banResultCFW!.Name} was found in the host's ban list.\n{banResultCFW.Comment}";
                 Log(msg);
                 await EnqueueEmbed(null, msg, false, true, false, false, token).ConfigureAwait(false);
                 return true;
@@ -768,7 +766,7 @@ namespace SysBot.Pokemon
 
             var embed = new EmbedBuilder()
             {
-                Title = disband ? $"**Raid canceled: [{TeraRaidCode}]**" : upnext && Settings.TotalRaidsToHost != 0 ? $"Initializing Raid {RaidCount}/{Settings.TotalRaidsToHost}" : upnext && Settings.TotalRaidsToHost == 0 ? $"Initializing Raid" : title,
+                Title = disband ? $"**Raid canceled: [{TeraRaidCode}]**" : upnext && Settings.TotalRaidsToHost != 0 ? $"Preparing Raid {RaidCount}/{Settings.TotalRaidsToHost}" : upnext && Settings.TotalRaidsToHost == 0 ? $"Preparing Raid" : title,
                 Color = disband ? Color.Red : hatTrick ? Color.Purple : Color.Green,
                 Description = disband ? message : upnext ? Settings.RaidEmbedFilters.Title : raidstart ? "" : description,
                 ImageUrl = bytes.Length > 0 ? "attachment://zap.jpg" : default,
