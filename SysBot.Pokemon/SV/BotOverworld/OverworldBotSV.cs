@@ -67,7 +67,7 @@ namespace SysBot.Pokemon
                     return;
                 }
 
-                if (Settings.PicnicFilters.TypeOfSandwich != SandwichSelection.NoSandwich)
+                if (Settings.PicnicFilters.TypeOfSandwich != SandwichSelection.NoSandwich && Settings.PicnicSelection != Selection.NoSandwich)
                 {
                     bool valid = await VerifyIngredients(token).ConfigureAwait(false);
                     if (!valid) return;
@@ -119,7 +119,7 @@ namespace SysBot.Pokemon
             // Grab fillings
             for (int i = 0; i < ingredients.Items.Length; i++) // Fillings
             {
-                if (ingredients.Items[i].Index >= 1909 && ingredients.Items[i].Index <= 1946 && ingredients.Items[i].Index != 0 && ingredients.Items[i].Count != 0 && ingredients.Items[i].Index != 1942 &&
+                if (ingredients.Items[i].Index >= 1909 && ingredients.Items[i].Index <= 1946 && ingredients.Items[i].Index != 0 && ingredients.Items[i].Count != 0 && ingredients.Items[i].Index != 1888 && ingredients.Items[i].Index != 1942 &&
                     ingredients.Items[i].Index != 1943 && ingredients.Items[i].Index != 1944)
                     Fillings.Add(ingredients.Items[i].Index);
             }
@@ -146,17 +146,17 @@ namespace SysBot.Pokemon
             // Grab condiments
             for (int i = 0; i < ingredients.Items.Length; i++) // Condiments
             {
-                if (ingredients.Items[i].Index < 1904 && ingredients.Items[i].Index != 0 && ingredients.Items[i].Count != 0)
+                if (ingredients.Items[i].Index < 1904 && ingredients.Items[i].Index != 0 && ingredients.Items[i].Count != 0 && ingredients.Items[i].Index != 1888)
                     Condiments.Add(ingredients.Items[i].Index);
             }
             for (int i = 0; i < ingredients.Items.Length; i++) // Add horseradish, curry powder, and wasabi
             {
-                if (ingredients.Items[i].Index >= 1942 && ingredients.Items[i].Index <= 1944 && ingredients.Items[i].Index != 0 && ingredients.Items[i].Count != 0)
+                if (ingredients.Items[i].Index >= 1942 && ingredients.Items[i].Index <= 1944 && ingredients.Items[i].Index != 0 && ingredients.Items[i].Count != 0 && ingredients.Items[i].Index != 1888)
                     Condiments.Add(ingredients.Items[i].Index);
             }
             for (int i = 0; i < ingredients.Items.Length; i++) // Add herbs last
             {
-                if (ingredients.Items[i].Index >= 1904 && ingredients.Items[i].Index <= 1908 && ingredients.Items[i].Index != 0 && ingredients.Items[i].Count != 0)
+                if (ingredients.Items[i].Index >= 1904 && ingredients.Items[i].Index <= 1908 && ingredients.Items[i].Index != 0 && ingredients.Items[i].Count != 0 && ingredients.Items[i].Index != 1888)
                     Condiments.Add(ingredients.Items[i].Index);
             }
 
@@ -483,6 +483,12 @@ namespace SysBot.Pokemon
             var token = CancellationToken.None;
             var url = string.Empty;
             Settings.AddCompletedScans();
+
+            if (pk.Scale is 0)
+                pk.SetRibbonIndex(RibbonIndex.MarkMini);
+            if (pk.Scale is 255)
+                pk.SetRibbonIndex(RibbonIndex.MarkJumbo);
+
             if (pk.IsShiny)
             {
                 Settings.AddShinyScans();
@@ -493,6 +499,7 @@ namespace SysBot.Pokemon
                 pk.TID16 = TrainerSav.TID16;
                 pk.SID16 = TrainerSav.SID16;
                 pk.OT_Name = TrainerSav.OT;
+                pk.OT_Gender = TrainerSav.Gender;
                 pk.Obedience_Level = (byte)pk.Met_Level;
                 pk.FatefulEncounter = false;
                 pk.Language = TrainerSav.Language;
@@ -558,15 +565,10 @@ namespace SysBot.Pokemon
                 }
             }
 
-            if (pk.Scale is 0)
-                pk.SetRibbonIndex(RibbonIndex.MarkMini);
-            if (pk.Scale is 255)
-                pk.SetRibbonIndex(RibbonIndex.MarkJumbo);
-
             StopConditionSettings.HasMark(pk, out RibbonIndex specialmark);
             if (Settings.SpecialMarksOnly && specialmark is >= RibbonIndex.MarkLunchtime and <= RibbonIndex.MarkMisty || Settings.SpecialMarksOnly && specialmark is RibbonIndex.MarkUncommon)
             {
-                if (pk.Scale != 0 && pk.Scale != 255 && Settings.SpecialMarksOnly)
+                if (pk.Scale > 0 && pk.Scale < 255)
                 {
                     Log($"Undesired {specialmark} found..");
                     url = TradeExtensions<PK9>.PokeImg(pk, false, false);

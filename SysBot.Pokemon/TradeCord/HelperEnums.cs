@@ -779,7 +779,6 @@
     public enum PicnicCondiments
     {
         None = 0,
-        Baguette = 1888,
         Mayonnaise = 1889,
         Ketchup = 1890,
         Mustard = 1891,

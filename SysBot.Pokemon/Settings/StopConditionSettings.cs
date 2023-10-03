@@ -158,6 +158,14 @@ namespace SysBot.Pokemon
                     return true;
                 }
             }
+            for (var mark = RibbonIndex.MarkJumbo; mark <= RibbonIndex.MarkMini; mark++)
+            {
+                if (pk.GetRibbon((int)mark))
+                {
+                    result = mark;
+                    return true;
+                }
+            }
             return false;
         }
 
