@@ -738,6 +738,7 @@
 
     public enum PicnicFillings
     {
+        None = 0,
         Lettuce = 1909,
         Tomato = 1910,
         CherryTomatoes = 1911,
@@ -777,6 +778,7 @@
 
     public enum PicnicCondiments
     {
+        None = 0,
         Baguette = 1888,
         Mayonnaise = 1889,
         Ketchup = 1890,
@@ -823,7 +825,8 @@
         Dragon = 15,
         Dark = 16,
         Fairy = 17,
-        Custom = 18,
+        Custom = 18,        
+        NoSandwich = 19,
     }
 
     public enum SandwichFlavor

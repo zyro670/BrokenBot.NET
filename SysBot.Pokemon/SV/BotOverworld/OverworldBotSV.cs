@@ -67,8 +67,11 @@ namespace SysBot.Pokemon
                     return;
                 }
 
-                bool valid = await VerifyIngredients(token).ConfigureAwait(false);
-                if (!valid) return;
+                if (Settings.PicnicFilters.TypeOfSandwich != SandwichSelection.NoSandwich)
+                {
+                    bool valid = await VerifyIngredients(token).ConfigureAwait(false);
+                    if (!valid) return;
+                }
                 await ScanOverworld(token).ConfigureAwait(false);
             }
             catch (Exception e)
@@ -111,7 +114,7 @@ namespace SysBot.Pokemon
             Settings.PicnicFilters.Item2 = (PicnicCondiments)itemsval.Item2;
             Settings.PicnicFilters.Item3 = (PicnicCondiments)itemsval.Item3;
             Settings.PicnicFilters.Item4 = (PicnicCondiments)itemsval.Item4;
-            Log($"Ingredients: {Settings.PicnicFilters.Item1}, {Settings.PicnicFilters.Item2}, & {Settings.PicnicFilters.Item3}.");
+            Log($"Ingredients needed for {Settings.PicnicFilters.TypeOfSandwich} {Settings.PicnicFilters.SandwichFlavor} Sandwich: {Settings.PicnicFilters.Item1}, {Settings.PicnicFilters.Item2}, {Settings.PicnicFilters.Item3}, & {Settings.PicnicFilters.Item4}.");
 
             // Grab fillings
             for (int i = 0; i < ingredients.Items.Length; i++) // Fillings
@@ -207,9 +210,12 @@ namespace SysBot.Pokemon
                 {
                     if (Condiments[f] == (int)Settings.PicnicFilters.Item4)
                     {
-                        DPADUp[3] = Condiments.Count - f < f;
+                        Sequence[3] = f;
+                        DPADUp[3] = Condiments.Count - f + Sequence[2] + Sequence[1] < f;
                         if (DPADUp[3] is true)
-                            Sequence[3] = (Condiments.Count - f) - Sequence[2];
+                            Sequence[3] = Condiments.Count - f - Sequence[2] - Sequence[1];
+                        else
+                            Sequence[3] += Sequence[2] + Sequence[1];
                         Settings.PicnicFilters.Item4DUP = DPADUp[3];
                         Log($"Clicks: {Sequence[3]}");
                         break;
@@ -1074,7 +1080,7 @@ namespace SysBot.Pokemon
                         switch (type)
                         {
                             case SandwichFlavor.Encounter: ingr1 = PicnicFillings.Basil; ingr2 = PicnicCondiments.SaltyHerbaMystica; ingr3 = PicnicCondiments.SweetHerbaMystica; Settings.PicnicFilters.AmountOfIngredientsToHold = 4; break;
-                            case SandwichFlavor.Humongo: ingr1 = PicnicFillings.Kiwi; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.CurryPowder; Settings.PicnicFilters.AmountOfIngredientsToHold = 3; break;
+                            case SandwichFlavor.Humongo: ingr1 = PicnicFillings.Kiwi; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.SpicyHerbaMystica; ingr4 = PicnicCondiments.CurryPowder; Settings.PicnicFilters.AmountOfIngredientsToHold = 3; break;
                             case SandwichFlavor.Teensy: ingr1 = PicnicFillings.RedBellPepper; ingr2 = PicnicCondiments.SourHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; Settings.PicnicFilters.AmountOfIngredientsToHold = 3; break;
                         }
                     }
@@ -1095,7 +1101,7 @@ namespace SysBot.Pokemon
                         switch (type)
                         {
                             case SandwichFlavor.Encounter: ingr1 = PicnicFillings.Lettuce; ingr2 = PicnicCondiments.SourHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; break;
-                            case SandwichFlavor.Humongo: ingr1 = PicnicFillings.Jalapeno; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.SourHerbaMystica; ingr4 = PicnicCondiments.ChiliSauce; break;
+                            case SandwichFlavor.Humongo: ingr1 = PicnicFillings.Lettuce; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.SpicyHerbaMystica; break;
                             case SandwichFlavor.Teensy: ingr1 = PicnicFillings.Lettuce; ingr2 = PicnicCondiments.SourHerbaMystica; ingr3 = PicnicCondiments.SourHerbaMystica; break;
                         }
                         Settings.PicnicFilters.AmountOfIngredientsToHold = 3;
@@ -1128,7 +1134,7 @@ namespace SysBot.Pokemon
                         {
                             case SandwichFlavor.Encounter: ingr1 = PicnicFillings.Noodles; ingr2 = PicnicCondiments.SaltyHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; break;
                             case SandwichFlavor.Humongo: ingr1 = PicnicFillings.Noodles; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.SpicyHerbaMystica; break;
-                            case SandwichFlavor.Teensy: ingr1 = PicnicFillings.Noodles; ingr2 = PicnicCondiments.SourHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; break;
+                            case SandwichFlavor.Teensy: ingr1 = PicnicFillings.Noodles; ingr2 = PicnicCondiments.SourHerbaMystica; ingr3 = PicnicCondiments.SourHerbaMystica; break;
                         }
                         Settings.PicnicFilters.AmountOfIngredientsToHold = 1;
                     }
@@ -1138,7 +1144,7 @@ namespace SysBot.Pokemon
                         switch (type)
                         {
                             case SandwichFlavor.Encounter: ingr1 = PicnicFillings.YellowBellPepper; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; break;
-                            case SandwichFlavor.Humongo: ingr1 = PicnicFillings.Watercress; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.Jam; break;
+                            case SandwichFlavor.Humongo: ingr1 = PicnicFillings.Watercress; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.SpicyHerbaMystica; ingr4 = PicnicCondiments.Jam; break;
                             case SandwichFlavor.Teensy: ingr1 = PicnicFillings.YellowBellPepper; ingr2 = PicnicCondiments.SourHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; break;
                         }
                         Settings.PicnicFilters.AmountOfIngredientsToHold = 3;
@@ -1181,7 +1187,7 @@ namespace SysBot.Pokemon
                         switch (type)
                         {
                             case SandwichFlavor.Encounter: ingr1 = PicnicFillings.KlawfStick; ingr2 = PicnicCondiments.SaltyHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; break;
-                            case SandwichFlavor.Humongo: ingr1 = PicnicFillings.Apple; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.Salt; ingr4 = PicnicCondiments.Pepper; break;
+                            case SandwichFlavor.Humongo: ingr1 = PicnicFillings.Apple; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; ingr4 = PicnicCondiments.Pepper; break;
                             case SandwichFlavor.Teensy: ingr1 = PicnicFillings.KlawfStick; ingr2 = PicnicCondiments.BitterHerbaMystica; ingr3 = PicnicCondiments.SourHerbaMystica; break;
                         }
                         Settings.PicnicFilters.AmountOfIngredientsToHold = 3;
@@ -1202,7 +1208,7 @@ namespace SysBot.Pokemon
                         switch (type)
                         {
                             case SandwichFlavor.Encounter: ingr1 = PicnicFillings.RedOnion; ingr2 = PicnicCondiments.SaltyHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; break;
-                            case SandwichFlavor.Humongo: ingr1 = PicnicFillings.RedOnion; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.Salt; break;
+                            case SandwichFlavor.Humongo: ingr1 = PicnicFillings.RedOnion; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.SpicyHerbaMystica; ingr4 = PicnicCondiments.Salt; break;
                             case SandwichFlavor.Teensy: ingr1 = PicnicFillings.RedOnion; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.SourHerbaMystica; break;
                         }
                         Settings.PicnicFilters.AmountOfIngredientsToHold = 3;
@@ -1224,7 +1230,7 @@ namespace SysBot.Pokemon
                         switch (type)
                         {
                             case SandwichFlavor.Encounter: ingr1 = PicnicFillings.Avocado; ingr2 = PicnicCondiments.SaltyHerbaMystica; ingr3 = PicnicCondiments.SaltyHerbaMystica; break;
-                            case SandwichFlavor.Humongo: ingr1 = PicnicFillings.Chorizo; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.Pepper; break;
+                            case SandwichFlavor.Humongo: ingr1 = PicnicFillings.Chorizo; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.SpicyHerbaMystica; ingr4 = PicnicCondiments.Pepper; break;
                             case SandwichFlavor.Teensy: ingr1 = PicnicFillings.Avocado; ingr2 = PicnicCondiments.SpicyHerbaMystica; ingr3 = PicnicCondiments.SourHerbaMystica; break;
                         }
                         Settings.PicnicFilters.AmountOfIngredientsToHold = 3;
@@ -1253,6 +1259,7 @@ namespace SysBot.Pokemon
                     }
                     break;
                 case SandwichSelection.Custom: ingr1 = Settings.PicnicFilters.Item1; ingr2 = Settings.PicnicFilters.Item2; ingr3 = Settings.PicnicFilters.Item3; ingr4 = Settings.PicnicFilters.Item4; break;
+                case SandwichSelection.NoSandwich: break;
             }
             return ((int)ingr1, (int)ingr2, (int)ingr3, (int)ingr4);
         }
