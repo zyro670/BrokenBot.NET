@@ -513,11 +513,6 @@ namespace SysBot.Pokemon
                     int location = enc.Location;
                     pk.Met_Location = location;
                 }
-                var balls = TradeExtensions<PK9>.GetLegalBalls(ShowdownParsing.GetShowdownText(pk)).ToList();
-                Random rng = new();
-                var ballrng = (ushort)rng.Next(balls.Count);
-                pk.Ball = ballrng;
-
                 DumpPokemon(DumpSetting.DumpFolder, "overworld", pk);
             }
 
