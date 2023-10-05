@@ -32,6 +32,8 @@ namespace SysBot.Pokemon
             Settings = hub.Config.RotatingRaidSV;
         }
 
+        private int RaidsAtStart;
+        private List<uint> checkingSeeds = new();
         private int RaidCount;
         private int WinCount;
         private int LossCount;
@@ -227,7 +229,7 @@ namespace SysBot.Pokemon
                 {
                     Log($"Preparing parameter for {Settings.RaidEmbedParameters[RotationCount].Species}");
                     bool verified = await ReadRaids(token).ConfigureAwait(false);
-                    if (!verified)
+                    if (!verified && Settings.SetDenIndexMethod == IndexSetting.PreInjected)
                         return;
                 }
                 else
@@ -253,6 +255,9 @@ namespace SysBot.Pokemon
                     dayRoll++;
                     continue;
                 }
+
+                // Get initial raid counts for comparison later.
+                await CountRaids(null, true, token).ConfigureAwait(false);
 
                 if (Hub.Config.Stream.CreateAssets)
                     await GetRaidSprite(token).ConfigureAwait(false);
@@ -404,48 +409,13 @@ namespace SysBot.Pokemon
                 await Click(B, 0_500, token).ConfigureAwait(false);
                 await Click(B, 0_500, token).ConfigureAwait(false);
                 await Click(DDOWN, 0_500, token).ConfigureAwait(false);
-
-                if (!await IsConnectedToLobby(token).ConfigureAwait(false) && await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
-                {
-                    Log("We lost the raid...");
-                    LossCount++;
-                    LostRaid++;
-                }
-
-                if (!await IsConnectedToLobby(token).ConfigureAwait(false) && !await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
-                {
-                    Settings.AddCompletedRaids();
-                    Log("We defeated the raid boss!");
-                    WinCount++;
-                    if (trainers.Count > 0 && Settings.CatchLimit != 0)
-                        ApplyPenalty(trainers);
-
-                    if (Settings.RaidEmbedParameters.Count > 1)
-                    {
-                        Log($"Replacing seed at location {SeedIndexToReplace}.");
-                        await SanitizeRotationCount(token).ConfigureAwait(false);
-                    }
-                    await EnqueueEmbed(null, "", false, false, true, false, token).ConfigureAwait(false);
-                    ready = true;
-                }
-
-                if (Settings.LobbyOptions.LobbyMethodOptions == LobbyMethodOptions.SkipRaid)
-                {
-                    Log($"Lost/Empty Lobbies: {LostRaid}/{Settings.LobbyOptions.SkipRaidLimit}");
-
-                    if (LostRaid >= Settings.LobbyOptions.SkipRaidLimit)
-                    {
-                        Log($"We had {Settings.LobbyOptions.SkipRaidLimit} lost/empty raids.. Moving on!");
-                        await SanitizeRotationCount(token).ConfigureAwait(false);
-                        await EnqueueEmbed(null, "", false, false, true, false, token).ConfigureAwait(false);
-                        ready = true;
-                    }
-                }
             }
 
             Log("Returning to overworld...");
             while (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
                 await Click(A, 1_000, token).ConfigureAwait(false);
+
+            ready = await CountRaids(lobbyTrainersFinal, false, token).ConfigureAwait(false);
 
             await CloseGame(Hub.Config, token).ConfigureAwait(false);
             if (ready)
@@ -1340,15 +1310,162 @@ namespace SysBot.Pokemon
                                 }
                             }
                         }
-                        SeedIndexToReplace = i;
-                        Log($"Storing index at location {i}");
+                        if (Settings.SetDenIndexMethod == IndexSetting.PreInjected)
+                        {
+                            SeedIndexToReplace = i;
+                            Log($"Storing index at location {i}");
+                        }
                         done = true;
                         return true;
                     }
                 }
             }
-            Log("Seed not found, make sure your input is active in game.");
+            if (Settings.SetDenIndexMethod == IndexSetting.PreInjected)
+                Log("Seed not found, make sure your input is active in game.");
+
             return false;
+        }
+
+        private async Task<bool> CountRaids(List<(ulong, TradeMyStatus)>? trainers, bool preList, CancellationToken token)
+        {
+            Log("Checking Seeds");
+            if (RaidBlockPointerP == 0)
+                RaidBlockPointerP = await SwitchConnection.PointerAll(Offsets.RaidBlockPointerP, token).ConfigureAwait(false);
+
+            if (RaidBlockPointerK == 0)
+                RaidBlockPointerK = await SwitchConnection.PointerAll(Offsets.RaidBlockPointerK, token).ConfigureAwait(false);
+
+            string id = await SwitchConnection.GetTitleID(token).ConfigureAwait(false);
+            var game = id switch
+            {
+                RaidCrawler.Core.Structures.Offsets.ScarletID => "Scarlet",
+                RaidCrawler.Core.Structures.Offsets.VioletID => "Violet",
+                _ => "",
+            };
+            container = new(game);
+            container.SetGame(game);
+
+            var BaseBlockKeyPointer = await SwitchConnection.PointerAll(Offsets.BlockKeyPointer, token).ConfigureAwait(false);
+
+            StoryProgress = await GetStoryProgress(BaseBlockKeyPointer, token).ConfigureAwait(false);
+            EventProgress = Math.Min(StoryProgress, 3);
+
+            await ReadEventRaids(BaseBlockKeyPointer, container, token).ConfigureAwait(false);
+
+            var data = await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerP + RaidBlock.HEADER_SIZE, (int)(RaidBlock.SIZE_BASE - RaidBlock.HEADER_SIZE), token).ConfigureAwait(false);
+
+            (int delivery, int enc) = container.ReadAllRaids(data, StoryProgress, EventProgress, 0, RaidSerializationFormat.BaseROM);
+            if (enc > 0)
+                Log($"Failed to find encounters for {enc} raid(s).");
+
+            if (delivery > 0)
+                Log($"Invalid delivery group ID for {delivery} raid(s). Try deleting the \"cache\" folder.");
+
+            var raids = container.Raids;
+            var encounters = container.Encounters;
+            var rewards = container.Rewards;
+
+            data = await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerK, 0xC80, token).ConfigureAwait(false);
+
+            (delivery, enc) = container.ReadAllRaids(data, StoryProgress, EventProgress, 0, RaidSerializationFormat.KitakamiROM);
+
+            if (enc > 0)
+                Log($"Failed to find encounters for {enc} raid(s).");
+
+            if (delivery > 0)
+                Log($"Invalid delivery group ID for {delivery} raid(s). Try deleting the \"cache\" folder.");
+
+            var allRaids = raids.Concat(container.Raids).ToList().AsReadOnly();
+            var allEncounters = encounters.Concat(container.Encounters).ToList().AsReadOnly();
+            var allRewards = rewards.Concat(container.Rewards).ToList().AsReadOnly();
+
+            raids = allRaids;
+
+            container.SetRaids(allRaids);
+            container.SetEncounters(allEncounters);
+            container.SetRewards(allRewards);
+
+            bool done = false;
+            if (Settings.SetDenIndexMethod == IndexSetting.DefeatedDen)
+            {
+                if (preList)
+                {
+                    checkingSeeds = new List<uint>();
+                    for (int i = 0; i < raids.Count; i++)
+                    {
+                        if (done is true)
+                            continue;
+
+                        var (pk, seed) = IsSeedReturned(container.Encounters[i], container.Raids[i]);
+                        checkingSeeds.Add(seed);
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < raids.Count; i++)
+                    {
+                        if (done is true)
+                            continue;
+
+                        var (pk, seed) = IsSeedReturned(container.Encounters[i], container.Raids[i]);
+
+                        // Compare the seed with the corresponding seed from checkingSeeds
+                        if (checkingSeeds.Count > i && seed != checkingSeeds[i])
+                        {
+                            Log($"Storing index at location {i}");
+                            SeedIndexToReplace = i;
+                            done = true;
+                        }
+                    }
+                }
+            }
+
+            if (RaidCount == 0)
+            {
+                RaidsAtStart = raids.Count;
+                if (Settings.KeepDaySeed)
+                    await OverrideTodaySeed(token).ConfigureAwait(false);
+                return true;
+            }
+
+
+
+            if (trainers is not null)
+            {
+                Settings.AddCompletedRaids();
+                if (RaidsAtStart > raids.Count)
+                {
+                    Log("We defeated the raid boss!");
+                    WinCount++;
+                    if (trainers.Count > 0 && Settings.CatchLimit != 0 || TodaySeed != BitConverter.ToUInt64(data.Slice(0, 8)) && RaidsAtStart == raids.Count && Settings.CatchLimit != 0)
+                        ApplyPenalty(trainers);
+
+                    if (Settings.RaidEmbedParameters.Count > 1)
+                    {
+                        await SanitizeRotationCount(token).ConfigureAwait(false);
+                    }
+                    await EnqueueEmbed(null, "", false, false, true, false, token).ConfigureAwait(false);
+                    return true;
+                }
+
+                if (Settings.LobbyOptions.LobbyMethodOptions == LobbyMethodOptions.SkipRaid && RaidCount > 0)
+                {
+                    Log($"Lost/Empty Lobbies: {LostRaid}/{Settings.LobbyOptions.SkipRaidLimit}");
+
+                    if (LostRaid >= Settings.LobbyOptions.SkipRaidLimit)
+                    {
+                        Log($"We had {Settings.LobbyOptions.SkipRaidLimit} lost/empty raids.. Moving on!");
+                        await SanitizeRotationCount(token).ConfigureAwait(false);
+                        await EnqueueEmbed(null, "", false, false, true, false, token).ConfigureAwait(false);
+                        return true;
+                    }
+                }
+
+                Log("We lost the raid...");
+                LossCount++;
+                LostRaid++;
+
+                return false;
         }
         #endregion
     }

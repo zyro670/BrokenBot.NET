@@ -32,6 +32,9 @@ namespace SysBot.Pokemon
         [Category(Hosting), Description("Raid embed parameters.")]
         public List<RotatingRaidParameters> RaidEmbedParameters { get; set; } = new();
 
+        [Category(Hosting), Description("Choose how you want to set your index.")]
+        public IndexSetting SetDenIndexMethod { get; set; } = IndexSetting.DefeatedDen;
+
         [Category(Hosting), Description("Enter the total number of raids to host before the bot automatically stops. Default is 0 to ignore this setting.")]
         public int TotalRaidsToHost { get; set; } = 0;
 
@@ -166,5 +169,5 @@ namespace SysBot.Pokemon
 
             public override bool CanConvertTo(ITypeDescriptorContext? context, Type? destinationType) => destinationType != typeof(string) && base.CanConvertTo(context, destinationType);
         }
-    }    
+    }
 }
