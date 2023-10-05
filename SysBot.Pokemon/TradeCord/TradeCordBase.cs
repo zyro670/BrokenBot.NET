@@ -776,10 +776,7 @@ namespace SysBot.Pokemon
             if (result != "Regenerated")
                 return false;
 
-            var table = EvolutionTree.GetEvolutionTree(pkm.Context);
-            var preEvolutions = table.Reverse.GetPreEvolutions(pkm.Species, pkm.Form).Where(x => x.Form == pkm.Form).Select(x => new EvoCriteria { Species = x.Species, Form = x.Form }).ToArray();
-            var evos = table.Forward.GetEvolutions(pkm.Species, pkm.Form);
-
+            var preEvolutions = EncounterOrigin.GetOriginChain(pkm, 9);
             var encs = EncounterGenerator.GetGenerator(Game).GetPossible(pkm, preEvolutions, Game, EncounterTypeGroup.Egg).ToArray();
             if (encs.Length is 0 || !Breeding.CanHatchAsEgg(species) || !Breeding.CanHatchAsEgg(species, form, pkm.Context))
                 return false;
@@ -1374,12 +1371,12 @@ namespace SysBot.Pokemon
                         continue;
 
                     var evoTree = EvolutionTree.GetEvolutionTree(blank.Context);
-                    var preEvos = evoTree.Reverse.GetPreEvolutions(i, f).Where(x => x.Form == f).Select(x => new EvoCriteria { Species = x.Species, Form = x.Form }).ToList();
+                    var preEvos = EncounterOrigin.GetOriginChain(blank, 9);
                     var evos = evoTree.Forward.GetEvolutions(blank.Species, blank.Form);
 
-                    if (preEvos.Count >= 2 && evos.Count() is 0)
+                    if (preEvos.Length >= 2 && evos.Count() is 0)
                     {
-                        for (int c = 0; c < preEvos.Count; c++)
+                        for (int c = 0; c < preEvos.Length; c++)
                         {
                             var evoType = preEvos[c].Method;
                             TCItems item = TCItems.None;

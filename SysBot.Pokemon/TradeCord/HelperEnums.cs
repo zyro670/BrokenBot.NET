@@ -783,7 +783,7 @@
         Ketchup = 1890,
         Mustard = 1891,
         Butter = 1892,
-        PeanuteButter = 1893,
+        PeanutButter = 1893,
         ChiliSauce = 1894,
         Salt = 1895,
         Pepper = 1896,

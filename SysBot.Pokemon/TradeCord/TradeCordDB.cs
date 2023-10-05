@@ -712,13 +712,12 @@ namespace SysBot.Pokemon
 
         private bool SameEvoTree(PKM pkm1, PKM pkm2)
         {
-            var tree = EvolutionTree.GetEvolutionTree(pkm1.Context);
-            var evos = tree.Reverse.GetPreEvolutions(pkm1.Species, pkm1.Form).Select(e => new EvoCriteria { Species = e.Species, Form = e.Form }).ToArray();
+            var evos = EncounterOrigin.GetOriginChain(pkm1, 8);
+            //var evos = tree.Reverse.GetPreEvolutions(pkm1.Species, pkm1.Form).Select(e => new EvoCriteria { Species = e.Species, Form = e.Form }).ToArray();
             var encs = EncounterGenerator.GetGenerator(Game).GetPossible(pkm1, evos, Game, EncounterTypeGroup.Egg).ToArray();
             var base1 = encs.Length > 0 ? encs[^1].Species : -1;
 
-            tree = EvolutionTree.GetEvolutionTree(pkm2.Context);
-            evos = tree.Reverse.GetPreEvolutions(pkm2.Species, pkm2.Form).Select(e => new EvoCriteria { Species = e.Species, Form = e.Form }).ToArray();
+            evos = EncounterOrigin.GetOriginChain(pkm2, 8);
             encs = EncounterGenerator.GetGenerator(Game).GetPossible(pkm2, evos, Game, EncounterTypeGroup.Egg).ToArray();
             var base2 = encs.Length > 0 ? encs[^1].Species : -2;
 

@@ -185,8 +185,7 @@ namespace SysBot.Pokemon
         public enum Selection
         {
             MakeASandwich = 0,
-            NoSandwich = 1,
-            StopAt30Min = 2,
+            StopAt30Min = 1,
         }
     }
 }
