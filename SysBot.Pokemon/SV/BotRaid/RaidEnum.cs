@@ -29,6 +29,12 @@ namespace SysBot.Pokemon
         TurboA,
     }
 
+    public enum IndexSetting
+    {
+        DefeatedDen,
+        PreInjected,
+    }
+
     public class BanList
     {
         public bool enabled { get; set; }
