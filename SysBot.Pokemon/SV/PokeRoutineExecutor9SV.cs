@@ -474,6 +474,7 @@ namespace SysBot.Pokemon
             var delivery_lottery_rewards = await ReadBlockDefault(BaseBlockKeyPointer, RaidCrawler.Core.Structures.Offsets.BCATRaidLotteryRewardLocation, "lottery_reward_item_array", force, token).ConfigureAwait(false);
 
             container.DistTeraRaids = TeraDistribution.GetAllEncounters(delivery_raid_fbs);
+            container.MightTeraRaids = TeraMight.GetAllEncounters(delivery_raid_fbs);
             container.DeliveryRaidPriority = group_id;
             container.DeliveryRaidFixedRewards = FlatbufferDumper.DumpFixedRewards(delivery_fixed_rewards);
             container.DeliveryRaidLotteryRewards = FlatbufferDumper.DumpLotteryRewards(delivery_lottery_rewards);

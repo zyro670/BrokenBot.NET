@@ -12,7 +12,6 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using RaidCrawler.Core.Structures;
-using pkNX.Structures.FlatBuffers.Gen9;
 using System.Net.Http;
 using Newtonsoft.Json;
 using static SysBot.Base.SwitchButton;
@@ -367,7 +366,7 @@ namespace SysBot.Pokemon
                 if (!await IsConnectedToLobby(token).ConfigureAwait(false) && !await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
                 {
                     Settings.AddCompletedRaids();
-                    Log("We defeated the raid boss!");
+                    Log($"We defeated {Settings.RaidEmbedFilters.Species}!");
                     WinCount++;
                     if (trainers.Count > 0 && Settings.CatchLimit != 0)
                         ApplyPenalty(trainers);
@@ -950,7 +949,7 @@ namespace SysBot.Pokemon
 
             var data = await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerP + RaidBlock.HEADER_SIZE, (int)(RaidBlock.SIZE_BASE - RaidBlock.HEADER_SIZE), token).ConfigureAwait(false);
 
-            (int delivery, int enc) = container.ReadAllRaids(data, StoryProgress, EventProgress, 0, RaidSerializationFormat.BaseROM);
+            (int delivery, int enc) = container.ReadAllRaids(data, StoryProgress, EventProgress, 0, TeraRaidMapParent.Paldea);
             if (enc > 0)
                 Log($"Failed to find encounters for {enc} raid(s).");
 
@@ -963,7 +962,7 @@ namespace SysBot.Pokemon
 
             data = await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerK, 0xC80, token).ConfigureAwait(false);
 
-            (delivery, enc) = container.ReadAllRaids(data, StoryProgress, EventProgress, 0, RaidSerializationFormat.KitakamiROM);
+            (delivery, enc) = container.ReadAllRaids(data, StoryProgress, EventProgress, 0, TeraRaidMapParent.Kitakami);
 
             if (enc > 0)
                 Log($"Failed to find encounters for {enc} raid(s).");
@@ -983,7 +982,7 @@ namespace SysBot.Pokemon
             for (int i = 0; i < container.Raids.Count; i++)
             {
                 if (done is true)
-                    continue;
+                    break;
 
                 var (pk, seed) = IsSeedReturned(container.Encounters[i], container.Raids[i]);
                 var set = uint.Parse(Settings.RaidEmbedFilters.Seed, NumberStyles.AllowHexSpecifier);
@@ -994,7 +993,7 @@ namespace SysBot.Pokemon
                         res = string.Empty;
                     else
                         res = "**Special Rewards:**\n" + res;
-                    Log($"Seed {seed:X8} found for {(Species)pk.Species}");
+                    Log($"Seed {seed:X8} found for {(Species)container.Encounters[i].Species}");
                     Settings.RaidEmbedFilters.Seed = $"{seed:X8}";
                     var stars = container.Raids[i].IsEvent ? container.Encounters[i].Stars : RaidExtensions.GetStarCount(container.Raids[i], container.Raids[i].Difficulty, StoryProgress, container.Raids[i].IsBlack);
                     string starcount = string.Empty;
@@ -1010,8 +1009,8 @@ namespace SysBot.Pokemon
                     }
                     Settings.RaidEmbedFilters.IsShiny = container.Raids[i].IsShiny;
                     Settings.RaidEmbedFilters.CrystalType = container.Raids[i].IsBlack ? TeraCrystalType.Black : container.Raids[i].IsEvent && stars == 7 ? TeraCrystalType.Might : container.Raids[i].IsEvent ? TeraCrystalType.Distribution : TeraCrystalType.Base;
-                    Settings.RaidEmbedFilters.Species = (Species)pk.Species;
-                    Settings.RaidEmbedFilters.SpeciesForm = pk.Form;
+                    Settings.RaidEmbedFilters.Species = (Species)container.Encounters[i].Species;
+                    Settings.RaidEmbedFilters.SpeciesForm = container.Encounters[i].Form;
                     var catchlimit = Settings.CatchLimit;
                     string cl = catchlimit is 0 ? "\n**No catch limit!**" : $"\n**Catch Limit: {catchlimit}**";
                     var pkinfo = Hub.Config.StopConditions.GetRaidPrintName(pk);

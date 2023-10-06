@@ -11,7 +11,7 @@ namespace SysBot.Pokemon.Twitch
 {
     public static class TwitchCommandsHelper<T> where T : PKM, new()
     {
-        private static RotatingRaidBotSV? rotatingRaid;
+        private static readonly RotatingRaidBotSV? rotatingRaid;
         // Helper functions for commands
         public static bool AddToWaitingList(string setstring, string display, string username, ulong mUserId, bool sub, out string msg)
         {

@@ -34,7 +34,7 @@ namespace SysBot.Pokemon
         private int sandwichcount = 0;
         private PK9 prevShiny = new();
         private static readonly PK9 Blank = new();
-        private readonly byte[] BlankVal = { 0x01 };        
+        private readonly byte[] BlankVal = { 0x01 };
         private byte[]? TextVal = Array.Empty<byte>();
         private ulong BoxStartOffset;
         private ulong OverworldOffset;
@@ -78,6 +78,11 @@ namespace SysBot.Pokemon
         /// </summary>
         private async Task InnerLoop(CancellationToken token)
         {
+            if (Settings.StopConditions.Count < 1)
+            {
+                Log("EggBotSV StopConditions criteria is empty. Please add items to the collection and try again.");
+                return;
+            }
 
             await SetCurrentBox(0, token).ConfigureAwait(false);
             await SwitchConnection.WriteBytesMainAsync(BlankVal, Offsets.LoadedIntoDesiredState, token).ConfigureAwait(false);
@@ -138,7 +143,7 @@ namespace SysBot.Pokemon
 
                     await Click(Y, 1_500, token).ConfigureAwait(false); // Attempt to leave the picnic again, in case you were stuck interacting with a pokemon
                     await Click(A, 1_000, token).ConfigureAwait(false); // Overworld seems to trigger true when you leave the Pokemon washing mode, so we have to try to exit picnic immediately
-                    
+
                     for (int i = 0; i < 4; i++)
                         await Click(B, 0_500, token).ConfigureAwait(false); // Click a few times to attempt to escape any menu
                 }
@@ -173,7 +178,7 @@ namespace SysBot.Pokemon
                 var wait = TimeSpan.FromMinutes(30);
                 var endTime = DateTime.Now + wait;
                 var ctr = 0;
-                var waiting = 0;                
+                var waiting = 0;
                 while (DateTime.Now < endTime)
                 {
                     var pk = await ReadPokemonSV(Offsets.EggData, 344, token).ConfigureAwait(false);
@@ -205,7 +210,7 @@ namespace SysBot.Pokemon
                     }
 
                     while (pk != null && (Species)pk.Species != Species.None && pkprev.EncryptionConstant != pk.EncryptionConstant)
-                    {                        
+                    {
                         waiting = 0;
                         eggcount++;
                         var print = $"Encounter: {eggcount}{Environment.NewLine}{Hub.Config.StopConditions.GetSpecialPrintName(pk)}{Environment.NewLine}Ball: {(Ball)pk.Ball}";
@@ -269,7 +274,7 @@ namespace SysBot.Pokemon
         }
 
         private async Task RecoveryReset(CancellationToken token)
-        {        
+        {
             await ReOpenGame(Hub.Config, token).ConfigureAwait(false);
             await InitializeSessionOffsets(token).ConfigureAwait(false);
             await Task.Delay(1_000, token).ConfigureAwait(false);
@@ -329,7 +334,7 @@ namespace SysBot.Pokemon
                 }
                 return true;
             }
-            
+
             // no need to take a video clip of us receiving an egg.
             var mode = Settings.ContinueAfterMatch;
             var msg = $"Result found!\n{print}\n" + mode switch
@@ -375,7 +380,7 @@ namespace SysBot.Pokemon
             EchoUtil.EchoEmbed(ping, print, url, "", true);
 
             if (mode == ContinueAfterMatch.PauseWaitAcknowledge)
-            {                
+            {
                 Log("Claim your egg before closing the picnic! Alternatively you can manually run to collect all present eggs, go back to the HOME screen, type $toss, and let it continue scanning from there.");
                 await Click(HOME, 0_700, token).ConfigureAwait(false);
 
@@ -544,7 +549,7 @@ namespace SysBot.Pokemon
             pk.SetMarking(3, 0);
             pk.SetMarking(4, 0);
             pk.SetMarking(5, 0);
-            pk.ClearInvalidMoves();            
+            pk.ClearInvalidMoves();
 
             DumpPokemon(DumpSetting.DumpFolder, "forced-eggs", pk);
         }

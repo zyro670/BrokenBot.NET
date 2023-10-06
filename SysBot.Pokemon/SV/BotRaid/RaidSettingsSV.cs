@@ -18,7 +18,7 @@ namespace SysBot.Pokemon
         public string BanListURL { get; set; } = "https://raw.githubusercontent.com/PokemonAutomation/ServerConfigs-PA-SHA/main/PokemonScarletViolet/TeraAutoHost-BanList.json";
 
         [Category(FeatureToggle), Description("URL to Pokémon Automation's Tera Global Ban List json (or one matching the required structure).")]
-        public string GlobalBanListURL { get; set; } = "";
+        public string GlobalBanListURL { get; set; } = "https://raw.githubusercontent.com/zyro670/NIDGlobalBanList/main/banlist.json";
 
         [Category(Hosting), Description("Amount of raids before updating the ban list. If you want the global ban list off, set this to -1.")]
         public int RaidsBetweenUpdate { get; set; } = 3;

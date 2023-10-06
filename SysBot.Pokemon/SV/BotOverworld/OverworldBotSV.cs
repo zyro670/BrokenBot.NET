@@ -63,7 +63,7 @@ namespace SysBot.Pokemon
                 await InitializeSessionOffsets(token).ConfigureAwait(false);
                 if (Settings.RolloverFilters.ConfigureRolloverCorrection)
                 {
-                    await RolloverCorrectionSV(token, false).ConfigureAwait(false);
+                    await RolloverCorrectionSV(false, token).ConfigureAwait(false);
                     return;
                 }
 
@@ -241,7 +241,7 @@ namespace SysBot.Pokemon
             await CloseGame(Hub.Config, token).ConfigureAwait(false);
             await Task.Delay(1_500, token).ConfigureAwait(false);
             if (opensettings)
-                await RolloverCorrectionSV(token, time).ConfigureAwait(false);
+                await RolloverCorrectionSV(time, token).ConfigureAwait(false);
             await Task.Delay(1_700, token).ConfigureAwait(false);
             await StartGame(Hub.Config, token).ConfigureAwait(false);
             await InitializeSessionOffsets(token).ConfigureAwait(false);
@@ -397,6 +397,10 @@ namespace SysBot.Pokemon
                         if ((Species)pk.Species == Species.None)
                             break;
                         scanCount++;
+                        if (pk.Scale is 0)
+                            pk.SetRibbonIndex(RibbonIndex.MarkMini);
+                        if (pk.Scale is 255)
+                            pk.SetRibbonIndex(RibbonIndex.MarkJumbo);
                         var result = $"\nEncounter: {scanCount}{Environment.NewLine}{Hub.Config.StopConditions.GetSpecialPrintName(pk)}";
                         TradeExtensions<PK9>.EncounterLogs(pk, "EncounterLogPretty_OverworldSV.txt");
                         TradeExtensions<PK9>.EncounterScaleLogs(pk, "EncounterLogScalePretty.txt");
@@ -484,11 +488,6 @@ namespace SysBot.Pokemon
             var url = string.Empty;
             Settings.AddCompletedScans();
 
-            if (pk.Scale is 0)
-                pk.SetRibbonIndex(RibbonIndex.MarkMini);
-            if (pk.Scale is 255)
-                pk.SetRibbonIndex(RibbonIndex.MarkJumbo);
-
             if (pk.IsShiny)
             {
                 Settings.AddShinyScans();
@@ -517,20 +516,10 @@ namespace SysBot.Pokemon
             }
 
             bool hasMark = StopConditionSettings.HasMark(pk, out RibbonIndex mark);
-            string markmsg = hasMark ? $"{mark.ToString().Replace("Mark", "")}mark" : "";
+            string markmsg = hasMark ? $"{mark.ToString().Replace("Mark", "")}" : "";
             string markurl = string.Empty;
             if (hasMark)
-            {
-                markurl = $"https://www.serebii.net/swordshield/ribbons/" + $"{markmsg.ToLower()}" + ".png";
-                if (mark == RibbonIndex.MarkPumpedUp)
-                    markurl = $"https://www.serebii.net/swordshield/ribbons/pumped-upmark.png";
-                if (mark == RibbonIndex.MarkAbsentMinded)
-                    markurl = $"https://www.serebii.net/swordshield/ribbons/absent-mindedmark.png";
-                if (mark == RibbonIndex.MarkSleepyTime)
-                    markurl = $"https://www.serebii.net/swordshield/ribbons/sleepy-timemark.png";
-                if (mark == RibbonIndex.MarkZonedOut)
-                    markurl = $"https://www.serebii.net/swordshield/ribbons/zoned-outmark.png";
-            }
+                markurl = $"https://raw.githubusercontent.com/kwsch/PKHeX/master/PKHeX.Drawing.Misc/Resources/img/ribbons/ribbonmark{markmsg.ToLower()}.png";
 
             if (!StopConditionSettings.EncounterFound(pk, DesiredMinIVs, DesiredMaxIVs, Hub.Config.StopConditions, UnwantedMarks))
             {
@@ -978,11 +967,10 @@ namespace SysBot.Pokemon
             await Task.Delay(0_250, token).ConfigureAwait(false);
             await SetStick(LEFT, 0, 32323, yup, token).ConfigureAwait(false); // ↑
             await SetStick(LEFT, 0, 0, 0_500, token).ConfigureAwait(false);
-            await Task.Delay(0_250, token).ConfigureAwait(false);
-            await Click(X, 2_500, token).ConfigureAwait(false);
+            await Task.Delay(2_000, token).ConfigureAwait(false);
         }
 
-        private async Task RolloverCorrectionSV(CancellationToken token, bool time)
+        private async Task RolloverCorrectionSV(bool time, CancellationToken token)
         {
             Log("Applying rollover correction.");
             var scrollroll = Settings.RolloverFilters.DateTimeFormat switch
