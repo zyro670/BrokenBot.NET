@@ -1369,6 +1369,7 @@ namespace SysBot.Pokemon
                                 }
                             }
                         }
+                        SeedIndexToReplace = i;
                         done = true;
                     }
                 }
