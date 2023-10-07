@@ -599,5 +599,24 @@ namespace SysBot.Pokemon
 
             return raidDescription;
         }
+
+        //Kuro's Additions
+        public async Task RollExitGame(PokeTradeHubConfig config, CancellationToken token)
+        {
+            var timing = config.Timings;
+            // Close out of the game
+            await Click(B, 0_500, token).ConfigureAwait(false);
+            await Click(HOME, 2_000 + timing.ExtraTimeReturnHome, token).ConfigureAwait(false);
+            Log("Closed out of the game!");
+        }
+
+        public async Task RollStartGame(PokeTradeHubConfig config, CancellationToken token)
+        {
+            var timing = config.Timings;
+            // Open game.
+            await Click(A, 1_000 + timing.ExtraTimeLoadProfile, token).ConfigureAwait(false);
+            Log("Back in the overworld!");
+        }
+        //End of additions
     }
 }

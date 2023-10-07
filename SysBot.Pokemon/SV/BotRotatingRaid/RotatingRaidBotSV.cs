@@ -236,10 +236,50 @@ namespace SysBot.Pokemon
                 var currentSeed = BitConverter.ToUInt64(await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerP, 8, token).ConfigureAwait(false), 0);
                 if (TodaySeed != currentSeed)
                 {
-                    var msg = $"Current Today Seed {currentSeed:X8} does not match Starting Today Seed: {TodaySeed:X8} after rolling back 1 day. ";
+                    var msg = $"Current Today Seed {currentSeed:X8} does not match Starting Today Seed: {TodaySeed:X8}.\n ";
                     if (dayRoll != 0)
                     {
-                        Log(msg + "Stopping routine for lost raid.");
+                        Log(msg + "Raid Lost initiating recovery sequence.");
+                        bool denFound = false;
+                        while (!denFound)
+                        {
+                            if (!await PrepareForDayroll(token).ConfigureAwait(false))
+                            {
+                                Log("Failed to save for dayroll.");
+                                await ReOpenGame(Hub.Config, token).ConfigureAwait(false);
+                                continue;
+                            }
+                            await RollExitGame(Hub.Config, token).ConfigureAwait(false);
+                            await RolloverPushSV(token).ConfigureAwait(false);
+                            await RollStartGame(Hub.Config, token).ConfigureAwait(false);
+                            await SaveGame(Hub.Config, token);
+
+                            TodaySeed = BitConverter.ToUInt64(await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerP, 8, token).ConfigureAwait(false), 0);
+
+                            // Connect online and enter den.
+                            if (!await CheckForRaid(token).ConfigureAwait(false))
+                                continue;
+
+                            // Wait until we're in lobby.
+                            if (!await CheckForLobby(token).ConfigureAwait(false))
+                            {
+                                continue;
+                            }
+                            else
+                            {
+                                Log("Den Found, continuing routine!");
+                                denFound = true;
+                                await Click(B, 1_000, token).ConfigureAwait(false);
+                                await Task.Delay(2_000, token).ConfigureAwait(false);
+                                await Click(A, 1_000, token).ConfigureAwait(false);
+                                await Task.Delay(5_000, token).ConfigureAwait(false);
+                                await Click(B, 1_000, token).ConfigureAwait(false);
+                                await Click(B, 1_000, token).ConfigureAwait(false);
+                            }
+                        };
+                        if (denFound)
+                            continue;
+
                         return;
                     }
                     Log(msg);
@@ -1183,6 +1223,81 @@ namespace SysBot.Pokemon
 
             await Hub.Config.Stream.StartRaid(this, pk, pknext, RotationCount, Hub, 1, token).ConfigureAwait(false);
         }
+
+        //Kuro's Additions
+        // From PokeTradeBotSV, modified.
+        private async Task<bool> SaveGame(PokeTradeHubConfig config, CancellationToken token)
+        {
+
+            await Click(X, 3_000, token).ConfigureAwait(false);
+            await Click(R, 3_000 + config.Timings.ExtraTimeConnectOnline, token).ConfigureAwait(false);
+            await Click(A, 3_000, token).ConfigureAwait(false);
+            await Click(A, 1_000, token).ConfigureAwait(false);
+            await Click(B, 1_000, token).ConfigureAwait(false);
+            return true;
+        }
+
+        private async Task RolloverPushSV(CancellationToken token)
+        {
+            var scrollroll = Settings.DateTimeFormat switch
+            {
+                DTFormat.DDMMYY => 0,
+                DTFormat.YYMMDD => 2,
+                _ => 1,
+            };
+
+            for (int i = 0; i < 2; i++)
+                await Click(B, 0_150, token).ConfigureAwait(false);
+
+            for (int i = 0; i < 2; i++)
+                await Click(DRIGHT, 0_150, token).ConfigureAwait(false);
+            await Click(DDOWN, 0_150, token).ConfigureAwait(false);
+            await Click(DRIGHT, 0_150, token).ConfigureAwait(false);
+            await Click(A, 1_250, token).ConfigureAwait(false); // Enter settings
+
+            await PressAndHold(DDOWN, 2_000, 0_250, token).ConfigureAwait(false); // Scroll to system settings
+            await Click(A, 1_250, token).ConfigureAwait(false);
+
+            if (Settings.UseOvershoot)
+            {
+                await PressAndHold(DDOWN, Settings.HoldTimeForRollover, 1_000, token).ConfigureAwait(false);
+                await Click(DUP, 0_500, token).ConfigureAwait(false);
+            }
+            else if (!Settings.UseOvershoot)
+            {
+                for (int i = 0; i < 39; i++)
+                    await Click(DDOWN, 0_100, token).ConfigureAwait(false);
+            }
+
+            await Click(A, 1_250, token).ConfigureAwait(false);
+            for (int i = 0; i < 2; i++)
+                await Click(DDOWN, 0_150, token).ConfigureAwait(false);
+            await Click(A, 0_500, token).ConfigureAwait(false);
+            for (int i = 0; i < scrollroll; i++) // 0 to roll day for DDMMYY, 1 to roll day for MMDDYY, 3 to roll hour
+                await Click(DRIGHT, 0_200, token).ConfigureAwait(false);
+
+            await Click(DUP, 0_200, token).ConfigureAwait(false);
+
+            for (int i = 0; i < 8; i++) // Mash DRIGHT to confirm
+                await Click(DRIGHT, 0_200, token).ConfigureAwait(false);
+
+            await Click(A, 0_200, token).ConfigureAwait(false); // Confirm date/time change
+            await Click(HOME, 1_000, token).ConfigureAwait(false); // Back to title screen
+        }
+
+        private async Task<bool> PrepareForDayroll(CancellationToken token)
+        {
+            // Make sure we're connected.
+            while (!await IsConnectedOnline(ConnectedOffset, token).ConfigureAwait(false))
+            {
+                Log("Connecting...");
+                await RecoverToOverworld(token).ConfigureAwait(false);
+                if (!await ConnectToOnline(Hub.Config, token).ConfigureAwait(false))
+                    return false;
+            }
+            return true;
+        }
+        //End of additions
 
         #region RaidCrawler
         // via RaidCrawler modified for this proj
