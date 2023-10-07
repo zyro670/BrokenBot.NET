@@ -1225,6 +1225,50 @@ namespace SysBot.Pokemon
         }
 
         //Kuro's Additions
+        private async Task<bool> CheckForRaid(CancellationToken token)
+        {
+            Log("Preparing lobby...");
+            // Make sure we're connected.
+            while (!await IsConnectedOnline(ConnectedOffset, token).ConfigureAwait(false))
+            {
+                Log("Connecting...");
+                await RecoverToOverworld(token).ConfigureAwait(false);
+                if (!await ConnectToOnline(Hub.Config, token).ConfigureAwait(false))
+                    return false;
+            }
+
+            for (int i = 0; i < 6; i++)
+                await Click(B, 0_500, token).ConfigureAwait(false);
+
+            await Task.Delay(1_500, token).ConfigureAwait(false);
+
+            // If not in the overworld, we've been attacked so quit earlier.
+            if (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
+                return false;
+
+            await Click(A, 3_000, token).ConfigureAwait(false);
+            await Click(A, 3_000, token).ConfigureAwait(false);
+            await Click(A, 8_000, token).ConfigureAwait(false);
+            return true;
+        }
+
+        private async Task<bool> CheckForLobby(CancellationToken token)
+        {
+            var x = 0;
+            Log("Connecting to lobby...");
+            while (!await IsConnectedToLobby(token).ConfigureAwait(false))
+            {
+                await Click(A, 1_000, token).ConfigureAwait(false);
+                x++;
+                if (x == 45)
+                {
+                    Log("No den here! Rolling again.");
+                    return false;
+                }
+            }
+            return true;
+        }
+
         // From PokeTradeBotSV, modified.
         private async Task<bool> SaveGame(PokeTradeHubConfig config, CancellationToken token)
         {
