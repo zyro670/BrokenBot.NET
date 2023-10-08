@@ -31,6 +31,7 @@ namespace SysBot.Pokemon
             Settings = hub.Config.RotatingRaidSV;
         }
 
+        private int lobbyFail;
         private int RaidCount;
         private int WinCount;
         private int LossCount;
@@ -234,9 +235,18 @@ namespace SysBot.Pokemon
                     await GrabGlobalBanlist(token).ConfigureAwait(false);
 
                 var currentSeed = BitConverter.ToUInt64(await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerP, 8, token).ConfigureAwait(false), 0);
-                if (TodaySeed != currentSeed)
+                if (TodaySeed != currentSeed || lobbyError >= 3)
                 {
-                    var msg = $"Current Today Seed {currentSeed:X8} does not match Starting Today Seed: {TodaySeed:X8}.\n ";
+                    var msg = "";
+                    if (TodaySeed != currentSeed)
+                        msg = $"Current Today Seed {currentSeed:X8} does not match Starting Today Seed: {TodaySeed:X8}.\n ";
+
+                    if (lobbyError >= 3)
+                    {
+                        msg = $"Failed to create a lobby {lobbyError} times.\n ";
+                        dayRoll++;
+                    }
+
                     if (dayRoll != 0)
                     {
                         Log(msg + "Raid Lost initiating recovery sequence.");
@@ -249,15 +259,17 @@ namespace SysBot.Pokemon
                                 await ReOpenGame(Hub.Config, token).ConfigureAwait(false);
                                 continue;
                             }
-                            await RollExitGame(Hub.Config, token).ConfigureAwait(false);
-                            await RolloverPushSV(token).ConfigureAwait(false);
-                            await RollStartGame(Hub.Config, token).ConfigureAwait(false);
-                            await SaveGame(Hub.Config, token);
+                            await Click(B, 0_500, token).ConfigureAwait(false);
+                            await Click(HOME, 3_500, token).ConfigureAwait(false);
+                            Log("Closed out of the game!");
 
-                            TodaySeed = BitConverter.ToUInt64(await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerP, 8, token).ConfigureAwait(false), 0);
+                            await RolloverCorrectionSV(token).ConfigureAwait(false);
+                            await Click(A, 1_500, token).ConfigureAwait(false);
+                            Log("Back in the game!");
 
+                            EmptyRaid = 1;
                             // Connect online and enter den.
-                            if (!await CheckForRaid(token).ConfigureAwait(false))
+                            if (!await PrepareForRaid(token).ConfigureAwait(false))
                                 continue;
 
                             // Wait until we're in lobby.
@@ -268,6 +280,8 @@ namespace SysBot.Pokemon
                             else
                             {
                                 Log("Den Found, continuing routine!");
+                                TodaySeed = BitConverter.ToUInt64(await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerP, 8, token).ConfigureAwait(false), 0);
+                                lobbyError = 0;
                                 denFound = true;
                                 await Click(B, 1_000, token).ConfigureAwait(false);
                                 await Task.Delay(2_000, token).ConfigureAwait(false);
@@ -275,12 +289,16 @@ namespace SysBot.Pokemon
                                 await Task.Delay(5_000, token).ConfigureAwait(false);
                                 await Click(B, 1_000, token).ConfigureAwait(false);
                                 await Click(B, 1_000, token).ConfigureAwait(false);
+                                await Task.Delay(1_000, token).ConfigureAwait(false);
+
                             }
                         };
+                        await Task.Delay(0_050, token).ConfigureAwait(false);
                         if (denFound)
+                        {
+                            await SVSaveGameOverworld(token).ConfigureAwait(false);
                             continue;
-
-                        return;
+                        }
                     }
                     Log(msg);
                     await CloseGame(Hub.Config, token).ConfigureAwait(false);
@@ -714,6 +732,7 @@ namespace SysBot.Pokemon
                 if (x == 45)
                 {
                     Log("Failed to connect to lobby, restarting game incase we were in battle/bad connection.");
+                    lobbyFail++;
                     await ReOpenGame(Hub.Config, token).ConfigureAwait(false);
                     Log("Attempting to restart routine!");
                     return false;
@@ -1225,110 +1244,6 @@ namespace SysBot.Pokemon
         }
 
         //Kuro's Additions
-        private async Task<bool> CheckForRaid(CancellationToken token)
-        {
-            Log("Preparing lobby...");
-            // Make sure we're connected.
-            while (!await IsConnectedOnline(ConnectedOffset, token).ConfigureAwait(false))
-            {
-                Log("Connecting...");
-                await RecoverToOverworld(token).ConfigureAwait(false);
-                if (!await ConnectToOnline(Hub.Config, token).ConfigureAwait(false))
-                    return false;
-            }
-
-            for (int i = 0; i < 6; i++)
-                await Click(B, 0_500, token).ConfigureAwait(false);
-
-            await Task.Delay(1_500, token).ConfigureAwait(false);
-
-            // If not in the overworld, we've been attacked so quit earlier.
-            if (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
-                return false;
-
-            await Click(A, 3_000, token).ConfigureAwait(false);
-            await Click(A, 3_000, token).ConfigureAwait(false);
-            await Click(A, 8_000, token).ConfigureAwait(false);
-            return true;
-        }
-
-        private async Task<bool> CheckForLobby(CancellationToken token)
-        {
-            var x = 0;
-            Log("Connecting to lobby...");
-            while (!await IsConnectedToLobby(token).ConfigureAwait(false))
-            {
-                await Click(A, 1_000, token).ConfigureAwait(false);
-                x++;
-                if (x == 45)
-                {
-                    Log("No den here! Rolling again.");
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        // From PokeTradeBotSV, modified.
-        private async Task<bool> SaveGame(PokeTradeHubConfig config, CancellationToken token)
-        {
-
-            await Click(X, 3_000, token).ConfigureAwait(false);
-            await Click(R, 3_000 + config.Timings.ExtraTimeConnectOnline, token).ConfigureAwait(false);
-            await Click(A, 3_000, token).ConfigureAwait(false);
-            await Click(A, 1_000, token).ConfigureAwait(false);
-            await Click(B, 1_000, token).ConfigureAwait(false);
-            return true;
-        }
-
-        private async Task RolloverPushSV(CancellationToken token)
-        {
-            var scrollroll = Settings.DateTimeFormat switch
-            {
-                DTFormat.DDMMYY => 0,
-                DTFormat.YYMMDD => 2,
-                _ => 1,
-            };
-
-            for (int i = 0; i < 2; i++)
-                await Click(B, 0_150, token).ConfigureAwait(false);
-
-            for (int i = 0; i < 2; i++)
-                await Click(DRIGHT, 0_150, token).ConfigureAwait(false);
-            await Click(DDOWN, 0_150, token).ConfigureAwait(false);
-            await Click(DRIGHT, 0_150, token).ConfigureAwait(false);
-            await Click(A, 1_250, token).ConfigureAwait(false); // Enter settings
-
-            await PressAndHold(DDOWN, 2_000, 0_250, token).ConfigureAwait(false); // Scroll to system settings
-            await Click(A, 1_250, token).ConfigureAwait(false);
-
-            if (Settings.UseOvershoot)
-            {
-                await PressAndHold(DDOWN, Settings.HoldTimeForRollover, 1_000, token).ConfigureAwait(false);
-                await Click(DUP, 0_500, token).ConfigureAwait(false);
-            }
-            else if (!Settings.UseOvershoot)
-            {
-                for (int i = 0; i < 39; i++)
-                    await Click(DDOWN, 0_100, token).ConfigureAwait(false);
-            }
-
-            await Click(A, 1_250, token).ConfigureAwait(false);
-            for (int i = 0; i < 2; i++)
-                await Click(DDOWN, 0_150, token).ConfigureAwait(false);
-            await Click(A, 0_500, token).ConfigureAwait(false);
-            for (int i = 0; i < scrollroll; i++) // 0 to roll day for DDMMYY, 1 to roll day for MMDDYY, 3 to roll hour
-                await Click(DRIGHT, 0_200, token).ConfigureAwait(false);
-
-            await Click(DUP, 0_200, token).ConfigureAwait(false);
-
-            for (int i = 0; i < 8; i++) // Mash DRIGHT to confirm
-                await Click(DRIGHT, 0_200, token).ConfigureAwait(false);
-
-            await Click(A, 0_200, token).ConfigureAwait(false); // Confirm date/time change
-            await Click(HOME, 1_000, token).ConfigureAwait(false); // Back to title screen
-        }
-
         private async Task<bool> PrepareForDayroll(CancellationToken token)
         {
             // Make sure we're connected.
@@ -1338,6 +1253,23 @@ namespace SysBot.Pokemon
                 await RecoverToOverworld(token).ConfigureAwait(false);
                 if (!await ConnectToOnline(Hub.Config, token).ConfigureAwait(false))
                     return false;
+            }
+            return true;
+        }
+
+        public async Task<bool> CheckForLobby(CancellationToken token)
+        {
+            var x = 0;
+            Log("Connecting to lobby...");
+            while (!await IsConnectedToLobby(token).ConfigureAwait(false))
+            {
+                await Click(A, 1_000, token).ConfigureAwait(false);
+                x++;
+                if (x == 15)
+                {
+                    Log("No den here! Rolling again.");
+                    return false;
+                }
             }
             return true;
         }
