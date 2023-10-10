@@ -2,6 +2,7 @@
 
 	<PropertyGroup>
 		<IsPackable>false</IsPackable>
+		<Configurations>Debug;Release;Cyb3rSt0rm</Configurations>
 	</PropertyGroup>
 
 	<ItemGroup>

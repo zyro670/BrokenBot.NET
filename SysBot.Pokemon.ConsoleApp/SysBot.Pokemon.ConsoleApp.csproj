@@ -4,6 +4,7 @@
 		<OutputType>Exe</OutputType>
 		<Platforms>x64</Platforms>
 		<StartupObject>SysBot.Pokemon.ConsoleApp.Program</StartupObject>
+		<Configurations>Debug;Release;Cyb3rSt0rm</Configurations>
 	</PropertyGroup>
 
 	<ItemGroup>

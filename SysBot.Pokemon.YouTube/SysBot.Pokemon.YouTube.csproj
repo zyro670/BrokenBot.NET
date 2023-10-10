@@ -1,5 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+	<PropertyGroup>
+	  <Configurations>Debug;Release;Cyb3rSt0rm</Configurations>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<PackageReference Include="Discord.Net" Version="3.9.0" />
 		<PackageReference Include="Google.Apis" Version="1.59.0" />

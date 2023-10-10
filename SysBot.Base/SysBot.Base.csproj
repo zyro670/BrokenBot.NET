@@ -2,6 +2,7 @@
 
 	<PropertyGroup>
 		<TargetFramework>netstandard2.0</TargetFramework>
+		<Configurations>Debug;Release;Cyb3rSt0rm</Configurations>
 	</PropertyGroup>
 
 	<ItemGroup>

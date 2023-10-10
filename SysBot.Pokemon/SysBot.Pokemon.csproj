@@ -1,5 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+	<PropertyGroup>
+	  <Configurations>Debug;Release;Cyb3rSt0rm</Configurations>
+	</PropertyGroup>
+
 	<ItemGroup>
 	  <Compile Remove="SV\BotEncounter\**" />
 	  <EmbeddedResource Remove="SV\BotEncounter\**" />
