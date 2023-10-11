@@ -32,6 +32,7 @@ namespace SysBot.Pokemon
         }
 
         private int lobbyError;
+        private int RaidsAtStart;
         private int RaidCount;
         private int WinCount;
         private int LossCount;
@@ -481,27 +482,11 @@ namespace SysBot.Pokemon
                 await Click(B, 0_500, token).ConfigureAwait(false);
                 await Click(DDOWN, 0_500, token).ConfigureAwait(false);
 
-                if (!await IsConnectedToLobby(token).ConfigureAwait(false) && await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
-                {
-                    Log("We lost the raid...");
-                    LossCount++;
-                    LostRaid++;
-                }
+                if (Settings.RaidEmbedParameters.Count > 1)
+                    await SanitizeRotationCount(token).ConfigureAwait(false);
 
-                if (!await IsConnectedToLobby(token).ConfigureAwait(false) && !await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
-                {
-                    Settings.AddCompletedRaids();
-                    Log($"We defeated {Settings.RaidEmbedParameters[RotationCount].Species}!");
-                    WinCount++;
-                    if (trainers.Count > 0 && Settings.CatchLimit != 0)
-                        ApplyPenalty(trainers);
-
-                    if (Settings.RaidEmbedParameters.Count > 1)
-                        await SanitizeRotationCount(token).ConfigureAwait(false);
-
-                    await EnqueueEmbed(null, "", false, false, true, false, token).ConfigureAwait(false);
-                    ready = true;
-                }
+                await EnqueueEmbed(null, "", false, false, true, false, token).ConfigureAwait(false);
+                ready = true;
 
                 if (Settings.LobbyOptions.LobbyMethodOptions == LobbyMethodOptions.SkipRaid)
                 {
@@ -521,6 +506,7 @@ namespace SysBot.Pokemon
             while (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
                 await Click(A, 1_000, token).ConfigureAwait(false);
 
+            await CountRaids(trainers, token).ConfigureAwait(false);
             await LocateSeedIndex(token).ConfigureAwait(false);
             await Task.Delay(0_500, token).ConfigureAwait(false);
             await CloseGame(Hub.Config, token).ConfigureAwait(false);
@@ -567,7 +553,52 @@ namespace SysBot.Pokemon
                 }
             }
         }
+        private async Task CountRaids(List<(ulong, TradeMyStatus)>? trainers, CancellationToken token)
+        {
+            int countP = 0;
+            int countK = 0;
 
+            // Read data from RaidBlockPointerP.
+            // Paldea has 69 dens, great number.
+            var dataP = await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerP, 2304, token).ConfigureAwait(false);
+            for (int i = 0; i < 69; i++)
+            {
+                var seed = BitConverter.ToUInt32(dataP.Slice(0 + (i * 32), 4));
+                if (seed != 0)
+                    countP++;
+            }
+
+            // Read data from RaidBlockPointerK for the remaining raids.
+            // Kitakami has 26 dens.
+            var dataK = await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerK, (26 * 32), token).ConfigureAwait(false);
+            for (int i = 0; i < 26; i++)
+            {
+                var seed = BitConverter.ToUInt32(dataK.Slice(0 + (i * 32), 4));
+                if (seed != 0)
+                    countK++;
+            }
+
+            Log($"Total raids in Paldea: {countP}");
+            Log($"Total raids in Kitakami: {countK}");
+
+            if (trainers is not null)
+            {
+                Log("Back in the overworld, checking if we won or lost.");
+
+                if ((countP <= 68 && countK == 26) || (countP == 69 && countK <= 25))
+                {
+                    Log("We defeated the raid boss!");
+                    WinCount++;
+                    if (trainers.Count > 0)
+                        ApplyPenalty(trainers);
+                }
+                else
+                {
+                    Log("We lost the raid...");
+                    LossCount++;
+                }
+            }
+        }
         private async Task OverrideTodaySeed(CancellationToken token)
         {
             var todayoverride = BitConverter.GetBytes(TodaySeed);
@@ -879,7 +910,6 @@ namespace SysBot.Pokemon
 
             await Task.Delay(5_000, token).ConfigureAwait(false);
 
-            RaidCount++;
             if (lobbyTrainers.Count == 0)
             {
                 EmptyRaid++;
@@ -894,6 +924,7 @@ namespace SysBot.Pokemon
 
                 return (false, lobbyTrainers);
             }
+            RaidCount++; // Increment RaidCount only when a raid is actually starting.
             Log($"Raid #{RaidCount} is starting!");
             if (EmptyRaid != 0)
                 EmptyRaid = 0;
