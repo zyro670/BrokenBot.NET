@@ -23,7 +23,7 @@ namespace SysBot.Pokemon
         [Category(Hosting), Description("Amount of raids before updating the ban list. If you want the global ban list off, set this to -1.")]
         public int RaidsBetweenUpdate { get; set; } = 3;
 
-        [Category(Hosting), Description("When enabled, the bot will attempt to auto-generate Raid Parameters from the \"raidsv.txt\" file on botstart.")]
+        [Category(Hosting), Description("When enabled, the bot will attempt to auto-generate Raid Parameters from the \"pkparam.txt\" file on botstart.")]
         public bool GenerateParametersFromFile { get; set; } = true;
 
         [Category(Hosting), Description("When enabled, the bot will attempt to auto-generate Raid Embeds based on the\"preset.txt\" file.")]
@@ -126,9 +126,6 @@ namespace SysBot.Pokemon
         public class RaidPresetFiltersCategory
         {
             public override string ToString() => "Preset Filters";
-
-            [Category(Hosting), Description("If true, the bot will attempt to auto-generate Raid Embeds based on the \"preset.txt\" file.")]
-            public bool UsePresetFile { get; set; } = true;
 
             [Category(Hosting), Description("If true, the bot will use the first line of preset as title.")]
             public bool TitleFromPreset { get; set; } = true;
