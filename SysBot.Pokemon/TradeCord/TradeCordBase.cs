@@ -449,10 +449,10 @@ namespace SysBot.Pokemon
                 TradeCordHelper<T>.VacuumLock = true;
                 Thread.Sleep(0_500);
 
-                if (System.IO.File.Exists(bckPath))
+                if (File.Exists(bckPath))
                 {
-                    System.IO.File.Copy(bckPath, bckPath2, true);
-                    System.IO.File.Delete(bckPath);
+                    File.Copy(bckPath, bckPath2, true);
+                    File.Delete(bckPath);
                 }
 
                 var cmd = Connection.CreateCommand();
@@ -461,9 +461,9 @@ namespace SysBot.Pokemon
                 Connection.Dispose();
                 Connected = false;
 
-                System.IO.File.Copy(bckPath, dbPath, true);
-                if (System.IO.File.Exists(bckPath2))
-                    System.IO.File.Delete(bckPath2);
+                File.Copy(bckPath, dbPath, true);
+                if (File.Exists(bckPath2))
+                    File.Delete(bckPath2);
             }
             catch (Exception ex)
             {

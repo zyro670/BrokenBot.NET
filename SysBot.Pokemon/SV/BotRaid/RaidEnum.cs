@@ -26,7 +26,6 @@ namespace SysBot.Pokemon
     {
         AFK,
         MashA,
-        TurboA,
     }
 
     public class BanList

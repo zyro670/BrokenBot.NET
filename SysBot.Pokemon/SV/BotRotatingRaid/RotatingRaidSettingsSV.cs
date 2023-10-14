@@ -113,6 +113,7 @@ namespace SysBot.Pokemon
             public string[] PartyPK { get; set; } = Array.Empty<string>();
             public bool SpriteAlternateArt { get; set; } = false;
             public string Seed { get; set; } = "0";
+            public MoveType TeraType { get; set; } = MoveType.Any;
             public string Title { get; set; } = string.Empty;
         }
 
@@ -154,7 +155,7 @@ namespace SysBot.Pokemon
             [Category(Hosting), Description("Empty/Lost raid limit per parameter before the bot moves on to the next one. Default is 3 raids.")]
             public int SkipRaidLimit { get; set; } = 3;
 
-            [Category(FeatureToggle), Description("Set the action you would want your bot to perform. MashA presses A every 3.5s, while TurboA will press A every 1.5s.")]
+            [Category(FeatureToggle), Description("Set the action you would want your bot to perform. MashA presses A every 3.5s")]
             public RaidAction Action { get; set; } = RaidAction.AFK;
         }
 
@@ -166,5 +167,5 @@ namespace SysBot.Pokemon
 
             public override bool CanConvertTo(ITypeDescriptorContext? context, Type? destinationType) => destinationType != typeof(string) && base.CanConvertTo(context, destinationType);
         }
-    }    
+    }
 }
