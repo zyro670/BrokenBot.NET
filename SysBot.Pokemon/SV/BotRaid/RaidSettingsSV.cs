@@ -47,7 +47,7 @@ namespace SysBot.Pokemon
         [Category(Hosting), Description("Empty raid limit per parameter before the bot hosts an uncoded raid. Default is 3 raids.")]
         public int EmptyRaidLimit { get; set; } = 3;
 
-        [Category(FeatureToggle), Description("Set the action you would want your bot to perform. MashA presses A every 3.5s, while TurboA will press A every 1.5s.")]
+        [Category(FeatureToggle), Description("Set the action you would want your bot to perform. MashA presses A every 3.5s")]
         public RaidAction Action { get; set; } = RaidAction.AFK;
 
         [Category(Hosting), Description("Minimum amount of seconds to wait before starting a raid.")]

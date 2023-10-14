@@ -31,7 +31,7 @@ namespace SysBot.Pokemon
             Settings = hub.Config.RotatingRaidSV;
         }
 
-        private int lobbyError;
+        private int LobbyError;
         private int RaidCount;
         private int WinCount;
         private int LossCount;
@@ -52,6 +52,7 @@ namespace SysBot.Pokemon
         private string[] PresetDescription = Array.Empty<string>();
         private string[] ModDescription = Array.Empty<string>();
         private readonly Dictionary<ulong, int> RaidTracker = new();
+        private List<int> TeraType = new();
         private List<BanList> GlobalBanList = new();
         private SAV9SV HostSAV = new();
         private DateTime StartTime = DateTime.Now;
@@ -223,7 +224,7 @@ namespace SysBot.Pokemon
                     Log($"Today Seed: {TodaySeed:X8}");
                 }
 
-                if (!Settings.RaidEmbedParameters[RotationCount].IsSet)
+                if (!Settings.RaidEmbedParameters[RotationCount].IsSet || RaidCount == 0)
                 {
                     Log($"Preparing parameter for {Settings.RaidEmbedParameters[RotationCount].Species}");
                     await ReadRaids(token).ConfigureAwait(false);
@@ -235,19 +236,19 @@ namespace SysBot.Pokemon
                     await GrabGlobalBanlist(token).ConfigureAwait(false);
 
                 var currentSeed = BitConverter.ToUInt64(await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerP, 8, token).ConfigureAwait(false), 0);
-                if (TodaySeed != currentSeed || lobbyError >= 3)
+                if (TodaySeed != currentSeed || LobbyError >= 3)
                 {
                     var msg = "";
                     if (TodaySeed != currentSeed)
                         msg = $"Current Today Seed {currentSeed:X8} does not match Starting Today Seed: {TodaySeed:X8}.\n ";
 
-                    if (lobbyError >= 3)
+                    if (LobbyError >= 3)
                     {
-                        msg = $"Failed to create a lobby {lobbyError} times.\n ";
+                        msg = $"Failed to create a lobby {LobbyError} times.\n ";
                         dayRoll++;
                     }
 
-                    if (dayRoll != 0)
+                    if (dayRoll != 0 && SeedIndexToReplace != 0 && RaidCount != 0)
                     {
                         Log(msg + "Raid Lost initiating recovery sequence.");
                         bool denFound = false;
@@ -274,7 +275,7 @@ namespace SysBot.Pokemon
                             {
                                 Log("Den Found, continuing routine!");
                                 TodaySeed = BitConverter.ToUInt64(await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerP, 8, token).ConfigureAwait(false), 0);
-                                lobbyError = 0;
+                                LobbyError = 0;
                                 denFound = true;
                                 await Click(B, 1_000, token).ConfigureAwait(false);
                                 await Task.Delay(2_000, token).ConfigureAwait(false);
@@ -290,6 +291,8 @@ namespace SysBot.Pokemon
                         if (denFound)
                         {
                             await SVSaveGameOverworld(token).ConfigureAwait(false);
+                            await Task.Delay(0_500, token).ConfigureAwait(false);
+                            await Click(B, 1_000, token).ConfigureAwait(false);
                             continue;
                         }
                     }
@@ -470,7 +473,6 @@ namespace SysBot.Pokemon
                     {
                         case RaidAction.AFK: await Task.Delay(3_000, token).ConfigureAwait(false); break;
                         case RaidAction.MashA: await Click(A, 3_500, token).ConfigureAwait(false); break;
-                        case RaidAction.TurboA: await Click(A, 1_500, token).ConfigureAwait(false); break;
                     }
                     if (b % 10 == 0)
                         Log("Still in battle...");
@@ -481,14 +483,12 @@ namespace SysBot.Pokemon
                 await Click(B, 0_500, token).ConfigureAwait(false);
                 await Click(DDOWN, 0_500, token).ConfigureAwait(false);
 
-                if (!await IsConnectedToLobby(token).ConfigureAwait(false) && await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
-                {
-                    Log("We lost the raid...");
-                    LossCount++;
-                    LostRaid++;
-                }
+                Log("Returning to overworld...");
+                while (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
+                    await Click(A, 1_000, token).ConfigureAwait(false);
 
-                if (!await IsConnectedToLobby(token).ConfigureAwait(false) && !await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
+                bool status = await DenStatus(SeedIndexToReplace, token).ConfigureAwait(false);
+                if (!status)
                 {
                     Settings.AddCompletedRaids();
                     Log($"We defeated {Settings.RaidEmbedParameters[RotationCount].Species}!");
@@ -501,6 +501,11 @@ namespace SysBot.Pokemon
 
                     await EnqueueEmbed(null, "", false, false, true, false, token).ConfigureAwait(false);
                     ready = true;
+                }
+                else
+                {
+                    Log("We lost the raid...");
+                    LossCount++;
                 }
 
                 if (Settings.LobbyOptions.LobbyMethodOptions == LobbyMethodOptions.SkipRaid)
@@ -572,7 +577,7 @@ namespace SysBot.Pokemon
         {
             var todayoverride = BitConverter.GetBytes(TodaySeed);
             List<long> ptr = new(Offsets.RaidBlockPointerP);
-            ptr[2] += 0x8;
+            ptr[3] += 0x8;
             await SwitchConnection.PointerPoke(todayoverride, ptr, token).ConfigureAwait(false);
         }
 
@@ -607,6 +612,30 @@ namespace SysBot.Pokemon
             if (currcrystal != crystal)
                 await SwitchConnection.PointerPoke(crystal, ptr2, token).ConfigureAwait(false);
 
+        }
+
+        private async Task<bool> DenStatus(int index, CancellationToken token)
+        {
+            List<long> ptr;
+            if (index < 69)
+            {
+                ptr = new(Offsets.RaidBlockPointerP)
+                {
+                    [3] = 0x40 + (index + 1) * 0x20 - 0x10
+                };
+            }
+            else
+            {
+                ptr = new(Offsets.RaidBlockPointerK)
+                {
+                    [3] = 0xCE8 + (index - 69) * 0x20 - 0x10
+                };
+            }
+            var data = await SwitchConnection.PointerPeek(2, ptr, token).ConfigureAwait(false);
+            var status = BitConverter.ToUInt16(data);
+            var msg = status == 1 ? "active" : "inactive";
+            Log($"Den is {msg}.");
+            return status == 1;
         }
 
         private async Task SanitizeRotationCount(CancellationToken token)
@@ -726,15 +755,13 @@ namespace SysBot.Pokemon
                 x++;
                 if (x == 15 && recovery)
                 {
-                    Log("Failed to connect to lobby, restarting game incase we were in battle/bad connection.");
-                    await ReOpenGame(Hub.Config, token).ConfigureAwait(false);
-                    Log("Attempting to restart routine!");
+                    Log("No den here! Rolling again.");
                     return false;
                 }
                 if (x == 45)
                 {
                     Log("Failed to connect to lobby, restarting game incase we were in battle/bad connection.");
-                    lobbyError++;
+                    LobbyError++;
                     await ReOpenGame(Hub.Config, token).ConfigureAwait(false);
                     Log("Attempting to restart routine!");
                     return false;
@@ -1022,14 +1049,22 @@ namespace SysBot.Pokemon
                 bytes = await SwitchConnection.PixelPeek(token).ConfigureAwait(false) ?? Array.Empty<byte>();
 
             string disclaimer = Settings.RaidEmbedParameters.Count > 1 ? "Disclaimer: Raids are on rotation via seed injection.\n" : "";
+            var teraurl = string.Empty;
+            if (!upnext)
+                teraurl = $"https://raw.githubusercontent.com/kwsch/PKHeX/master/PKHeX.Drawing.Misc/Resources/img/types/gem/gem_" + (TeraType[RotationCount] < 10 ? $"0{TeraType[RotationCount]}" : $"{TeraType[RotationCount]}") + ".png";
 
             var embed = new EmbedBuilder()
             {
-                Title = disband ? $"**Raid canceled: [{TeraRaidCode}]**" : upnext && Settings.TotalRaidsToHost != 0 ? $"Preparing Raid {RaidCount}/{Settings.TotalRaidsToHost}" : upnext && Settings.TotalRaidsToHost == 0 ? $"Preparing Raid" : title,
                 Color = disband ? Color.Red : hatTrick ? Color.Purple : Color.Green,
                 Description = disband ? message : upnext ? Settings.RaidEmbedParameters[RotationCount].Title : raidstart ? "" : description,
                 ImageUrl = bytes.Length > 0 ? "attachment://zap.jpg" : default,
-            }.WithFooter(new EmbedFooterBuilder()
+            }.WithAuthor(new EmbedAuthorBuilder()
+            {
+                IconUrl = teraurl,
+                Name = disband ? $"**Raid canceled: [{TeraRaidCode}]**" : upnext && Settings.TotalRaidsToHost != 0 ? $"Preparing Raid {RaidCount}/{Settings.TotalRaidsToHost}" : upnext && Settings.TotalRaidsToHost == 0 ? $"Preparing Raid" : title,
+
+            })
+            .WithFooter(new EmbedFooterBuilder()
             {
                 Text = $"Host: {HostSAV.OT} | Uptime: {StartTime - DateTime.Now:d\\.hh\\:mm\\:ss}\n" +
                        $"Raids: {RaidCount} | Wins: {WinCount} | Losses: {LossCount}\n" + disclaimer
@@ -1431,6 +1466,7 @@ namespace SysBot.Pokemon
                             }
                         }
                         SeedIndexToReplace = i;
+                        TeraType.Add(container.Raids[i].TeraType);
                         done = true;
                     }
                 }

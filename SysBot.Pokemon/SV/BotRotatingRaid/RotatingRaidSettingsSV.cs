@@ -154,7 +154,7 @@ namespace SysBot.Pokemon
             [Category(Hosting), Description("Empty/Lost raid limit per parameter before the bot moves on to the next one. Default is 3 raids.")]
             public int SkipRaidLimit { get; set; } = 3;
 
-            [Category(FeatureToggle), Description("Set the action you would want your bot to perform. MashA presses A every 3.5s, while TurboA will press A every 1.5s.")]
+            [Category(FeatureToggle), Description("Set the action you would want your bot to perform. MashA presses A every 3.5s")]
             public RaidAction Action { get; set; } = RaidAction.AFK;
         }
 

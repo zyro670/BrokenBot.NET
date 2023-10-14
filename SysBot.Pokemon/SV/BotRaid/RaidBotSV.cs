@@ -37,6 +37,8 @@ namespace SysBot.Pokemon
         private int EmptyRaid;
         private int StoryProgress;
         private int EventProgress;
+        private int StoredIndex;
+        private int TeraType;
         private ulong TodaySeed;
         private ulong OverworldOffset;
         private ulong ConnectedOffset;
@@ -181,7 +183,7 @@ namespace SysBot.Pokemon
                     Log($"Today Seed: {TodaySeed:X8}");
                 }
 
-                if (!Settings.RaidEmbedFilters.IsSet)
+                if (!Settings.RaidEmbedFilters.IsSet || RaidCount == 0)
                 {
                     Log($"Preparing parameter for {Settings.RaidEmbedFilters.Species}");
                     await ReadRaids(token).ConfigureAwait(false);
@@ -346,7 +348,6 @@ namespace SysBot.Pokemon
                     {
                         case RaidAction.AFK: await Task.Delay(3_000, token).ConfigureAwait(false); break;
                         case RaidAction.MashA: await Click(A, 3_500, token).ConfigureAwait(false); break;
-                        case RaidAction.TurboA: await Click(A, 1_500, token).ConfigureAwait(false); break;
                     }
                     if (b % 10 == 0)
                         Log("Still in battle...");
@@ -357,13 +358,12 @@ namespace SysBot.Pokemon
                 await Click(B, 0_500, token).ConfigureAwait(false);
                 await Click(DDOWN, 0_500, token).ConfigureAwait(false);
 
-                if (!await IsConnectedToLobby(token).ConfigureAwait(false) && await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
-                {
-                    Log("We lost the raid...");
-                    LossCount++;
-                }
+                Log("Returning to overworld...");
+                while (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
+                    await Click(A, 1_000, token).ConfigureAwait(false);
 
-                if (!await IsConnectedToLobby(token).ConfigureAwait(false) && !await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
+                bool status = await DenStatus(StoredIndex, token).ConfigureAwait(false);
+                if (!status)
                 {
                     Settings.AddCompletedRaids();
                     Log($"We defeated {Settings.RaidEmbedFilters.Species}!");
@@ -373,13 +373,39 @@ namespace SysBot.Pokemon
 
                     await EnqueueEmbed(null, "", false, false, true, false, token).ConfigureAwait(false);
                 }
-                Log("Returning to overworld...");
-                while (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
-                    await Click(A, 1_000, token).ConfigureAwait(false);
+                else
+                {
+                    Log("We lost the raid...");
+                    LossCount++;
+                }
             }
 
             await CloseGame(Hub.Config, token).ConfigureAwait(false);
             await StartGame(Hub.Config, token).ConfigureAwait(false);
+        }
+
+        private async Task<bool> DenStatus(int index, CancellationToken token)
+        {
+            List<long> ptr;
+            if (index < 69)
+            {
+                ptr = new(Offsets.RaidBlockPointerP)
+                {
+                    [3] = 0x40 + (index + 1) * 0x20 - 0x10
+                };
+            }
+            else
+            {
+                ptr = new(Offsets.RaidBlockPointerK)
+                {
+                    [3] = 0xCE8 + (index - 69) * 0x20 - 0x10
+                };
+            }
+            var data = await SwitchConnection.PointerPeek(2, ptr, token).ConfigureAwait(false);
+            var status = BitConverter.ToUInt16(data);
+            var msg = status == 1 ? "active" : "inactive";
+            Log($"Den is {msg}.");
+            return status == 1;
         }
 
         private void ApplyPenalty(List<(ulong, TradeMyStatus)> trainers)
@@ -405,7 +431,7 @@ namespace SysBot.Pokemon
         {
             var todayoverride = BitConverter.GetBytes(TodaySeed);
             List<long> ptr = new(Offsets.RaidBlockPointerP);
-            ptr[2] += 0x8;
+            ptr[3] += 0x8;
             await SwitchConnection.PointerPoke(todayoverride, ptr, CancellationToken.None).ConfigureAwait(false);
         }
 
@@ -472,7 +498,7 @@ namespace SysBot.Pokemon
             await Click(A, 3_000, token).ConfigureAwait(false);
             await Click(A, 3_000, token).ConfigureAwait(false);
 
-            if (!Settings.RaidEmbedFilters.IsCoded || Settings.RaidEmbedFilters.IsCoded && EmptyRaid == Settings.EmptyRaidLimit)
+            if (!Settings.RaidEmbedFilters.IsCoded || Settings.RaidEmbedFilters.IsCoded && EmptyRaid == Settings.EmptyRaidLimit && Settings.EmptyRaidLimit != 0)
             {
                 if (Settings.RaidEmbedFilters.IsCoded && EmptyRaid == Settings.EmptyRaidLimit)
                     Log($"We had {Settings.EmptyRaidLimit} empty raids.. Opening this raid to all!");
@@ -763,13 +789,18 @@ namespace SysBot.Pokemon
             if (Settings.TakeScreenshot && !upnext)
                 bytes = await SwitchConnection.PixelPeek(token).ConfigureAwait(false) ?? Array.Empty<byte>();
 
+            var teraurl = $"https://raw.githubusercontent.com/kwsch/PKHeX/master/PKHeX.Drawing.Misc/Resources/img/types/gem/gem_" + (TeraType < 10 ? $"0{TeraType}" : $"{TeraType}") + ".png";
+
             var embed = new EmbedBuilder()
             {
-                Title = disband ? $"**Raid canceled: [{TeraRaidCode}]**" : upnext && Settings.TotalRaidsToHost != 0 ? $"Preparing Raid {RaidCount}/{Settings.TotalRaidsToHost}" : upnext && Settings.TotalRaidsToHost == 0 ? $"Preparing Raid" : title,
                 Color = disband ? Color.Red : hatTrick ? Color.Purple : Color.Green,
                 Description = disband ? message : upnext ? Settings.RaidEmbedFilters.Title : raidstart ? "" : description,
                 ImageUrl = bytes.Length > 0 ? "attachment://zap.jpg" : default,
-            }.WithFooter(new EmbedFooterBuilder()
+            }.WithAuthor(new EmbedAuthorBuilder()
+            {
+                IconUrl = teraurl,
+                Name = disband ? $"**Raid canceled: [{TeraRaidCode}]**" : upnext && Settings.TotalRaidsToHost != 0 ? $"Preparing Raid {RaidCount}/{Settings.TotalRaidsToHost}" : upnext && Settings.TotalRaidsToHost == 0 ? $"Preparing Raid" : title,
+            }).WithFooter(new EmbedFooterBuilder()
             {
                 Text = $"Host: {HostSAV.OT} | Uptime: {StartTime - DateTime.Now:d\\.hh\\:mm\\:ss}\n" +
                        $"Raids: {RaidCount} | Wins: {WinCount} | Losses: {LossCount}"
@@ -1081,6 +1112,8 @@ namespace SysBot.Pokemon
                     }
 
                     Settings.RaidEmbedFilters.IsSet = true;
+                    TeraType = container.Raids[i].TeraType;
+                    StoredIndex = i;
                     done = true;
                 }
             }

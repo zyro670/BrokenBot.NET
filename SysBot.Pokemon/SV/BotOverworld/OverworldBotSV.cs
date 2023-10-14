@@ -27,12 +27,13 @@ namespace SysBot.Pokemon
         private ulong OverworldOffset;
         private ulong RaidBlockP;
         private int scanCount;
-        private int PicnicVal = 0;
+        private int PicnicVal;
+        private int sandwichCounter;
+        private int MinimumIngredientCount;
         private static ulong BaseBlockKeyPointer = 0;
         private ulong PlayerCanMoveOffset;
         private ulong PlayerOnMountOffset;
-        private bool GameWasReset = false;
-        private int sandwichCounter;
+        private bool GameWasReset = false;        
         private SAV9SV TrainerSav = new();
         private List<byte[]?> coordList = new();
         private List<int> Condiments = new();
@@ -114,14 +115,17 @@ namespace SysBot.Pokemon
             Settings.PicnicFilters.Item2 = (PicnicCondiments)itemsval.Item2;
             Settings.PicnicFilters.Item3 = (PicnicCondiments)itemsval.Item3;
             Settings.PicnicFilters.Item4 = (PicnicCondiments)itemsval.Item4;
-            Log($"Ingredients needed for {Settings.PicnicFilters.TypeOfSandwich} {Settings.PicnicFilters.SandwichFlavor} Sandwich: {Settings.PicnicFilters.Item1}, {Settings.PicnicFilters.Item2}, {Settings.PicnicFilters.Item3}, & {Settings.PicnicFilters.Item4}.");
-
+            List<int> List = new();
             // Grab fillings
             for (int i = 0; i < ingredients.Items.Length; i++) // Fillings
             {
                 if (ingredients.Items[i].Index >= 1909 && ingredients.Items[i].Index <= 1946 && ingredients.Items[i].Index != 0 && ingredients.Items[i].Count != 0 && ingredients.Items[i].Index != 1888 && ingredients.Items[i].Index != 1942 &&
                     ingredients.Items[i].Index != 1943 && ingredients.Items[i].Index != 1944)
+                {
                     Fillings.Add(ingredients.Items[i].Index);
+                    List.Add(ingredients.Items[i].Count);
+                }
+
             }
 
             if (!Fillings.Contains((int)Settings.PicnicFilters.Item1))
@@ -147,17 +151,26 @@ namespace SysBot.Pokemon
             for (int i = 0; i < ingredients.Items.Length; i++) // Condiments
             {
                 if (ingredients.Items[i].Index < 1904 && ingredients.Items[i].Index != 0 && ingredients.Items[i].Count != 0 && ingredients.Items[i].Index != 1888)
+                {
                     Condiments.Add(ingredients.Items[i].Index);
+                    List.Add(ingredients.Items[i].Count);
+                }
             }
             for (int i = 0; i < ingredients.Items.Length; i++) // Add horseradish, curry powder, and wasabi
             {
                 if (ingredients.Items[i].Index >= 1942 && ingredients.Items[i].Index <= 1944 && ingredients.Items[i].Index != 0 && ingredients.Items[i].Count != 0 && ingredients.Items[i].Index != 1888)
+                {
                     Condiments.Add(ingredients.Items[i].Index);
+                    List.Add(ingredients.Items[i].Count);
+                }
             }
             for (int i = 0; i < ingredients.Items.Length; i++) // Add herbs last
             {
                 if (ingredients.Items[i].Index >= 1904 && ingredients.Items[i].Index <= 1908 && ingredients.Items[i].Index != 0 && ingredients.Items[i].Count != 0 && ingredients.Items[i].Index != 1888)
+                {
                     Condiments.Add(ingredients.Items[i].Index);
+                    List.Add(ingredients.Items[i].Count);
+                }
             }
 
             if (!Condiments.Contains((int)Settings.PicnicFilters.Item2) || !Condiments.Contains((int)Settings.PicnicFilters.Item3) || !Condiments.Contains((int)Settings.PicnicFilters.Item4) && Settings.PicnicFilters.Item4 != 0)
@@ -221,7 +234,13 @@ namespace SysBot.Pokemon
                         break;
                     }
                 }
-            }
+            }            
+            if (List.Min() != 0)
+                MinimumIngredientCount = List.Min();
+
+            Log($"Ingredients needed for {Settings.PicnicFilters.TypeOfSandwich} {Settings.PicnicFilters.SandwichFlavor} Sandwich: {Settings.PicnicFilters.Item1}, {Settings.PicnicFilters.Item2}, {Settings.PicnicFilters.Item3}, & {Settings.PicnicFilters.Item4}.\nWe have enough " +
+                $"ingredients for {MinimumIngredientCount} sandwiches.");
+
             return true;
         }
 
@@ -300,6 +319,12 @@ namespace SysBot.Pokemon
             int start = 0;
             while (!token.IsCancellationRequested)
             {
+                if (MinimumIngredientCount - sandwichCounter <= 1)
+                {
+                    Log($"{Hub.Config.StopConditions.MatchFoundEchoMention} Insufficient ingredient count, please restock your basket!");
+                    return;
+                }
+
                 if (start == 2 && Settings.RolloverFilters.CheckForRollover)
                 {
                     await ResetOverworld(true, true, token).ConfigureAwait(false);
