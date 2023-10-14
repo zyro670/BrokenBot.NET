@@ -65,7 +65,7 @@ namespace SysBot.Pokemon
                 Log("Done.");
             }
 
-            if (Settings.PresetFilters.UsePresetFile)
+            if (Settings.UsePresetFile)
             {
                 LoadDefaultFile();
                 Log("Using Preset file.");
@@ -221,12 +221,14 @@ namespace SysBot.Pokemon
                 {
                     TodaySeed = BitConverter.ToUInt64(await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerP, 8, token).ConfigureAwait(false), 0);
                     Log($"Today Seed: {TodaySeed:X8}");
+                    Log($"Preparing to store index for {Settings.RaidEmbedParameters[RotationCount].Species}");
+                    await ReadRaids(true, token).ConfigureAwait(false);
                 }
 
-                if (!Settings.RaidEmbedParameters[RotationCount].IsSet || RaidCount == 0)
+                if (!Settings.RaidEmbedParameters[RotationCount].IsSet)
                 {
                     Log($"Preparing parameter for {Settings.RaidEmbedParameters[RotationCount].Species}");
-                    await ReadRaids(token).ConfigureAwait(false);
+                    await ReadRaids(false, token).ConfigureAwait(false);
                 }
                 else
                     Log($"Parameter for {Settings.RaidEmbedParameters[RotationCount].Species} has been set previously, skipping raid reads.");
@@ -1281,7 +1283,7 @@ namespace SysBot.Pokemon
 
         #region RaidCrawler
         // via RaidCrawler modified for this proj
-        private async Task ReadRaids(CancellationToken token)
+        private async Task ReadRaids(bool init, CancellationToken token)
         {
             Log("Starting raid reads..");
             if (RaidBlockPointerP == 0)
@@ -1297,49 +1299,66 @@ namespace SysBot.Pokemon
                 RaidCrawler.Core.Structures.Offsets.VioletID => "Violet",
                 _ => "",
             };
-            container = new(game);
-            container.SetGame(game);
 
-            var BaseBlockKeyPointer = await SwitchConnection.PointerAll(Offsets.BlockKeyPointer, token).ConfigureAwait(false);
+            if (container is null)
+            {
+                container = new(game);
+                container.SetGame(game);
 
-            StoryProgress = await GetStoryProgress(BaseBlockKeyPointer, token).ConfigureAwait(false);
-            EventProgress = Math.Min(StoryProgress, 3);
+                var BaseBlockKeyPointer = await SwitchConnection.PointerAll(Offsets.BlockKeyPointer, token).ConfigureAwait(false);
 
-            await ReadEventRaids(BaseBlockKeyPointer, container, token).ConfigureAwait(false);
+                StoryProgress = await GetStoryProgress(BaseBlockKeyPointer, token).ConfigureAwait(false);
+                EventProgress = Math.Min(StoryProgress, 3);
 
-            var data = await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerP + RaidBlock.HEADER_SIZE, (int)RaidBlock.SIZE_BASE, token).ConfigureAwait(false);
+                await ReadEventRaids(BaseBlockKeyPointer, container, token).ConfigureAwait(false);
 
-            (int delivery, int enc) = container.ReadAllRaids(data, StoryProgress, EventProgress, 0, TeraRaidMapParent.Paldea);
-            if (enc > 0)
-                Log($"Failed to find encounters for {enc} raid(s).");
+                var data = await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerP + RaidBlock.HEADER_SIZE, (int)RaidBlock.SIZE_BASE, token).ConfigureAwait(false);
 
-            if (delivery > 0)
-                Log($"Invalid delivery group ID for {delivery} raid(s). Try deleting the \"cache\" folder.");
+                (int delivery, int enc) = container.ReadAllRaids(data, StoryProgress, EventProgress, 0, TeraRaidMapParent.Paldea);
+                if (enc > 0)
+                    Log($"Failed to find encounters for {enc} raid(s).");
 
-            var raids = container.Raids;
-            var encounters = container.Encounters;
-            var rewards = container.Rewards;
-            container.ClearRaids();
-            container.ClearEncounters();
-            container.ClearRewards();
+                if (delivery > 0)
+                    Log($"Invalid delivery group ID for {delivery} raid(s). Try deleting the \"cache\" folder.");
 
-            data = await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerK, (int)RaidBlock.SIZE_KITAKAMI, token).ConfigureAwait(false);
+                var raids = container.Raids;
+                var encounters = container.Encounters;
+                var rewards = container.Rewards;
+                container.ClearRaids();
+                container.ClearEncounters();
+                container.ClearRewards();
 
-            (delivery, enc) = container.ReadAllRaids(data, StoryProgress, EventProgress, 0, TeraRaidMapParent.Kitakami);
+                data = await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerK, (int)RaidBlock.SIZE_KITAKAMI, token).ConfigureAwait(false);
 
-            if (enc > 0)
-                Log($"Failed to find encounters for {enc} raid(s).");
+                (delivery, enc) = container.ReadAllRaids(data, StoryProgress, EventProgress, 0, TeraRaidMapParent.Kitakami);
 
-            if (delivery > 0)
-                Log($"Invalid delivery group ID for {delivery} raid(s). Try deleting the \"cache\" folder.");
+                if (enc > 0)
+                    Log($"Failed to find encounters for {enc} raid(s).");
 
-            var allRaids = raids.Concat(container.Raids).ToList().AsReadOnly();
-            var allEncounters = encounters.Concat(container.Encounters).ToList().AsReadOnly();
-            var allRewards = rewards.Concat(container.Rewards).ToList().AsReadOnly();
+                if (delivery > 0)
+                    Log($"Invalid delivery group ID for {delivery} raid(s). Try deleting the \"cache\" folder.");
 
-            container.SetRaids(allRaids);
-            container.SetEncounters(allEncounters);
-            container.SetRewards(allRewards);
+                var allRaids = raids.Concat(container.Raids).ToList().AsReadOnly();
+                var allEncounters = encounters.Concat(container.Encounters).ToList().AsReadOnly();
+                var allRewards = rewards.Concat(container.Rewards).ToList().AsReadOnly();
+
+                container.SetRaids(allRaids);
+                container.SetEncounters(allEncounters);
+                container.SetRewards(allRewards);
+            }
+
+            if (init)
+            {
+                for (int i = 0; i < container.Raids.Count; i++)
+                {
+                    if (container.Raids[i].Seed == uint.Parse(Settings.RaidEmbedParameters[RotationCount].Seed, NumberStyles.AllowHexSpecifier))
+                    {
+                        SeedIndexToReplace = i;
+                        Log($"Den ID: {i} stored.");
+                        return;
+                    }
+                }
+            }
 
             bool done = false;
             for (int i = 0; i < container.Raids.Count; i++)
@@ -1393,7 +1412,7 @@ namespace SysBot.Pokemon
                             extramoves += extraMovesList.LastOrDefault()?.TrimEnd(Environment.NewLine.ToCharArray());
                         }
 
-                        if (Settings.PresetFilters.UsePresetFile)
+                        if (Settings.UsePresetFile)
                         {
                             string tera = $"{(MoveType)container.Raids[i].TeraType}";
                             if (!string.IsNullOrEmpty(Settings.RaidEmbedParameters[a].Title) && !Settings.PresetFilters.ForceTitle)
@@ -1442,7 +1461,7 @@ namespace SysBot.Pokemon
                             }
                         }
 
-                        else if (!Settings.PresetFilters.UsePresetFile)
+                        else if (!Settings.UsePresetFile)
                         {
                             Settings.RaidEmbedParameters[a].Description = new[] { "\n**Raid Info:**", pkinfo, "\n**Moveset:**", movestr, extramoves, BaseDescription, res };
                             Settings.RaidEmbedParameters[a].Title = $"{(Species)container.Encounters[i].Species} {starcount} - {(MoveType)container.Raids[i].TeraType}";
