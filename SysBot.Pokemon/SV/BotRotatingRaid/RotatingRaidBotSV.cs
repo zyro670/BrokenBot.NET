@@ -52,7 +52,6 @@ namespace SysBot.Pokemon
         private string[] PresetDescription = Array.Empty<string>();
         private string[] ModDescription = Array.Empty<string>();
         private readonly Dictionary<ulong, int> RaidTracker = new();
-        private List<int> TeraType = new();
         private List<BanList> GlobalBanList = new();
         private SAV9SV HostSAV = new();
         private DateTime StartTime = DateTime.Now;
@@ -1051,7 +1050,7 @@ namespace SysBot.Pokemon
             string disclaimer = Settings.RaidEmbedParameters.Count > 1 ? "Disclaimer: Raids are on rotation via seed injection.\n" : "";
             var teraurl = string.Empty;
             if (!upnext)
-                teraurl = $"https://raw.githubusercontent.com/kwsch/PKHeX/master/PKHeX.Drawing.Misc/Resources/img/types/gem/gem_" + (TeraType[RotationCount] < 10 ? $"0{TeraType[RotationCount]}" : $"{TeraType[RotationCount]}") + ".png";
+                teraurl = $"https://raw.githubusercontent.com/kwsch/PKHeX/master/PKHeX.Drawing.Misc/Resources/img/types/gem/gem_" + ((int)Settings.RaidEmbedParameters[RotationCount].TeraType < 10 ? $"0{(int)Settings.RaidEmbedParameters[RotationCount].TeraType}" : $"{(int)Settings.RaidEmbedParameters[RotationCount].TeraType}") + ".png";
 
             var embed = new EmbedBuilder()
             {
@@ -1380,6 +1379,7 @@ namespace SysBot.Pokemon
                         Settings.RaidEmbedParameters[a].CrystalType = container.Raids[i].IsBlack ? TeraCrystalType.Black : container.Raids[i].IsEvent && stars == 7 ? TeraCrystalType.Might : container.Raids[i].IsEvent ? TeraCrystalType.Distribution : TeraCrystalType.Base;
                         Settings.RaidEmbedParameters[a].Species = (Species)container.Encounters[i].Species;
                         Settings.RaidEmbedParameters[a].SpeciesForm = container.Encounters[i].Form;
+                        Settings.RaidEmbedParameters[a].TeraType = (MoveType)container.Raids[i].TeraType;
                         var pkinfo = Hub.Config.StopConditions.GetRaidPrintName(pk);
                         pkinfo += $"\nTera Type: {(MoveType)container.Raids[i].TeraType}";
                         var strings = GameInfo.GetStrings(1);
@@ -1460,13 +1460,10 @@ namespace SysBot.Pokemon
                                 RotationCount++;
 
                                 if (RotationCount >= Settings.RaidEmbedParameters.Count)
-                                {
                                     RotationCount = 0;
-                                }
                             }
                         }
                         SeedIndexToReplace = i;
-                        TeraType.Add(container.Raids[i].TeraType);
                         done = true;
                     }
                 }

@@ -38,7 +38,6 @@ namespace SysBot.Pokemon
         private int StoryProgress;
         private int EventProgress;
         private int StoredIndex;
-        private int TeraType;
         private ulong TodaySeed;
         private ulong OverworldOffset;
         private ulong ConnectedOffset;
@@ -789,7 +788,7 @@ namespace SysBot.Pokemon
             if (Settings.TakeScreenshot && !upnext)
                 bytes = await SwitchConnection.PixelPeek(token).ConfigureAwait(false) ?? Array.Empty<byte>();
 
-            var teraurl = $"https://raw.githubusercontent.com/kwsch/PKHeX/master/PKHeX.Drawing.Misc/Resources/img/types/gem/gem_" + (TeraType < 10 ? $"0{TeraType}" : $"{TeraType}") + ".png";
+            var teraurl = $"https://raw.githubusercontent.com/kwsch/PKHeX/master/PKHeX.Drawing.Misc/Resources/img/types/gem/gem_" + ((int)Settings.RaidEmbedFilters.TeraType < 10 ? $"0{(int)Settings.RaidEmbedFilters.TeraType}" : $"{(int)Settings.RaidEmbedFilters.TeraType}") + ".png";
 
             var embed = new EmbedBuilder()
             {
@@ -1042,6 +1041,7 @@ namespace SysBot.Pokemon
                     Settings.RaidEmbedFilters.CrystalType = container.Raids[i].IsBlack ? TeraCrystalType.Black : container.Raids[i].IsEvent && stars == 7 ? TeraCrystalType.Might : container.Raids[i].IsEvent ? TeraCrystalType.Distribution : TeraCrystalType.Base;
                     Settings.RaidEmbedFilters.Species = (Species)container.Encounters[i].Species;
                     Settings.RaidEmbedFilters.SpeciesForm = container.Encounters[i].Form;
+                    Settings.RaidEmbedFilters.TeraType = (MoveType)container.Raids[i].TeraType;
                     var catchlimit = Settings.CatchLimit;
                     string cl = catchlimit is 0 ? "\n**No catch limit!**" : $"\n**Catch Limit: {catchlimit}**";
                     var pkinfo = Hub.Config.StopConditions.GetRaidPrintName(pk);
@@ -1112,7 +1112,6 @@ namespace SysBot.Pokemon
                     }
 
                     Settings.RaidEmbedFilters.IsSet = true;
-                    TeraType = container.Raids[i].TeraType;
                     StoredIndex = i;
                     done = true;
                 }

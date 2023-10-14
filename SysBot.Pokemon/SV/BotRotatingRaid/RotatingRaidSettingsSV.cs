@@ -113,6 +113,7 @@ namespace SysBot.Pokemon
             public string[] PartyPK { get; set; } = Array.Empty<string>();
             public bool SpriteAlternateArt { get; set; } = false;
             public string Seed { get; set; } = "0";
+            public MoveType TeraType { get; set; } = MoveType.Any;
             public string Title { get; set; } = string.Empty;
         }
 
@@ -166,5 +167,5 @@ namespace SysBot.Pokemon
 
             public override bool CanConvertTo(ITypeDescriptorContext? context, Type? destinationType) => destinationType != typeof(string) && base.CanConvertTo(context, destinationType);
         }
-    }    
+    }
 }

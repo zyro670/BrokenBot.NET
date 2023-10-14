@@ -118,6 +118,7 @@ namespace SysBot.Pokemon
             public Species Species { get; set; } = Species.None;
             public int SpeciesForm { get; set; } = 0;
             public string Seed { get; set; } = "00000000";
+            public MoveType TeraType { get; set; } = MoveType.Any;
             public string Title { get; set; } = string.Empty;
         }
 
@@ -153,5 +154,5 @@ namespace SysBot.Pokemon
 
             public override bool CanConvertTo(ITypeDescriptorContext? context, Type? destinationType) => destinationType != typeof(string) && base.CanConvertTo(context, destinationType);
         }
-    }    
+    }
 }
