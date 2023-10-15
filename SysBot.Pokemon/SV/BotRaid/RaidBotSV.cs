@@ -800,18 +800,13 @@ namespace SysBot.Pokemon
             if (Settings.TakeScreenshot && !upnext)
                 bytes = await SwitchConnection.PixelPeek(token).ConfigureAwait(false) ?? Array.Empty<byte>();
 
-            var teraurl = $"https://raw.githubusercontent.com/kwsch/PKHeX/master/PKHeX.Drawing.Misc/Resources/img/types/gem/gem_" + ((int)Settings.RaidEmbedFilters.TeraType < 10 ? $"0{(int)Settings.RaidEmbedFilters.TeraType}" : $"{(int)Settings.RaidEmbedFilters.TeraType}") + ".png";
-
             var embed = new EmbedBuilder()
             {
+                Title = disband ? $"**Raid canceled: [{TeraRaidCode}]**" : upnext && Settings.TotalRaidsToHost != 0 ? $"Preparing Raid {RaidCount}/{Settings.TotalRaidsToHost}" : upnext && Settings.TotalRaidsToHost == 0 ? $"Preparing Raid" : title,
                 Color = disband ? Color.Red : hatTrick ? Color.Purple : Color.Green,
                 Description = disband ? message : upnext ? Settings.RaidEmbedFilters.Title : raidstart ? "" : description,
                 ImageUrl = bytes.Length > 0 ? "attachment://zap.jpg" : default,
-            }.WithAuthor(new EmbedAuthorBuilder()
-            {
-                IconUrl = teraurl,
-                Name = disband ? $"**Raid canceled: [{TeraRaidCode}]**" : upnext && Settings.TotalRaidsToHost != 0 ? $"Preparing Raid {RaidCount}/{Settings.TotalRaidsToHost}" : upnext && Settings.TotalRaidsToHost == 0 ? $"Preparing Raid" : title,
-            }).WithFooter(new EmbedFooterBuilder()
+            }.WithFooter(new EmbedFooterBuilder()
             {
                 Text = $"Host: {HostSAV.OT} | Uptime: {StartTime - DateTime.Now:d\\.hh\\:mm\\:ss}\n" +
                        $"Raids: {RaidCount} | Wins: {WinCount} | Losses: {LossCount}"
@@ -1049,7 +1044,6 @@ namespace SysBot.Pokemon
                     Settings.RaidEmbedFilters.CrystalType = container.Raids[i].IsBlack ? TeraCrystalType.Black : container.Raids[i].IsEvent && stars == 7 ? TeraCrystalType.Might : container.Raids[i].IsEvent ? TeraCrystalType.Distribution : TeraCrystalType.Base;
                     Settings.RaidEmbedFilters.Species = (Species)container.Encounters[i].Species;
                     Settings.RaidEmbedFilters.SpeciesForm = container.Encounters[i].Form;
-                    Settings.RaidEmbedFilters.TeraType = (MoveType)container.Raids[i].TeraType;
                     var catchlimit = Settings.CatchLimit;
                     string cl = catchlimit is 0 ? "\n**No catch limit!**" : $"\n**Catch Limit: {catchlimit}**";
                     var pkinfo = Hub.Config.StopConditions.GetRaidPrintName(pk);
@@ -1120,6 +1114,7 @@ namespace SysBot.Pokemon
                     }
 
                     Settings.RaidEmbedFilters.IsSet = true;
+                    StoredIndex = i;
                     return true;
                 }
             }
