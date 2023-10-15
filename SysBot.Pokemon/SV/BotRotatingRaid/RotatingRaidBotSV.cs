@@ -199,6 +199,7 @@ namespace SysBot.Pokemon
                     Species = TradeExtensions<PK9>.EnumParse<Species>(montitle),
                     CrystalType = type,
                     PartyPK = new[] { data },
+                    IsSet = false,
                 };
                 Settings.RaidEmbedParameters.Add(param);
                 Log($"Parameters generated from text file for {montitle}.");
@@ -221,14 +222,12 @@ namespace SysBot.Pokemon
                 {
                     TodaySeed = BitConverter.ToUInt64(await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerP, 8, token).ConfigureAwait(false), 0);
                     Log($"Today Seed: {TodaySeed:X8}");
-                    Log($"Preparing to store index for {Settings.RaidEmbedParameters[RotationCount].Species}");
-                    await ReadRaids(true, token).ConfigureAwait(false);
                 }
 
                 if (!Settings.RaidEmbedParameters[RotationCount].IsSet)
                 {
                     Log($"Preparing parameter for {Settings.RaidEmbedParameters[RotationCount].Species}");
-                    await ReadRaids(false, token).ConfigureAwait(false);
+                    await ReadRaids(token).ConfigureAwait(false);
                 }
                 else
                     Log($"Parameter for {Settings.RaidEmbedParameters[RotationCount].Species} has been set previously, skipping raid reads.");
@@ -1053,6 +1052,8 @@ namespace SysBot.Pokemon
             var teraurl = string.Empty;
             if (!upnext)
                 teraurl = $"https://raw.githubusercontent.com/kwsch/PKHeX/master/PKHeX.Drawing.Misc/Resources/img/types/gem/gem_" + ((int)Settings.RaidEmbedParameters[RotationCount].TeraType < 10 ? $"0{(int)Settings.RaidEmbedParameters[RotationCount].TeraType}" : $"{(int)Settings.RaidEmbedParameters[RotationCount].TeraType}") + ".png";
+            else
+                teraurl = "https://i.imgur.com/uHSaGGJ.png";
 
             var embed = new EmbedBuilder()
             {
@@ -1063,7 +1064,6 @@ namespace SysBot.Pokemon
             {
                 IconUrl = teraurl,
                 Name = disband ? $"**Raid canceled: [{TeraRaidCode}]**" : upnext && Settings.TotalRaidsToHost != 0 ? $"Preparing Raid {RaidCount}/{Settings.TotalRaidsToHost}" : upnext && Settings.TotalRaidsToHost == 0 ? $"Preparing Raid" : title,
-
             })
             .WithFooter(new EmbedFooterBuilder()
             {
@@ -1283,7 +1283,7 @@ namespace SysBot.Pokemon
 
         #region RaidCrawler
         // via RaidCrawler modified for this proj
-        private async Task ReadRaids(bool init, CancellationToken token)
+        private async Task ReadRaids(CancellationToken token)
         {
             Log("Starting raid reads..");
             if (RaidBlockPointerP == 0)
@@ -1300,65 +1300,49 @@ namespace SysBot.Pokemon
                 _ => "",
             };
 
-            if (container is null)
-            {
-                container = new(game);
-                container.SetGame(game);
+            container = new(game);
+            container.SetGame(game);
 
-                var BaseBlockKeyPointer = await SwitchConnection.PointerAll(Offsets.BlockKeyPointer, token).ConfigureAwait(false);
+            var BaseBlockKeyPointer = await SwitchConnection.PointerAll(Offsets.BlockKeyPointer, token).ConfigureAwait(false);
 
-                StoryProgress = await GetStoryProgress(BaseBlockKeyPointer, token).ConfigureAwait(false);
-                EventProgress = Math.Min(StoryProgress, 3);
+            StoryProgress = await GetStoryProgress(BaseBlockKeyPointer, token).ConfigureAwait(false);
+            EventProgress = Math.Min(StoryProgress, 3);
 
-                await ReadEventRaids(BaseBlockKeyPointer, container, token).ConfigureAwait(false);
+            await ReadEventRaids(BaseBlockKeyPointer, container, token).ConfigureAwait(false);
 
-                var data = await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerP + RaidBlock.HEADER_SIZE, (int)RaidBlock.SIZE_BASE, token).ConfigureAwait(false);
+            var data = await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerP + RaidBlock.HEADER_SIZE, (int)RaidBlock.SIZE_BASE, token).ConfigureAwait(false);
 
-                (int delivery, int enc) = container.ReadAllRaids(data, StoryProgress, EventProgress, 0, TeraRaidMapParent.Paldea);
-                if (enc > 0)
-                    Log($"Failed to find encounters for {enc} raid(s).");
+            (int delivery, int enc) = container.ReadAllRaids(data, StoryProgress, EventProgress, 0, TeraRaidMapParent.Paldea);
+            if (enc > 0)
+                Log($"Failed to find encounters for {enc} raid(s).");
 
-                if (delivery > 0)
-                    Log($"Invalid delivery group ID for {delivery} raid(s). Try deleting the \"cache\" folder.");
+            if (delivery > 0)
+                Log($"Invalid delivery group ID for {delivery} raid(s). Try deleting the \"cache\" folder.");
 
-                var raids = container.Raids;
-                var encounters = container.Encounters;
-                var rewards = container.Rewards;
-                container.ClearRaids();
-                container.ClearEncounters();
-                container.ClearRewards();
+            var raids = container.Raids;
+            var encounters = container.Encounters;
+            var rewards = container.Rewards;
+            container.ClearRaids();
+            container.ClearEncounters();
+            container.ClearRewards();
 
-                data = await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerK, (int)RaidBlock.SIZE_KITAKAMI, token).ConfigureAwait(false);
+            data = await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerK, (int)RaidBlock.SIZE_KITAKAMI, token).ConfigureAwait(false);
 
-                (delivery, enc) = container.ReadAllRaids(data, StoryProgress, EventProgress, 0, TeraRaidMapParent.Kitakami);
+            (delivery, enc) = container.ReadAllRaids(data, StoryProgress, EventProgress, 0, TeraRaidMapParent.Kitakami);
 
-                if (enc > 0)
-                    Log($"Failed to find encounters for {enc} raid(s).");
+            if (enc > 0)
+                Log($"Failed to find encounters for {enc} raid(s).");
 
-                if (delivery > 0)
-                    Log($"Invalid delivery group ID for {delivery} raid(s). Try deleting the \"cache\" folder.");
+            if (delivery > 0)
+                Log($"Invalid delivery group ID for {delivery} raid(s). Try deleting the \"cache\" folder.");
 
-                var allRaids = raids.Concat(container.Raids).ToList().AsReadOnly();
-                var allEncounters = encounters.Concat(container.Encounters).ToList().AsReadOnly();
-                var allRewards = rewards.Concat(container.Rewards).ToList().AsReadOnly();
+            var allRaids = raids.Concat(container.Raids).ToList().AsReadOnly();
+            var allEncounters = encounters.Concat(container.Encounters).ToList().AsReadOnly();
+            var allRewards = rewards.Concat(container.Rewards).ToList().AsReadOnly();
 
-                container.SetRaids(allRaids);
-                container.SetEncounters(allEncounters);
-                container.SetRewards(allRewards);
-            }
-
-            if (init)
-            {
-                for (int i = 0; i < container.Raids.Count; i++)
-                {
-                    if (container.Raids[i].Seed == uint.Parse(Settings.RaidEmbedParameters[RotationCount].Seed, NumberStyles.AllowHexSpecifier))
-                    {
-                        SeedIndexToReplace = i;
-                        Log($"Den ID: {i} stored.");
-                        return;
-                    }
-                }
-            }
+            container.SetRaids(allRaids);
+            container.SetEncounters(allEncounters);
+            container.SetRewards(allRewards);
 
             bool done = false;
             for (int i = 0; i < container.Raids.Count; i++)

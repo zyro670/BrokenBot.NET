@@ -238,8 +238,11 @@ namespace SysBot.Pokemon
             if (List.Min() != 0)
                 MinimumIngredientCount = List.Min();
 
-            Log($"Ingredients needed for {Settings.PicnicFilters.TypeOfSandwich} {Settings.PicnicFilters.SandwichFlavor} Sandwich: {Settings.PicnicFilters.Item1}, {Settings.PicnicFilters.Item2}, {Settings.PicnicFilters.Item3}, & {Settings.PicnicFilters.Item4}.\nWe have enough " +
-                $"ingredients for {MinimumIngredientCount} sandwiches.");
+            if (Condiments[1] == Condiments[2] || Condiments[2] == Condiments[3])
+                MinimumIngredientCount /= 2;
+
+            Log($"Ingredients needed for {Settings.PicnicFilters.TypeOfSandwich} {Settings.PicnicFilters.SandwichFlavor} Sandwich: {Settings.PicnicFilters.Item1}, {Settings.PicnicFilters.Item2}, {Settings.PicnicFilters.Item3}, & {Settings.PicnicFilters.Item4}." +
+                $"\nWe have enough ingredients for {MinimumIngredientCount} sandwiches.");
 
             return true;
         }

@@ -56,6 +56,12 @@ namespace SysBot.Pokemon
 
         public override async Task MainLoop(CancellationToken token)
         {
+            if (string.IsNullOrEmpty(Settings.RaidEmbedFilters.Seed))
+            {
+                Log("Please enter your seed in the Seed field before starting the bot.");
+                return;
+            }
+
             if (Settings.GenerateParametersFromFile)
             {
                 GenerateSeedsFromFile();
@@ -172,6 +178,7 @@ namespace SysBot.Pokemon
             EmptyRaid = 0;
             RaidCount = 0;
             var raidsHosted = 0;
+            Settings.RaidEmbedFilters.IsSet = false;
             while (!token.IsCancellationRequested)
             {
                 // Initialize offsets at the start of the routine and cache them.
@@ -180,14 +187,17 @@ namespace SysBot.Pokemon
                 {
                     TodaySeed = BitConverter.ToUInt64(await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerP, 8, token).ConfigureAwait(false), 0);
                     Log($"Today Seed: {TodaySeed:X8}");
-                    Log($"Preparing to store index for {Settings.RaidEmbedFilters.Species}");
-                    await ReadRaids(true, token).ConfigureAwait(false);
                 }
 
                 if (!Settings.RaidEmbedFilters.IsSet)
                 {
                     Log($"Preparing parameter for {Settings.RaidEmbedFilters.Species}");
-                    await ReadRaids(false, token).ConfigureAwait(false);
+                    bool valid = await ReadRaids(token).ConfigureAwait(false);
+                    if (!valid)
+                    {
+                        Log($"{Settings.RaidEmbedFilters.Seed} was not found among your current raids in game. Please ensure your seed is entered correctly before starting the bot.");
+                        return;
+                    }
                 }
                 else
                     Log($"Parameter for {Settings.RaidEmbedFilters.Species} set previously, skipping raid reads.");
@@ -953,7 +963,7 @@ namespace SysBot.Pokemon
 
         #region RaidCrawler
         // via RaidCrawler modified for this proj
-        private async Task ReadRaids(bool init, CancellationToken token)
+        private async Task<bool> ReadRaids(CancellationToken token)
         {
             if (RaidBlockPointerP == 0)
                 RaidBlockPointerP = await SwitchConnection.PointerAll(Offsets.RaidBlockPointerP, token).ConfigureAwait(false);
@@ -969,69 +979,49 @@ namespace SysBot.Pokemon
                 _ => "",
             };
 
-            if (container is null)
-            {
-                container = new(game);
-                container.SetGame(game);
+            container = new(game);
+            container.SetGame(game);
 
-                var BaseBlockKeyPointer = await SwitchConnection.PointerAll(Offsets.BlockKeyPointer, token).ConfigureAwait(false);
+            var BaseBlockKeyPointer = await SwitchConnection.PointerAll(Offsets.BlockKeyPointer, token).ConfigureAwait(false);
 
-                StoryProgress = await GetStoryProgress(BaseBlockKeyPointer, token).ConfigureAwait(false);
-                EventProgress = Math.Min(StoryProgress, 3);
+            StoryProgress = await GetStoryProgress(BaseBlockKeyPointer, token).ConfigureAwait(false);
+            EventProgress = Math.Min(StoryProgress, 3);
 
-                await ReadEventRaids(BaseBlockKeyPointer, container, token).ConfigureAwait(false);
+            await ReadEventRaids(BaseBlockKeyPointer, container, token).ConfigureAwait(false);
 
-                var data = await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerP + RaidBlock.HEADER_SIZE, (int)(RaidBlock.SIZE_BASE - RaidBlock.HEADER_SIZE), token).ConfigureAwait(false);
+            var data = await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerP + RaidBlock.HEADER_SIZE, (int)(RaidBlock.SIZE_BASE - RaidBlock.HEADER_SIZE), token).ConfigureAwait(false);
 
-                (int delivery, int enc) = container.ReadAllRaids(data, StoryProgress, EventProgress, 0, TeraRaidMapParent.Paldea);
-                if (enc > 0)
-                    Log($"Failed to find encounters for {enc} raid(s).");
+            (int delivery, int enc) = container.ReadAllRaids(data, StoryProgress, EventProgress, 0, TeraRaidMapParent.Paldea);
+            if (enc > 0)
+                Log($"Failed to find encounters for {enc} raid(s).");
 
-                if (delivery > 0)
-                    Log($"Invalid delivery group ID for {delivery} raid(s). Try deleting the \"cache\" folder.");
+            if (delivery > 0)
+                Log($"Invalid delivery group ID for {delivery} raid(s). Try deleting the \"cache\" folder.");
 
-                var raids = container.Raids;
-                var encounters = container.Encounters;
-                var rewards = container.Rewards;
+            var raids = container.Raids;
+            var encounters = container.Encounters;
+            var rewards = container.Rewards;
 
-                data = await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerK, 0xC80, token).ConfigureAwait(false);
+            data = await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointerK, 0xC80, token).ConfigureAwait(false);
 
-                (delivery, enc) = container.ReadAllRaids(data, StoryProgress, EventProgress, 0, TeraRaidMapParent.Kitakami);
+            (delivery, enc) = container.ReadAllRaids(data, StoryProgress, EventProgress, 0, TeraRaidMapParent.Kitakami);
 
-                if (enc > 0)
-                    Log($"Failed to find encounters for {enc} raid(s).");
+            if (enc > 0)
+                Log($"Failed to find encounters for {enc} raid(s).");
 
-                if (delivery > 0)
-                    Log($"Invalid delivery group ID for {delivery} raid(s). Try deleting the \"cache\" folder.");
+            if (delivery > 0)
+                Log($"Invalid delivery group ID for {delivery} raid(s). Try deleting the \"cache\" folder.");
 
-                var allRaids = raids.Concat(container.Raids).ToList().AsReadOnly();
-                var allEncounters = encounters.Concat(container.Encounters).ToList().AsReadOnly();
-                var allRewards = rewards.Concat(container.Rewards).ToList().AsReadOnly();
+            var allRaids = raids.Concat(container.Raids).ToList().AsReadOnly();
+            var allEncounters = encounters.Concat(container.Encounters).ToList().AsReadOnly();
+            var allRewards = rewards.Concat(container.Rewards).ToList().AsReadOnly();
 
-                container.SetRaids(allRaids);
-                container.SetEncounters(allEncounters);
-                container.SetRewards(allRewards);
-            }
+            container.SetRaids(allRaids);
+            container.SetEncounters(allEncounters);
+            container.SetRewards(allRewards);
 
-            if (init)
-            {
-                for (int i = 0; i < container.Raids.Count; i++)
-                {
-                    if (container.Raids[i].Seed == uint.Parse(Settings.RaidEmbedFilters.Seed, NumberStyles.AllowHexSpecifier))
-                    {
-                        StoredIndex = i;
-                        Log($"Den ID: {i} stored.");
-                        return;
-                    }
-                }
-            }
-
-            bool done = false;
             for (int i = 0; i < container.Raids.Count; i++)
             {
-                if (done is true)
-                    break;
-
                 var (pk, seed) = IsSeedReturned(container.Encounters[i], container.Raids[i]);
                 var set = uint.Parse(Settings.RaidEmbedFilters.Seed, NumberStyles.AllowHexSpecifier);
                 if (seed == set)
@@ -1130,9 +1120,10 @@ namespace SysBot.Pokemon
                     }
 
                     Settings.RaidEmbedFilters.IsSet = true;
-                    done = true;
+                    return true;
                 }
             }
+            return false;
         }
         #endregion
     }
