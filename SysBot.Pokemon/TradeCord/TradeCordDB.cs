@@ -446,7 +446,7 @@ namespace SysBot.Pokemon
                         clone.OT_Name = "Nishikigoi";
                         var trainer = new PokeTrainerDetails(clone);
                         var encShelm = new LegalityAnalysis(pk).EncounterMatch;
-                        pk.SetHandlerandMemory(trainer, encShelm, tb);
+                        pk.SetHandlerandMemory(trainer, encShelm, (ITracebackHandler) tb);
                     }; break;
                 case EvolutionType.Spin:
                     {
@@ -521,7 +521,7 @@ namespace SysBot.Pokemon
                 pk.Met_Level = 1;
                 pk.SetEggMetData(GameVersion.UM, (GameVersion)version);
                 enc = new LegalityAnalysis(pk).EncounterMatch;
-                pk.SetHandlerandMemory(sav, enc, tb);
+                pk.SetHandlerandMemory(sav, enc, (ITracebackHandler) tb);
                 if (pk is PK8 pk8)
                 {
                     pk8.HeightScalar = 0;
@@ -531,7 +531,7 @@ namespace SysBot.Pokemon
                 if (pk.Ball is (int)Ball.Sport || (pk.WasEgg && pk.Ball is (int)Ball.Master))
                     pk.SetSuggestedBall(true);
             }
-            else pk.SetHandlerandMemory(sav, enc, tb);
+            else pk.SetHandlerandMemory(sav, enc, (ITracebackHandler) tb);
 
             var index = pk.PersonalInfo.GetIndexOfAbility(pk.Ability);
             pk.Species = result.EvolvesInto;

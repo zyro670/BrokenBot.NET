@@ -814,7 +814,7 @@ namespace SysBot.Pokemon
                     {
                         new() { Identifier = TracebackType.Trainer, Comment = "Modified handler to HT" }
                     };
-                    pk.SetHandlerandMemory(sav, enc, tb);
+                    pk.SetHandlerandMemory(sav, enc, (ITracebackHandler) tb);
                     if (results != default)
                     {
                         switch (results.Identifier)
@@ -852,7 +852,7 @@ namespace SysBot.Pokemon
                                         else pk.SetDefaultNickname(la);
 
                                         enc = new LegalityAnalysis(pk).EncounterMatch;
-                                        pk.SetHandlerandMemory(sav, enc, tb);
+                                        pk.SetHandlerandMemory(sav, enc, (ITracebackHandler) tb);
                                     }
                                     else pk.SetDefaultNickname(la);
                                 }; break;

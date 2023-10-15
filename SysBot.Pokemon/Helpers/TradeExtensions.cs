@@ -233,7 +233,7 @@ namespace SysBot.Pokemon
             {
                 new() { Identifier = TracebackType.Encounter, Comment = $"Encounter: {enc}" }
             };
-            pk.SetSuggestedRibbons(template, enc, true, tb);
+            pk.SetSuggestedRibbons(template, enc, true, (ITracebackHandler) tb);
         }
 
         public static void EncounterLogs(PKM pk, string filepath = "")
@@ -409,7 +409,7 @@ namespace SysBot.Pokemon
             if (mgPkm is not null && result is EntityConverterResult.Success)
             {
                 var enc = new LegalityAnalysis(mgPkm).EncounterMatch;
-                mgPkm.SetHandlerandMemory(info, enc, tb);
+                mgPkm.SetHandlerandMemory(info, enc, (ITracebackHandler) tb);
 
                 if (mgPkm.TID16 is 0 && mgPkm.SID16 is 0)
                 {
