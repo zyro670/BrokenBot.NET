@@ -15,6 +15,7 @@ using RaidCrawler.Core.Structures;
 using System.Net.Http;
 using Newtonsoft.Json;
 using static SysBot.Base.SwitchButton;
+using static SysBot.Pokemon.OverworldSettingsSV;
 
 namespace SysBot.Pokemon
 {
@@ -74,7 +75,7 @@ namespace SysBot.Pokemon
                 Log("Using Preset file.");
             }
 
-            if (Settings.ConfigureRolloverCorrection)
+            if (Settings.RolloverFilters.ConfigureRolloverCorrection)
             {
                 await RolloverCorrectionSV(token).ConfigureAwait(false);
                 return;
@@ -223,7 +224,7 @@ namespace SysBot.Pokemon
                     continue;
                 }
 
-                if (RaidCount == 0 && Settings.KeepDaySeed)
+                if (RaidCount == 0 && Settings.RolloverFilters.KeepDaySeed)
                     OverrideTodaySeed();
 
                 if (Hub.Config.Stream.CreateAssets)
@@ -702,7 +703,14 @@ namespace SysBot.Pokemon
 
         private async Task RolloverCorrectionSV(CancellationToken token)
         {
-            var scrollroll = Settings.DateTimeFormat switch
+            if (Settings.RolloverFilters.RolloverPrevention == RolloverPrevention.TimeSkip)
+            {
+                for (int i = 0; i < 23; i++)
+                    await TimeSkipBwd(token).ConfigureAwait(false);
+                return;
+            }
+
+            var scrollroll = Settings.RolloverFilters.DateTimeFormat switch
             {
                 DTFormat.DDMMYY => 0,
                 DTFormat.YYMMDD => 2,
@@ -721,12 +729,12 @@ namespace SysBot.Pokemon
             await PressAndHold(DDOWN, 2_000, 0_250, token).ConfigureAwait(false); // Scroll to system settings
             await Click(A, 1_250, token).ConfigureAwait(false);
 
-            if (Settings.UseOvershoot)
+            if (Settings.RolloverFilters.RolloverPrevention == RolloverPrevention.Overshoot)
             {
-                await PressAndHold(DDOWN, Settings.HoldTimeForRollover, 1_000, token).ConfigureAwait(false);
+                await PressAndHold(DDOWN, Settings.RolloverFilters.HoldTimeForRollover, 1_000, token).ConfigureAwait(false);
                 await Click(DUP, 0_500, token).ConfigureAwait(false);
             }
-            else if (!Settings.UseOvershoot)
+            else if (Settings.RolloverFilters.RolloverPrevention == RolloverPrevention.DDOWN)
             {
                 for (int i = 0; i < 39; i++)
                     await Click(DDOWN, 0_100, token).ConfigureAwait(false);

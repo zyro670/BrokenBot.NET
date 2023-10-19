@@ -278,6 +278,12 @@ namespace SysBot.Pokemon
 
 
         // Zyro additions
+
+        public async Task DaySkipSV(CancellationToken token) => await SwitchConnection.SendAsync(SwitchCommand.DaySkip(true), token).ConfigureAwait(false);
+        public async Task TimeSkipFwd(CancellationToken token) => await SwitchConnection.SendAsync(SwitchCommand.TimeSkipForward(true), token).ConfigureAwait(false);
+        public async Task TimeSkipBwd(CancellationToken token) => await SwitchConnection.SendAsync(SwitchCommand.TimeSkipBack(true), token).ConfigureAwait(false);
+        public async Task ResetTimeSV(CancellationToken token) => await SwitchConnection.SendAsync(SwitchCommand.ResetTime(true), token).ConfigureAwait(false);
+
         public async Task SetBoxPokemonEgg(PK9 pkm, ulong ofs, CancellationToken token)
         {
             pkm.ResetPartyStats();

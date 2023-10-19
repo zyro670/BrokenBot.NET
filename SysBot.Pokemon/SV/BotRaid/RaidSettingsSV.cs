@@ -4,6 +4,7 @@ using SysBot.Base;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading;
+using static SysBot.Pokemon.OverworldSettingsSV;
 
 namespace SysBot.Pokemon
 {
@@ -35,6 +36,9 @@ namespace SysBot.Pokemon
         [Category(Hosting), Description("Raid Embed Filters"), DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
         public RaidEmbedFiltersCategory RaidEmbedFilters { get; set; } = new();
 
+        [Category(Hosting), Description("Rollover Filters"), DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
+        public RaidRolloverFiltersCategory RolloverFilters { get; set; } = new();
+
         [Category(Hosting), Description("When enabled, the bot will use the superior sprite art courtesy of SHA.")]
         public bool SpriteAlternateArt { get; set; } = true;
 
@@ -61,24 +65,6 @@ namespace SysBot.Pokemon
 
         [Category(Hosting), Description("Users NIDs here are banned raiders.")]
         public RemoteControlAccessList RaiderBanList { get; set; } = new() { AllowIfEmpty = false };
-
-        [Category(Hosting), Description("When enabled, the bot will inject the current day seed to tomorrow's day seed.")]
-        public bool KeepDaySeed { get; set; } = false;
-
-        [Category(FeatureToggle), Description("Set your Switch Date/Time format in the Date/Time settings. The day will automatically rollback by 1 if the Date changes.")]
-        public DTFormat DateTimeFormat { get; set; } = DTFormat.MMDDYY;
-
-        [Category(Hosting), Description("When enabled, the bot will use the overshoot method to apply rollover correction, otherwise will use DDOWN clicks.")]
-        public bool UseOvershoot { get; set; } = false;
-
-        [Category(Hosting), Description("Amount of times to hit DDOWN for accessing date/time settings during rollover correction. [Default: 39 Clicks]")]
-        public int DDOWNClicks { get; set; } = 39;
-
-        [Category(Hosting), Description("Time to scroll down duration in milliseconds for accessing date/time settings during rollover correction. You want to have it overshoot the Date/Time setting by 1, as it will click DUP after scrolling down. [Default: 930ms]")]
-        public int HoldTimeForRollover { get; set; } = 900;
-
-        [Category(Hosting), Description("When enabled, start the bot when you are on the HOME screen with the game closed. The bot will only run the rollover routine so you can try to configure accurate timing.")]
-        public bool ConfigureRolloverCorrection { get; set; } = false;
 
         [Category(FeatureToggle), Description("When enabled, the screen will be turned off during normal bot loop operation to save power.")]
         public bool ScreenOff { get; set; }
@@ -140,6 +126,33 @@ namespace SysBot.Pokemon
 
             [Category(Hosting), Description("If true, the bot will append the Special Rewards to the preset Description.")]
             public bool IncludeRewards { get; set; } = true;
+        }
+
+        [Category(Hosting), TypeConverter(typeof(CategoryConverter<RaidRolloverFiltersCategory>))]
+        public class RaidRolloverFiltersCategory
+        {
+            public override string ToString() => "Rollover Conditions";
+
+            [Category(Hosting), Description("When enabled, the bot will inject the current day seed to tomorrow's day seed.")]
+            public bool KeepDaySeed { get; set; } = false;
+
+            [Category(Hosting), Description("When enabled, the bot will check if our dayseed changes to attempt preventing a lost outbreak.")]
+            public bool PreventRollover { get; set; } = false;
+
+            [Category(Hosting), Description("When PreventRollover is enabled, the bot will attempt to go back 1 hour every hour if using TimeSkip, otherwise back 1 day if using another selection. You must use zyro's usb-botbase release and Sync your Date/Time Settings if you select TimeSkip, otherwise Date/Time should be unsynced for the other options.")]
+            public RolloverPrevention RolloverPrevention { get; set; } = RolloverPrevention.TimeSkip;
+
+            [Category(Hosting), Description("Set your Switch Date/Time format in the Date/Time settings. The day will automatically rollback by 1 if the Date changes.")]
+            public DTFormat DateTimeFormat { get; set; } = DTFormat.MMDDYY;
+
+            [Category(Hosting), Description("Time to scroll down duration in milliseconds for accessing date/time settings during rollover correction. You want to have it overshoot the Date/Time setting by 1, as it will click DUP after scrolling down. [Default: 930ms]")]
+            public int HoldTimeForRollover { get; set; } = 900;
+
+            [Category(Hosting), Description("Amount of times to hit DDOWN for accessing date/time settings during rollover correction. [Default: 39 Clicks]")]
+            public int DDOWNClicks { get; set; } = 39;
+
+            [Category(Hosting), Description("If true, start the bot when you are on the HOME screen with the game closed. The bot will only run the rollover routine so you can try to configure accurate timing.")]
+            public bool ConfigureRolloverCorrection { get; set; } = false;
         }
 
         public class CategoryConverter<T> : TypeConverter

@@ -33,7 +33,7 @@ namespace SysBot.Pokemon
         private static ulong BaseBlockKeyPointer = 0;
         private ulong PlayerCanMoveOffset;
         private ulong PlayerOnMountOffset;
-        private bool GameWasReset = false;        
+        private bool GameWasReset = false;
         private SAV9SV TrainerSav = new();
         private List<byte[]?> coordList = new();
         private List<int> Condiments = new();
@@ -234,7 +234,7 @@ namespace SysBot.Pokemon
                         break;
                     }
                 }
-            }            
+            }
             if (List.Min() != 0)
                 MinimumIngredientCount = List.Min();
 
@@ -261,10 +261,13 @@ namespace SysBot.Pokemon
         {
             await Click(B, 0_050, token).ConfigureAwait(false);
             await CloseGame(Hub.Config, token).ConfigureAwait(false);
-            await Task.Delay(1_500, token).ConfigureAwait(false);
             if (opensettings)
-                await RolloverCorrectionSV(time, token).ConfigureAwait(false);
-            await Task.Delay(1_700, token).ConfigureAwait(false);
+            {
+                if (Settings.RolloverFilters.RolloverPrevention == RolloverPrevention.TimeSkip)
+                    await TimeSkipBwd(token).ConfigureAwait(false);
+                else
+                    await RolloverCorrectionSV(time, token).ConfigureAwait(false);
+            }
             await StartGame(Hub.Config, token).ConfigureAwait(false);
             await InitializeSessionOffsets(token).ConfigureAwait(false);
         }
@@ -328,7 +331,7 @@ namespace SysBot.Pokemon
                     return;
                 }
 
-                if (start == 2 && Settings.RolloverFilters.CheckForRollover)
+                if (start == 2 && Settings.RolloverFilters.PreventRollover)
                 {
                     await ResetOverworld(true, true, token).ConfigureAwait(false);
                     start = 0;
@@ -583,7 +586,7 @@ namespace SysBot.Pokemon
             }
 
             StopConditionSettings.HasMark(pk, out RibbonIndex specialmark);
-            if (Settings.SpecialMarksOnly && specialmark is >= RibbonIndex.MarkLunchtime and <= RibbonIndex.MarkMisty || Settings.SpecialMarksOnly && specialmark is RibbonIndex.MarkUncommon)
+            if (Settings.SpecialMarksOnly && specialmark is >= RibbonIndex.MarkLunchtime and <= RibbonIndex.MarkDawn || Settings.SpecialMarksOnly && specialmark is RibbonIndex.MarkUncommon)
             {
                 if (pk.Scale > 0 && pk.Scale < 255)
                 {
@@ -669,7 +672,6 @@ namespace SysBot.Pokemon
                     await Click(B, 1_000, token).ConfigureAwait(false);
                 await Click(HOME, 1_000, token).ConfigureAwait(false);
             }
-
             return false;
         }
 
@@ -1020,12 +1022,12 @@ namespace SysBot.Pokemon
             await PressAndHold(DDOWN, 2_000, 0_250, token).ConfigureAwait(false); // Scroll to system settings
             await Click(A, 1_250, token).ConfigureAwait(false);
 
-            if (Settings.RolloverFilters.UseOvershoot)
+            if (Settings.RolloverFilters.RolloverPrevention == RolloverPrevention.Overshoot)
             {
                 await PressAndHold(DDOWN, Settings.RolloverFilters.HoldTimeForRollover, 1_000, token).ConfigureAwait(false);
                 await Click(DUP, 0_500, token).ConfigureAwait(false);
             }
-            else if (!Settings.RolloverFilters.UseOvershoot)
+            else if (Settings.RolloverFilters.RolloverPrevention == RolloverPrevention.DDOWN)
             {
                 for (int i = 0; i < 39; i++)
                     await Click(DDOWN, 0_100, token).ConfigureAwait(false);
@@ -1062,7 +1064,7 @@ namespace SysBot.Pokemon
 
         private async Task TeleportToMatch(byte[]? cp, CancellationToken token)
         {
-            for (int i = 0; i < 5; i++) // Mash DRIGHT to confirm
+            for (int i = 0; i < 5; i++)
                 await Click(B, 0_500, token).ConfigureAwait(false);
             await Click(PLUS, 1_500, token).ConfigureAwait(false);
 
