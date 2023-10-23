@@ -7,7 +7,7 @@ For specific support for this fork of ForkBot's fork of kwsch's SysBot.NET repo 
 
 [Support Server: Rosé Garden](https://discord.gg/G23Mx85Mdz)
 
-[USB-Botbase](https://github.com/Koi-3088/USB-Botbase) client for remote USB control for this fork.
+[USB-Botbase](https://github.com/zyro670/usb-botbase) client for remote USB control for this fork.
 
 [sys-botbase](https://github.com/olliz0r/sys-botbase) client for remote control automation of Nintendo Switch consoles.
 
