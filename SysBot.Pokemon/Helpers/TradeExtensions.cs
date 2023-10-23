@@ -229,11 +229,14 @@ namespace SysBot.Pokemon
             pk.Move1_PPUps = pk.Move2_PPUps = pk.Move3_PPUps = pk.Move4_PPUps = 0;
             pk.SetMaximumPPCurrent(pk.Moves);
             pk.SetSuggestedHyperTrainingData();
-            List<ALMTraceback> tb = new()
+            ALMTraceback tblist = new()
             {
-                new() { Identifier = TracebackType.Encounter, Comment = $"Encounter: {enc}" }
+                Identifier = TracebackType.Misc,
+                Comment = "Set all valid ribbons",
             };
-            pk.SetSuggestedRibbons(template, enc, true, (ITracebackHandler) tb);
+            ITracebackHandler tb = default!;
+            tb.Handle(tblist);
+            pk.SetSuggestedRibbons(template, enc, true, tb);
         }
 
         public static void EncounterLogs(PKM pk, string filepath = "")
