@@ -17,9 +17,6 @@ namespace SysBot.Pokemon
         [Category(EggFetch), Description("When enabled, the bot will continue after finding a suitable match.")]
         public ContinueAfterMatch ContinueAfterMatch { get; set; } = ContinueAfterMatch.StopExit;
 
-        [Category(EggFetch), Description("Choose your method of collecting eggs. CollectAndDump is traditional collect eggs from basket. WaitAndClose will watch for 10 eggs to spawn then close and reopen picnic to reset them. Make sure no bonus is active or any eggs are in basket if using WaitAndClose mode.")]
-        public EggMode EggBotMode { get; set; } = EggMode.WaitAndClose;
-
         [Category(EggFetch), Description("EggFetch Paremeters"), DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
         public List<EggFetchStopConditionsCatgeory> StopConditions { get; set; } = new();
 
@@ -44,11 +41,8 @@ namespace SysBot.Pokemon
         [Category(EggFetch), Description("When enabled, the bot will look for 3 Segment Dunsparce or Family of Three Maus.")]
         public bool OneInOneHundredOnly { get; set; } = true;
 
-        [Category(EggFetch), Description("Resets game after making this amount of sandwiches to minimize memory leaks.")]
+        [Category(EggFetch), Description("Resets game after making this amount of sandwiches.")]
         public int ResetGameAfterThisManySandwiches { get; set; } = 2;
-
-        [Category(EggFetch), Description("When enabled, the bot will force dump any egg encounters that are a match. These should not be treated as legitimate eggs.")]
-        public bool ForceDump { get; set; } = false;
 
         [Category(EggFetch), Description("When enabled, the screen will be turned off during normal bot loop operation to save power.")]
         public bool ScreenOff { get; set; }
@@ -73,12 +67,6 @@ namespace SysBot.Pokemon
                 yield break;
             if (CompletedEggs != 0)
                 yield return $"Eggs Received: {CompletedEggs}";
-        }
-
-        public enum EggMode
-        {
-            CollectAndDump = 0,
-            WaitAndClose = 1,
         }
 
         [Category(EggFetch), TypeConverter(typeof(CategoryConverter<EggFetchStopConditionsCatgeory>))]

@@ -175,7 +175,7 @@ namespace SysBot.Pokemon
             }
             catch (Exception ex)
             {
-                Base.LogUtil.LogError($"Something went wrong during {ctx.Context} execution for {ctx.Username}.\nTarget: {ex.TargetSite}\nMessage: {ex.Message}\nStack: {ex.StackTrace}\nInner: {ex.InnerException}", "[TradeCord]");
+                LogUtil.LogError($"Something went wrong during {ctx.Context} execution for {ctx.Username}.\nTarget: {ex.TargetSite}\nMessage: {ex.Message}\nStack: {ex.StackTrace}\nInner: {ex.InnerException}", "[TradeCord]");
                 return new Results()
                 {
                     EmbedName = "Oops!",
@@ -241,6 +241,7 @@ namespace SysBot.Pokemon
             Results result = new();
             string eggMsg = string.Empty;
             string buddyMsg = string.Empty;
+            SimpleTrainerInfo info = new();
             bool FuncCatch()
             {
                 PerkBoostApplicator(user);
@@ -297,26 +298,26 @@ namespace SysBot.Pokemon
                     _ = DateTime.TryParse(Settings.EventEnd, out DateTime endTime);
                     bool ended = endTime != default && DateTime.Now > endTime;
                     bool boostProc = user.Perks.SpeciesBoost != 0 && Rng.SpeciesBoostRNG >= 99;
-                    MysteryGift? mg = default;
+                    MysteryGift mg = default!;
                     byte eventForm = 0;
 
                     if (Settings.EnableEvent && !ended)
-                        EventHandler(Settings, out mg, out eventForm);
+                        EventHandler(Settings, out mg!, out eventForm);
                     else if (boostProc)
                         Rng.SpeciesRNG = user.Perks.SpeciesBoost;
 
                     var speciesName = $"{SpeciesName.GetSpeciesNameGeneration(Rng.SpeciesRNG, 2, 9)}{TradeExtensions<T>.FormOutput(result.Poke.Species, result.Poke.Form, out _)}";
-                    if (CherishOnly.Contains(Rng.SpeciesRNG) || Rng.CherishRNG >= 100 - Settings.CherishRate || mg != default)
+                    /*if (CherishOnly.Contains(Rng.SpeciesRNG) || Rng.CherishRNG >= 100 - Settings.CherishRate || mg != default)
                     {
                         var mgRng = mg == default ? MysteryGiftRng(Settings) : mg;
                         if (mgRng != default)
                         {
                             _ = Enum.TryParse(user.TrainerInfo.OTGender, out Gender gender);
                             _ = Enum.TryParse(user.TrainerInfo.Language, out LanguageID language);
-                            var info = new SimpleTrainerInfo { Gender = (int)gender, Language = (int)language, OT = user.TrainerInfo.OTName, TID16 = user.TrainerInfo.TID16, SID16 = user.TrainerInfo.SID16, Context = Game is GameVersion.BDSP ? EntityContext.Gen8b : Game is GameVersion.SV ? EntityContext.Gen9 : EntityContext.Gen8, Generation = format };
-                            result.Poke = TradeExtensions<T>.CherishHandler(mgRng, info);
+                            info = new SimpleTrainerInfo { Gender = (int)gender, Language = (int)language, OT = user.TrainerInfo.OTName, TID16 = user.TrainerInfo.TID16, SID16 = user.TrainerInfo.SID16, Context = Game is GameVersion.BDSP ? EntityContext.Gen8b : Game is GameVersion.SV ? EntityContext.Gen9 : EntityContext.Gen8, Generation = format };
+                            result.Poke = TradeExtensions<T>.CherishHandler(mgRng!, info);
                         }
-                    }
+                    }*/
 
                     if (result.Poke.Species is 0)
                         result.Poke = Game is GameVersion.BDSP ? SetProcessBDSP(speciesName, trainerInfo, eventForm) : Game is GameVersion.SV ? SetProcessSV(speciesName, trainerInfo, eventForm) : SetProcessSWSH(speciesName, trainerInfo, eventForm);
@@ -327,7 +328,7 @@ namespace SysBot.Pokemon
                     if (result.Poke.Species is >= (ushort)Species.Sprigatito and <= (ushort)Species.Quaquaval && result.Poke.Ball == (int)Ball.Premier)
                         result.Poke.Ball = (int)Ball.Poke;
 
-                        if (!new LegalityAnalysis(result.Poke).Valid)
+                    if (!new LegalityAnalysis(result.Poke).Valid)
                         result.Poke = LegalityFixFailure(result.Poke);
 
                     if (!new LegalityAnalysis(result.Poke).Valid)

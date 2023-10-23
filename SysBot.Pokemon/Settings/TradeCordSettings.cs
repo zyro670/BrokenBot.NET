@@ -80,13 +80,16 @@ namespace SysBot.Pokemon
         Dark = 16,
         Fairy = 17,
         Legends = 18,
-        EventPoke = 19,
+        //EventPoke = 19,
         RodentLite = 20,
         ClickbaitArticle = 21,
         Babies = 22,
         Halloween = 23,
-        CottonCandy = 24,
+        //CottonCandy = 24,
         PokePets = 25,
         HouseParty = 26,
+        LegendOfKoi = 27,
+        Paradox = 28,
+        FroggyFrenzy = 29,
     }
 }

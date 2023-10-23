@@ -29,7 +29,7 @@ namespace SysBot.Pokemon
 
         public static readonly int[] Amped = { 3, 4, 2, 8, 9, 19, 22, 11, 13, 14, 0, 6, 24 };
         public static readonly int[] LowKey = { 1, 5, 7, 10, 12, 15, 16, 17, 18, 20, 21, 23 };
-        public static readonly ushort[] ShinyLock = {  (ushort)Species.Victini, (ushort)Species.Hoopa, (ushort)Species.Keldeo, (ushort)Species.Volcanion, (ushort)Species.Cosmog, (ushort)Species.Cosmoem, (ushort)Species.Magearna, (ushort)Species.Marshadow, (ushort)Species.Eternatus,
+        public static readonly ushort[] ShinyLock = {  (ushort)Species.Victini, (ushort)Species.Hoopa, (ushort)Species.Keldeo, (ushort)Species.Meloetta, (ushort)Species.Volcanion, (ushort)Species.Cosmog, (ushort)Species.Cosmoem, (ushort)Species.Magearna, (ushort)Species.Marshadow, (ushort)Species.Eternatus,
         (ushort)Species.Kubfu, (ushort)Species.Urshifu, (ushort)Species.Zarude, (ushort)Species.Glastrier, (ushort)Species.Spectrier, (ushort)Species.Calyrex, (ushort)Species.Enamorus, (ushort)Species.WalkingWake, (ushort)Species.IronLeaves,
         (ushort)Species.ChienPao, (ushort)Species.WoChien, (ushort)Species.TingLu, (ushort)Species.ChiYu, (ushort)Species.Koraidon, (ushort)Species.Miraidon};
         public static readonly ushort[] MegaPrimals = { (ushort)Species.Venusaur, (ushort)Species.Charizard, (ushort)Species.Blastoise, (ushort)Species.Beedrill, (ushort)Species.Pidgeot, (ushort)Species.Alakazam,
@@ -401,15 +401,18 @@ namespace SysBot.Pokemon
             var mgPkm = mg.ConvertToPKM(info);
             bool canConvert = EntityConverter.IsConvertibleToFormat(mgPkm, info.Generation);
             mgPkm = canConvert ? EntityConverter.ConvertToType(mgPkm, typeof(T), out result) : mgPkm;
-            List<ALMTraceback> tb = new()
+            ALMTraceback tblist = new()
             {
-                new() { Identifier = TracebackType.Trainer, Comment = "Modified handler to HT" }
+                Identifier = TracebackType.Trainer,
+                Comment = "Modified handler to HT",
             };
+            ITracebackHandler tb = default!;
+            tb.Handle(tblist);
 
             if (mgPkm is not null && result is EntityConverterResult.Success)
             {
                 var enc = new LegalityAnalysis(mgPkm).EncounterMatch;
-                mgPkm.SetHandlerandMemory(info, enc, (ITracebackHandler) tb);
+                mgPkm.SetHandlerandMemory(info, enc, tb);
 
                 if (mgPkm.TID16 is 0 && mgPkm.SID16 is 0)
                 {
