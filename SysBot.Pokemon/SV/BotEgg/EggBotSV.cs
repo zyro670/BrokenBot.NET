@@ -30,10 +30,7 @@ namespace SysBot.Pokemon
         private PK9 prevPK = new();
         private static readonly PK9 Blank = new();
         private readonly byte[] BlankVal = { 0x01 };
-        private ulong BoxStartOffset;
         private ulong OverworldOffset;
-        private ulong TextBoxOffset;
-        private byte[] TextVal = Array.Empty<byte>();
 
         public override async Task MainLoop(CancellationToken token)
         {
@@ -394,7 +391,7 @@ namespace SysBot.Pokemon
 
         private async Task InitializeSessionOffsets(CancellationToken token)
         {
-            BoxStartOffset = await SwitchConnection.PointerAll(Offsets.BoxStartPokemonPointer, token).ConfigureAwait(false);
+            OverworldOffset = await SwitchConnection.PointerAll(Offsets.OverworldPointer, token).ConfigureAwait(false);
             Log("Caching offsets complete!");
         }
 
