@@ -31,6 +31,7 @@ namespace SysBot.Pokemon
         public IReadOnlyList<long> RideCollisionPointer { get; } = new long[] { 0x46455D8, 0x2A8, 0x0, 0x08, 0x80 };
         public IReadOnlyList<long> PlayerOnMountPointer { get; } = new long[] { 0x46455D8, 0x2A8, 0x0, 0x08, 0x70 };
         public IReadOnlyList<long> MobilityPointer { get; } = new long[] { 0x46239F8, 0x60, 0x0, 0xB8, 0x20 };
+        public IReadOnlyList<long> TextBoxPointer { get; } = new long[] { 0x4647BC0, 0x10, 0x3D8, 0x1D0, 0x30, 0x0 };
         public IReadOnlyList<long> BlockKeyPointer = new long[] { 0x4617648, 0xD8, 0x0, 0x0, 0x30, 0x0 };
         public IReadOnlyList<long> ItemBlock { get; } = new long[] { 0x4617648, 0x1C0, 0xC8, 0x40 };
         public uint TeraLobbyIsConnected { get; } = 0x042CB430;

@@ -2,11 +2,11 @@
 using SysBot.Base;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using static SysBot.Base.SwitchButton;
 using static SysBot.Base.SwitchStick;
-using static SysBot.Pokemon.EggSettingsSV;
 
 namespace SysBot.Pokemon
 {
@@ -16,7 +16,6 @@ namespace SysBot.Pokemon
         private readonly IDumper DumpSetting;
         private readonly int[] DesiredMinIVs;
         private readonly int[] DesiredMaxIVs;
-        private readonly List<int[]> DesiredIVs = new();
         private readonly EggSettingsSV Settings;
         public ICountSettings Counts => Settings;
 
@@ -26,16 +25,17 @@ namespace SysBot.Pokemon
             Settings = Hub.Config.EggSV;
             DumpSetting = Hub.Config.Folder;
             StopConditionSettings.InitializeTargetIVs(Hub.Config, out DesiredMinIVs, out DesiredMaxIVs);
-            InitializeTargetIVs(Settings, out DesiredIVs);
         }
 
         private int eggcount = 0;
         private int sandwichcount = 0;
-        private PK9 prevShiny = new();
+        private PK9 prevPK = new();
         private static readonly PK9 Blank = new();
         private readonly byte[] BlankVal = { 0x01 };
         private ulong BoxStartOffset;
         private ulong OverworldOffset;
+        private ulong TextBoxOffset;
+        private byte[] TextVal = Array.Empty<byte>();
 
         public override async Task MainLoop(CancellationToken token)
         {
@@ -43,8 +43,6 @@ namespace SysBot.Pokemon
             Log("Identifying trainer data of the host console.");
             await IdentifyTrainer(token).ConfigureAwait(false);
             await InitializeSessionOffsets(token).ConfigureAwait(false);
-            await SetupBoxState(token).ConfigureAwait(false);
-            await SetCurrentBox(0, token).ConfigureAwait(false);
 
             Log("Starting main EggBot loop.");
             Config.IterateNextRoutine();
@@ -74,18 +72,27 @@ namespace SysBot.Pokemon
         /// </summary>
         private async Task InnerLoop(CancellationToken token)
         {
-            if (Settings.StopConditions.Count < 1)
-            {
-                Log("EggBotSV StopConditions criteria is empty. Please add items to the collection and try again.");
-                return;
-            }
-
             await SwitchConnection.WriteBytesMainAsync(BlankVal, Offsets.LoadedIntoDesiredState, token).ConfigureAwait(false);
+            await SetupBoxState(token).ConfigureAwait(false);
+            await SetCurrentBox(0, token).ConfigureAwait(false);
+            for (int i = 0; i < 2; i++)
+                await Click(A, 1_000, token).ConfigureAwait(false);
+            await Task.Delay(1_000, token).ConfigureAwait(false);
+            prevPK = await ReadPokemonSV(Offsets.EggData, 344, token).ConfigureAwait(false);
+            await GrabValues(token).ConfigureAwait(false);
             if (Settings.EatFirst == true)
                 await MakeSandwich(token).ConfigureAwait(false);
 
             await WaitForEggs(token).ConfigureAwait(false);
             return;
+        }
+
+        private async Task GrabValues(CancellationToken token)
+        {
+            TextBoxOffset = await SwitchConnection.PointerAll(Offsets.TextBoxPointer, token).ConfigureAwait(false);
+            await Task.Delay(0_500, token).ConfigureAwait(false);
+            TextVal = await SwitchConnection.ReadBytesAbsoluteAsync(TextBoxOffset, 4, token).ConfigureAwait(false);
+            await Click(A, 0_800, token).ConfigureAwait(false);
         }
 
         private async Task SetupBoxState(CancellationToken token)
@@ -110,13 +117,13 @@ namespace SysBot.Pokemon
             bool timerDone = false;
             while (!token.IsCancellationRequested)
             {
-                var wait = TimeSpan.FromMinutes(30);
+                var wait = TimeSpan.FromMinutes(31);
                 var endTime = DateTime.Now + wait;
                 var waiting = 0;
                 while (DateTime.Now < endTime || timerDone == true)
                 {
                     var pk = await ReadPokemonSV(Offsets.EggData, 344, token).ConfigureAwait(false);
-                    while (pk == prevShiny || pk == null || pkprev!.EncryptionConstant == pk.EncryptionConstant || (Species)pk.Species == Species.None)
+                    while (pk.EncryptionConstant == prevPK.EncryptionConstant || pk == null || pkprev!.EncryptionConstant == pk.EncryptionConstant || (Species)pk.Species == Species.None)
                     {
                         if (DateTime.Now >= endTime)
                             break;
@@ -127,7 +134,8 @@ namespace SysBot.Pokemon
 
                         if (waiting == 120)
                         {
-                            await Click(A, 1_500, token).ConfigureAwait(false);
+                            for (int i = 0; i < 4; i++)
+                                await Click(B, 1_300, token).ConfigureAwait(false);
                             waiting = 0;
                         }
                     }
@@ -139,7 +147,7 @@ namespace SysBot.Pokemon
 
                     if (!nomatch && Settings.ContinueAfterMatch == ContinueAfterMatch.StopExit)
                     {
-                        prevShiny = pk!;
+                        prevPK = pk!;
                         await Click(HOME, 0_500, token).ConfigureAwait(false);
                         return;
                     }
@@ -156,29 +164,14 @@ namespace SysBot.Pokemon
             var token = CancellationToken.None;
             string? url;
 
-            bool invalid = false;
-            bool[] results = EggFound(pk, DesiredIVs, Settings);
-            List<EggFetchStopConditionsCatgeory> list = Settings.StopConditions;
-            for (int r = 0; r < results.Length; r++)
+            if (!StopConditionSettings.EncounterFound(pk, DesiredMinIVs, DesiredMaxIVs, Hub.Config.StopConditions, null))
             {
-                if (results[r] == false)
-                    continue;
-
-                invalid = true;
-            }
-
-            if (invalid == false)
-            {
-                foreach (var param in list)
+                if (Hub.Config.StopConditions.ShinyTarget is TargetShinyType.AnyShiny or TargetShinyType.StarOnly or TargetShinyType.SquareOnly && pk.IsShiny)
                 {
-                    if (param.ShinyTarget is TargetShinyType.AnyShiny or TargetShinyType.StarOnly or TargetShinyType.SquareOnly && pk.IsShiny)
-                    {
-                        url = TradeExtensions<PK9>.PokeImg(pk, false, false);
-                        EchoUtil.EchoEmbed("", print, url, "", false);
-                        break;
-                    }
+                    url = TradeExtensions<PK9>.PokeImg(pk, false, false);
+                    EchoUtil.EchoEmbed("", print, url, "", false);
                 }
-                return true;
+                return true; //No match, return true to keep scanning
             }
 
             if (Settings.MinMaxScaleOnly && pk.Scale > 0 && pk.Scale < 255)
@@ -350,7 +343,9 @@ namespace SysBot.Pokemon
             for (int a = 0; a < 4; a++)
                 await Click(A, 1_500, token).ConfigureAwait(false);
 
+            await Task.Delay(0_500, token).ConfigureAwait(false);
             var pk = await ReadBoxPokemonSV(BoxStartOffset, 344, token).ConfigureAwait(false);
+            byte[]? text;
             if (pk != null && (Species)pk.Species != Species.None)
             {
                 Log("There's an egg!");
@@ -363,14 +358,24 @@ namespace SysBot.Pokemon
                 match = await CheckEncounter(print, pk).ConfigureAwait(false);
                 DumpPokemon(DumpSetting.DumpFolder, "eggs", pk);
                 await Click(MINUS, 1_500, token).ConfigureAwait(false);
-                for (int a = 0; a < 2; a++)
-                    await Click(A, 1_500, token).ConfigureAwait(false);
+                text = await SwitchConnection.ReadBytesAbsoluteAsync(TextBoxOffset, 4, token).ConfigureAwait(false);
+                while (!text.SequenceEqual(TextVal))
+                {
+                    await Click(A, 1_700, token).ConfigureAwait(false);
+                    text = await SwitchConnection.ReadBytesAbsoluteAsync(TextBoxOffset, 4, token).ConfigureAwait(false);
+                }
+                await Click(A, 0_500, token).ConfigureAwait(false);
                 return match;
             }
 
             Log("No egg..darn item check :(");
-            for (int a = 0; a < 2; a++)
-                await Click(A, 1_500, token).ConfigureAwait(false);
+            text = await SwitchConnection.ReadBytesAbsoluteAsync(TextBoxOffset, 4, token).ConfigureAwait(false);
+            while (!text.SequenceEqual(TextVal))
+            {
+                await Click(A, 1_700, token).ConfigureAwait(false);
+                text = await SwitchConnection.ReadBytesAbsoluteAsync(TextBoxOffset, 4, token).ConfigureAwait(false);
+            }
+            await Click(A, 0_500, token).ConfigureAwait(false);
             return match;
         }
     }
