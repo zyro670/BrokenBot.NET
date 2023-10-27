@@ -55,7 +55,6 @@ namespace SysBot.Pokemon.Discord
         {
             if (info.Type == PokeTradeType.TradeCord)
                 TradeCordHelper<T>.HandleTradedCatches(Trader.Id, true);
-
             OnFinish?.Invoke(routine);
             var tradedToUser = Data.Species;
             var message = tradedToUser != 0 ? $"Trade finished. Enjoy your {(Species)tradedToUser}!" : "Trade finished!";

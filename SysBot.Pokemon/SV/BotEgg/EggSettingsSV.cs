@@ -36,7 +36,7 @@ namespace SysBot.Pokemon
         public bool OneInOneHundredOnly { get; set; } = true;
 
         [Category(EggFetch), Description("Resets game after making this amount of sandwiches.")]
-        public int ResetGameAfterThisManySandwiches { get; set; } = 2;
+        public int ResetGameAfterThisManySandwiches { get; set; } = 0;
 
         [Category(EggFetch), Description("When enabled, the bot will force dump any egg encounters that are a match. These should not be treated as legitimate eggs.")]
         public bool ForceDump { get; set; } = false;

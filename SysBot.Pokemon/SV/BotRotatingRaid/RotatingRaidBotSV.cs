@@ -468,6 +468,7 @@ namespace SysBot.Pokemon
                     await EnqueueEmbed(names, "", hatTrick, false, false, true, token).ConfigureAwait(false);
                 }
 
+                bool stuck = false;
                 while (await IsConnectedToLobby(token).ConfigureAwait(false))
                 {
                     b++;
@@ -476,50 +477,62 @@ namespace SysBot.Pokemon
                         case RaidAction.AFK: await Task.Delay(3_000, token).ConfigureAwait(false); break;
                         case RaidAction.MashA: await Click(A, 3_500, token).ConfigureAwait(false); break;
                     }
+
                     if (b % 10 == 0)
                         Log("Still in battle...");
-                }
 
-                Log("Raid lobby disbanded!");
-                await Click(B, 0_500, token).ConfigureAwait(false);
-                await Click(B, 0_500, token).ConfigureAwait(false);
-                await Click(DDOWN, 0_500, token).ConfigureAwait(false);
-
-                Log("Returning to overworld...");
-                while (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
-                    await Click(A, 1_000, token).ConfigureAwait(false);
-
-                bool status = await DenStatus(SeedIndexToReplace, token).ConfigureAwait(false);
-                if (!status)
-                {
-                    Settings.AddCompletedRaids();
-                    Log($"We defeated {Settings.RaidEmbedParameters[RotationCount].Species}!");
-                    WinCount++;
-                    if (trainers.Count > 0 && Settings.CatchLimit != 0)
-                        ApplyPenalty(trainers);
-
-                    if (Settings.RaidEmbedParameters.Count > 1)
-                        await SanitizeRotationCount(token).ConfigureAwait(false);
-
-                    await EnqueueEmbed(null, "", false, false, true, false, token).ConfigureAwait(false);
-                    ready = true;
-                }
-                else
-                {
-                    Log("We lost the raid...");
-                    LossCount++;
-                }
-
-                if (Settings.LobbyOptions.LobbyMethodOptions == LobbyMethodOptions.SkipRaid)
-                {
-                    Log($"Lost/Empty Lobbies: {LostRaid}/{Settings.LobbyOptions.SkipRaidLimit}");
-
-                    if (LostRaid >= Settings.LobbyOptions.SkipRaidLimit)
+                    if (b == 300 && Settings.RaidEmbedParameters[RotationCount].CrystalType is TeraCrystalType.Might || b == 200 && Settings.RaidEmbedParameters[RotationCount].CrystalType != TeraCrystalType.Might)
                     {
-                        Log($"We had {Settings.LobbyOptions.SkipRaidLimit} lost/empty raids.. Moving on!");
-                        await SanitizeRotationCount(token).ConfigureAwait(false);
+                        string time = b == 200 ? "10 minutes " : "15 minutes ";
+                        Log($"We've been stuck in battle for {time}.. Raid frozen? Resetting game!");
+                        stuck = true;
+                        break;
+                    }
+                }
+
+                if (!stuck)
+                {
+                    Log("Raid lobby disbanded!");
+                    await Click(B, 0_500, token).ConfigureAwait(false);
+                    await Click(B, 0_500, token).ConfigureAwait(false);
+                    await Click(DDOWN, 0_500, token).ConfigureAwait(false);
+
+                    Log("Returning to overworld...");
+                    while (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
+                        await Click(A, 1_000, token).ConfigureAwait(false);
+
+                    bool status = await DenStatus(SeedIndexToReplace, token).ConfigureAwait(false);
+                    if (!status)
+                    {
+                        Settings.AddCompletedRaids();
+                        Log($"We defeated {Settings.RaidEmbedParameters[RotationCount].Species}!");
+                        WinCount++;
+                        if (trainers.Count > 0 && Settings.CatchLimit != 0)
+                            ApplyPenalty(trainers);
+
+                        if (Settings.RaidEmbedParameters.Count > 1)
+                            await SanitizeRotationCount(token).ConfigureAwait(false);
+
                         await EnqueueEmbed(null, "", false, false, true, false, token).ConfigureAwait(false);
                         ready = true;
+                    }
+                    else
+                    {
+                        Log("We lost the raid...");
+                        LossCount++;
+                    }
+
+                    if (Settings.LobbyOptions.LobbyMethodOptions == LobbyMethodOptions.SkipRaid)
+                    {
+                        Log($"Lost/Empty Lobbies: {LostRaid}/{Settings.LobbyOptions.SkipRaidLimit}");
+
+                        if (LostRaid >= Settings.LobbyOptions.SkipRaidLimit)
+                        {
+                            Log($"We had {Settings.LobbyOptions.SkipRaidLimit} lost/empty raids.. Moving on!");
+                            await SanitizeRotationCount(token).ConfigureAwait(false);
+                            await EnqueueEmbed(null, "", false, false, true, false, token).ConfigureAwait(false);
+                            ready = true;
+                        }
                     }
                 }
             }

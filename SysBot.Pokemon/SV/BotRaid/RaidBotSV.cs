@@ -167,7 +167,7 @@ namespace SysBot.Pokemon
                 PartyPK = new[] { data },
             };
             Settings.RaidEmbedFilters = param;
-            Log($"Parameters generated from text file for 0x{Settings.RaidEmbedFilters.Seed}.");
+            Log($"Parameters generated for 0x{Settings.RaidEmbedFilters.Seed}.");
         }
 
         private async Task InnerLoop(CancellationToken token)
@@ -353,6 +353,7 @@ namespace SysBot.Pokemon
                     await EnqueueEmbed(names, "", hatTrick, false, false, true, token).ConfigureAwait(false);
                 }
 
+                bool stuck = false;
                 while (await IsConnectedToLobby(token).ConfigureAwait(false))
                 {
                     b++;
@@ -361,34 +362,46 @@ namespace SysBot.Pokemon
                         case RaidAction.AFK: await Task.Delay(3_000, token).ConfigureAwait(false); break;
                         case RaidAction.MashA: await Click(A, 3_500, token).ConfigureAwait(false); break;
                     }
+
                     if (b % 10 == 0)
                         Log("Still in battle...");
+
+                    if (b == 300 && Settings.RaidEmbedFilters.CrystalType is TeraCrystalType.Might || b == 200 && Settings.RaidEmbedFilters.CrystalType != TeraCrystalType.Might)
+                    {
+                        string time = b == 200 ? "10 minutes " : "15 minutes ";
+                        Log($"We've been stuck in battle for {time}.. Raid frozen? Resetting game!");
+                        stuck = true;
+                        break;
+                    }
                 }
 
-                Log("Raid lobby disbanded!");
-                await Click(B, 0_500, token).ConfigureAwait(false);
-                await Click(B, 0_500, token).ConfigureAwait(false);
-                await Click(DDOWN, 0_500, token).ConfigureAwait(false);
-
-                Log("Returning to overworld...");
-                while (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
-                    await Click(A, 1_000, token).ConfigureAwait(false);
-
-                bool status = await DenStatus(StoredIndex, token).ConfigureAwait(false);
-                if (!status)
+                if (!stuck)
                 {
-                    Settings.AddCompletedRaids();
-                    Log($"We defeated {Settings.RaidEmbedFilters.Species}!");
-                    WinCount++;
-                    if (trainers.Count > 0 && Settings.CatchLimit != 0)
-                        ApplyPenalty(trainers);
+                    Log("Raid lobby disbanded!");
+                    await Click(B, 0_500, token).ConfigureAwait(false);
+                    await Click(B, 0_500, token).ConfigureAwait(false);
+                    await Click(DDOWN, 0_500, token).ConfigureAwait(false);
 
-                    await EnqueueEmbed(null, "", false, false, true, false, token).ConfigureAwait(false);
-                }
-                else
-                {
-                    Log("We lost the raid...");
-                    LossCount++;
+                    Log("Returning to overworld...");
+                    while (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
+                        await Click(A, 1_000, token).ConfigureAwait(false);
+
+                    bool status = await DenStatus(StoredIndex, token).ConfigureAwait(false);
+                    if (!status)
+                    {
+                        Settings.AddCompletedRaids();
+                        Log($"We defeated {Settings.RaidEmbedFilters.Species}!");
+                        WinCount++;
+                        if (trainers.Count > 0 && Settings.CatchLimit != 0)
+                            ApplyPenalty(trainers);
+
+                        await EnqueueEmbed(null, "", false, false, true, false, token).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        Log("We lost the raid...");
+                        LossCount++;
+                    }
                 }
             }
 
