@@ -116,6 +116,7 @@ namespace SysBot.Pokemon
             Settings.PicnicFilters.Item3 = (PicnicCondiments)itemsval.Item3;
             Settings.PicnicFilters.Item4 = (PicnicCondiments)itemsval.Item4;
             List<int> List = new();
+            int[] Stored = new int[4];
             // Grab fillings
             for (int i = 0; i < ingredients.Items.Length; i++) // Fillings
             {
@@ -139,6 +140,7 @@ namespace SysBot.Pokemon
                 if (Fillings[f] == (int)Settings.PicnicFilters.Item1)
                 {
                     Sequence[0] = f;
+                    Stored[0] = f;
                     DPADUp[0] = Fillings.Count - f < f;
                     if (DPADUp[0] is true)
                         Sequence[0] = Fillings.Count - f;
@@ -184,6 +186,7 @@ namespace SysBot.Pokemon
                 if (Condiments[f] == (int)Settings.PicnicFilters.Item2)
                 {
                     Sequence[1] = f;
+                    Stored[1] = f;
                     DPADUp[1] = Condiments.Count - f < f;
                     if (DPADUp[1] is true)
                         Sequence[1] = Condiments.Count - f;
@@ -196,6 +199,8 @@ namespace SysBot.Pokemon
             if (Settings.PicnicFilters.Item2 == Settings.PicnicFilters.Item3)
             {
                 Sequence[2] = 0;
+                var last = Stored.Last();
+                Stored[2] = Stored[1];
                 DPADUp[2] = DPADUp[1];
                 Settings.PicnicFilters.Item3DUP = DPADUp[2];
                 Log($"Clicks: {Sequence[2]}");
@@ -207,6 +212,7 @@ namespace SysBot.Pokemon
                 {
                     if (Condiments[f] == (int)Settings.PicnicFilters.Item3)
                     {
+                        Stored[2] = f;
                         DPADUp[2] = Condiments.Count - f < f;
                         if (DPADUp[2] is true)
                             Sequence[2] = (Condiments.Count - f) - Sequence[1];
@@ -224,6 +230,7 @@ namespace SysBot.Pokemon
                     if (Condiments[f] == (int)Settings.PicnicFilters.Item4)
                     {
                         Sequence[3] = f;
+                        Stored[3] = f;
                         DPADUp[3] = Condiments.Count - f + Sequence[2] + Sequence[1] < f;
                         if (DPADUp[3] is true)
                             Sequence[3] = Condiments.Count - f - Sequence[2] - Sequence[1];
@@ -235,13 +242,19 @@ namespace SysBot.Pokemon
                     }
                 }
             }
-            if (List.Min() != 0)
-                MinimumIngredientCount = List.Min();
+            List<int> sanitized = new()
+            {
+                List[Stored[0]],
+                List[Stored[1]],
+                List[Stored[2]],
+                List[Stored[3]]
+            };
+            MinimumIngredientCount = sanitized.Where(item => item > 0).Min();
 
-            if (Condiments[1] == Condiments[2] || Condiments[2] == Condiments[3])
+            if (Settings.PicnicFilters.Item2 == Settings.PicnicFilters.Item3 && sanitized[1] == sanitized[2] && MinimumIngredientCount == sanitized[1] || Settings.PicnicFilters.Item3 == Settings.PicnicFilters.Item4 && sanitized[2] == sanitized[3] && MinimumIngredientCount == sanitized[2])
                 MinimumIngredientCount /= 2;
 
-            Log($"Ingredients needed for {Settings.PicnicFilters.TypeOfSandwich} {Settings.PicnicFilters.SandwichFlavor} Sandwich: {Settings.PicnicFilters.Item1}, {Settings.PicnicFilters.Item2}, {Settings.PicnicFilters.Item3}, & {Settings.PicnicFilters.Item4}." +
+            Log($"Ingredients needed for {Settings.PicnicFilters.TypeOfSandwich} {Settings.PicnicFilters.SandwichFlavor} Sandwich: {Settings.PicnicFilters.Item1} ({sanitized[0]}), {Settings.PicnicFilters.Item2} ({sanitized[1]}), {Settings.PicnicFilters.Item3} ({sanitized[2]}), & {Settings.PicnicFilters.Item4} ({sanitized[3]})." +
                 $"\nWe have enough ingredients for {MinimumIngredientCount} sandwiches.");
 
             return true;
