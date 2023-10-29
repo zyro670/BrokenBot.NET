@@ -247,12 +247,12 @@ namespace SysBot.Pokemon
                 List[Stored[0]],
                 List[Stored[1]],
                 List[Stored[2]],
-                List[Stored[3]]
+                List[Stored[3]],
             };
             MinimumIngredientCount = sanitized.Where(item => item > 0).Min();
 
-            if (Settings.PicnicFilters.Item2 == Settings.PicnicFilters.Item3 && sanitized[1] == sanitized[2] && MinimumIngredientCount == sanitized[1] || Settings.PicnicFilters.Item3 == Settings.PicnicFilters.Item4 && sanitized[2] == sanitized[3] && MinimumIngredientCount == sanitized[2])
-                MinimumIngredientCount /= 2;
+            if (sanitized[1] == sanitized[2] || sanitized[2] == sanitized[3])
+                MinimumIngredientCount = sanitized[2] / 2;
 
             Log($"Ingredients needed for {Settings.PicnicFilters.TypeOfSandwich} {Settings.PicnicFilters.SandwichFlavor} Sandwich: {Settings.PicnicFilters.Item1} ({sanitized[0]}), {Settings.PicnicFilters.Item2} ({sanitized[1]}), {Settings.PicnicFilters.Item3} ({sanitized[2]}), & {Settings.PicnicFilters.Item4} ({sanitized[3]})." +
                 $"\nWe have enough ingredients for {MinimumIngredientCount} sandwiches.");
