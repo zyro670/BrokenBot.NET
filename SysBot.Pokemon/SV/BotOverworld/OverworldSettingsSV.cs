@@ -18,7 +18,7 @@ namespace SysBot.Pokemon
         [Category(Overworld), Description("If not blank will check for a match from Stop Conditions plus the Species listed here. Do not include spaces for Species name and separate species with a comma. Ex: IronThorns,Cetoddle,Pikachu,RoaringMoon")]
         public string SpeciesToHunt { get; set; } = string.Empty;
 
-        [Category(Overworld), Description("When enabled, the bot will stop on any Special Marks Only, ignoring Uncommon, all Time, and all Weather marks. Encounters with Min/Max Scale will be considered as having a special mark.")]
+        [Category(Overworld), Description("When enabled, the bot will stop on any Special Marks Only, ignoring Uncommon and all Time marks. Encounters with Min/Max Scale will be considered as having a special mark.")]
         public bool SpecialMarksOnly { get; set; } = false;
 
         [Category(Overworld), Description("Select which location you are scanning.")]
@@ -109,10 +109,10 @@ namespace SysBot.Pokemon
             public override string ToString() => "Rollover Conditions";
 
             [Category(Overworld), Description("When enabled, the bot will check if our dayseed changes to attempt preventing a lost outbreak.")]
-            public bool CheckForRollover { get; set; } = false;
+            public bool PreventRollover { get; set; } = false;
 
-            [Category(Overworld), Description("When enabled, the bot will use the overshoot method to apply rollover correction, otherwise will use DDOWN clicks.")]
-            public bool UseOvershoot { get; set; } = false;
+            [Category(Overworld), Description("When PreventRollover is enabled, the bot will attempt to go back 1 hour every 2 sandwiches. You must use zyro's usb-botbase release and Sync your Date/Time Settings if you select TimeSkip, otherwise Date/Time should be unsynced for the other options.")]
+            public RolloverPrevention RolloverPrevention { get; set; } = RolloverPrevention.TimeSkip;
 
             [Category(Overworld), Description("Set your Switch Date/Time format in the Date/Time settings. The day will automatically rollback by 1 if the Date changes.")]
             public DTFormat DateTimeFormat { get; set; } = DTFormat.MMDDYY;
@@ -125,7 +125,6 @@ namespace SysBot.Pokemon
 
             [Category(Overworld), Description("If true, start the bot when you are on the HOME screen with the game closed. The bot will only run the rollover routine so you can try to configure accurate timing.")]
             public bool ConfigureRolloverCorrection { get; set; } = false;
-
         }
 
         public class CategoryConverter<T> : TypeConverter
@@ -186,6 +185,13 @@ namespace SysBot.Pokemon
         {
             MakeASandwich = 0,
             StopAt30Min = 1,
+        }
+
+        public enum RolloverPrevention
+        {
+            TimeSkip = 0,
+            DDOWN = 1,
+            Overshoot = 2,
         }
     }
 }

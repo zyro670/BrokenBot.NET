@@ -1599,7 +1599,7 @@ namespace SysBot.Pokemon
                 pk.SetIVs(pkIVList);
                 (pkIVList[5], pkIVList[3], pkIVList[4]) = (pkIVList[3], pkIVList[4], pkIVList[5]);
                 pk.IVs = pkIVList;
-                pk.Nature = (int)gen.Item8;
+                pk.Nature = gen.Item8;
                 pk.Gender = gen.gender;
                 pk.IsAlpha = alpha;
 

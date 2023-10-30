@@ -33,7 +33,7 @@ namespace SysBot.Pokemon
         private static ulong BaseBlockKeyPointer = 0;
         private ulong PlayerCanMoveOffset;
         private ulong PlayerOnMountOffset;
-        private bool GameWasReset = false;        
+        private bool GameWasReset = false;
         private SAV9SV TrainerSav = new();
         private List<byte[]?> coordList = new();
         private List<int> Condiments = new();
@@ -116,6 +116,7 @@ namespace SysBot.Pokemon
             Settings.PicnicFilters.Item3 = (PicnicCondiments)itemsval.Item3;
             Settings.PicnicFilters.Item4 = (PicnicCondiments)itemsval.Item4;
             List<int> List = new();
+            int[] Stored = new int[4];
             // Grab fillings
             for (int i = 0; i < ingredients.Items.Length; i++) // Fillings
             {
@@ -139,6 +140,7 @@ namespace SysBot.Pokemon
                 if (Fillings[f] == (int)Settings.PicnicFilters.Item1)
                 {
                     Sequence[0] = f;
+                    Stored[0] = f;
                     DPADUp[0] = Fillings.Count - f < f;
                     if (DPADUp[0] is true)
                         Sequence[0] = Fillings.Count - f;
@@ -184,6 +186,7 @@ namespace SysBot.Pokemon
                 if (Condiments[f] == (int)Settings.PicnicFilters.Item2)
                 {
                     Sequence[1] = f;
+                    Stored[1] = f;
                     DPADUp[1] = Condiments.Count - f < f;
                     if (DPADUp[1] is true)
                         Sequence[1] = Condiments.Count - f;
@@ -196,6 +199,8 @@ namespace SysBot.Pokemon
             if (Settings.PicnicFilters.Item2 == Settings.PicnicFilters.Item3)
             {
                 Sequence[2] = 0;
+                var last = Stored.Last();
+                Stored[2] = Stored[1];
                 DPADUp[2] = DPADUp[1];
                 Settings.PicnicFilters.Item3DUP = DPADUp[2];
                 Log($"Clicks: {Sequence[2]}");
@@ -207,6 +212,7 @@ namespace SysBot.Pokemon
                 {
                     if (Condiments[f] == (int)Settings.PicnicFilters.Item3)
                     {
+                        Stored[2] = f;
                         DPADUp[2] = Condiments.Count - f < f;
                         if (DPADUp[2] is true)
                             Sequence[2] = (Condiments.Count - f) - Sequence[1];
@@ -224,6 +230,7 @@ namespace SysBot.Pokemon
                     if (Condiments[f] == (int)Settings.PicnicFilters.Item4)
                     {
                         Sequence[3] = f;
+                        Stored[3] = f;
                         DPADUp[3] = Condiments.Count - f + Sequence[2] + Sequence[1] < f;
                         if (DPADUp[3] is true)
                             Sequence[3] = Condiments.Count - f - Sequence[2] - Sequence[1];
@@ -234,12 +241,21 @@ namespace SysBot.Pokemon
                         break;
                     }
                 }
-            }            
-            if (List.Min() != 0)
-                MinimumIngredientCount = List.Min();
+            }
+            List<int> sanitized = new()
+            {
+                List[Stored[0]],
+                List[Stored[1]],
+                List[Stored[2]],
+                List[Stored[3]],
+            };
+            MinimumIngredientCount = sanitized.Where(item => item > 0).Min();
 
-            Log($"Ingredients needed for {Settings.PicnicFilters.TypeOfSandwich} {Settings.PicnicFilters.SandwichFlavor} Sandwich: {Settings.PicnicFilters.Item1}, {Settings.PicnicFilters.Item2}, {Settings.PicnicFilters.Item3}, & {Settings.PicnicFilters.Item4}.\nWe have enough " +
-                $"ingredients for {MinimumIngredientCount} sandwiches.");
+            if (sanitized[1] == sanitized[2] || sanitized[2] == sanitized[3])
+                MinimumIngredientCount = sanitized[2] / 2;
+
+            Log($"Ingredients needed for {Settings.PicnicFilters.TypeOfSandwich} {Settings.PicnicFilters.SandwichFlavor} Sandwich: {Settings.PicnicFilters.Item1} ({sanitized[0]}), {Settings.PicnicFilters.Item2} ({sanitized[1]}), {Settings.PicnicFilters.Item3} ({sanitized[2]}), & {Settings.PicnicFilters.Item4} ({sanitized[3]})." +
+                $"\nWe have enough ingredients for {MinimumIngredientCount} sandwiches.");
 
             return true;
         }
@@ -258,10 +274,13 @@ namespace SysBot.Pokemon
         {
             await Click(B, 0_050, token).ConfigureAwait(false);
             await CloseGame(Hub.Config, token).ConfigureAwait(false);
-            await Task.Delay(1_500, token).ConfigureAwait(false);
             if (opensettings)
-                await RolloverCorrectionSV(time, token).ConfigureAwait(false);
-            await Task.Delay(1_700, token).ConfigureAwait(false);
+            {
+                if (Settings.RolloverFilters.RolloverPrevention == RolloverPrevention.TimeSkip)
+                    await TimeSkipBwd(token).ConfigureAwait(false);
+                else
+                    await RolloverCorrectionSV(time, token).ConfigureAwait(false);
+            }
             await StartGame(Hub.Config, token).ConfigureAwait(false);
             await InitializeSessionOffsets(token).ConfigureAwait(false);
         }
@@ -325,7 +344,7 @@ namespace SysBot.Pokemon
                     return;
                 }
 
-                if (start == 2 && Settings.RolloverFilters.CheckForRollover)
+                if (start == 2 && Settings.RolloverFilters.PreventRollover)
                 {
                     await ResetOverworld(true, true, token).ConfigureAwait(false);
                     start = 0;
@@ -580,7 +599,7 @@ namespace SysBot.Pokemon
             }
 
             StopConditionSettings.HasMark(pk, out RibbonIndex specialmark);
-            if (Settings.SpecialMarksOnly && specialmark is >= RibbonIndex.MarkLunchtime and <= RibbonIndex.MarkMisty || Settings.SpecialMarksOnly && specialmark is RibbonIndex.MarkUncommon)
+            if (Settings.SpecialMarksOnly && specialmark is >= RibbonIndex.MarkLunchtime and <= RibbonIndex.MarkDawn || Settings.SpecialMarksOnly && specialmark is RibbonIndex.MarkUncommon)
             {
                 if (pk.Scale > 0 && pk.Scale < 255)
                 {
@@ -666,7 +685,6 @@ namespace SysBot.Pokemon
                     await Click(B, 1_000, token).ConfigureAwait(false);
                 await Click(HOME, 1_000, token).ConfigureAwait(false);
             }
-
             return false;
         }
 
@@ -1017,12 +1035,12 @@ namespace SysBot.Pokemon
             await PressAndHold(DDOWN, 2_000, 0_250, token).ConfigureAwait(false); // Scroll to system settings
             await Click(A, 1_250, token).ConfigureAwait(false);
 
-            if (Settings.RolloverFilters.UseOvershoot)
+            if (Settings.RolloverFilters.RolloverPrevention == RolloverPrevention.Overshoot)
             {
                 await PressAndHold(DDOWN, Settings.RolloverFilters.HoldTimeForRollover, 1_000, token).ConfigureAwait(false);
                 await Click(DUP, 0_500, token).ConfigureAwait(false);
             }
-            else if (!Settings.RolloverFilters.UseOvershoot)
+            else if (Settings.RolloverFilters.RolloverPrevention == RolloverPrevention.DDOWN)
             {
                 for (int i = 0; i < 39; i++)
                     await Click(DDOWN, 0_100, token).ConfigureAwait(false);
@@ -1059,7 +1077,7 @@ namespace SysBot.Pokemon
 
         private async Task TeleportToMatch(byte[]? cp, CancellationToken token)
         {
-            for (int i = 0; i < 5; i++) // Mash DRIGHT to confirm
+            for (int i = 0; i < 5; i++)
                 await Click(B, 0_500, token).ConfigureAwait(false);
             await Click(PLUS, 1_500, token).ConfigureAwait(false);
 

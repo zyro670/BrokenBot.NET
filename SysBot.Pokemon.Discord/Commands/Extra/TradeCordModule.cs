@@ -73,7 +73,7 @@ namespace SysBot.Pokemon.Discord
                 var rng = new Random();
                 var legends = rng.Next(101);
                 var rand = vals[rng.Next(vals.Length)];
-                if ((rand == PokeEventType.Legends && (legends < 55 || bdsp)) || (rand == PokeEventType.EventPoke && bdsp))
+                if ((rand == PokeEventType.Legends && (legends < 55 || bdsp)))// || (rand == PokeEventType.EventPoke && bdsp))
                     continue;
 
                 if (!events.Contains(rand))

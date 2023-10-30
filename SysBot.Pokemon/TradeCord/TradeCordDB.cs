@@ -446,7 +446,7 @@ namespace SysBot.Pokemon
                         clone.OT_Name = "Nishikigoi";
                         var trainer = new PokeTrainerDetails(clone);
                         var encShelm = new LegalityAnalysis(pk).EncounterMatch;
-                        pk.SetHandlerandMemory(trainer, encShelm, tb);
+                        pk.SetHandlerandMemory(trainer, encShelm, (ITracebackHandler) tb);
                     }; break;
                 case EvolutionType.Spin:
                     {
@@ -521,7 +521,7 @@ namespace SysBot.Pokemon
                 pk.Met_Level = 1;
                 pk.SetEggMetData(GameVersion.UM, (GameVersion)version);
                 enc = new LegalityAnalysis(pk).EncounterMatch;
-                pk.SetHandlerandMemory(sav, enc, tb);
+                pk.SetHandlerandMemory(sav, enc, (ITracebackHandler) tb);
                 if (pk is PK8 pk8)
                 {
                     pk8.HeightScalar = 0;
@@ -531,7 +531,7 @@ namespace SysBot.Pokemon
                 if (pk.Ball is (int)Ball.Sport || (pk.WasEgg && pk.Ball is (int)Ball.Master))
                     pk.SetSuggestedBall(true);
             }
-            else pk.SetHandlerandMemory(sav, enc, tb);
+            else pk.SetHandlerandMemory(sav, enc, (ITracebackHandler) tb);
 
             var index = pk.PersonalInfo.GetIndexOfAbility(pk.Ability);
             pk.Species = result.EvolvesInto;
@@ -772,7 +772,7 @@ namespace SysBot.Pokemon
             string type = string.Empty;
             bool match = false;
             form = 255;
-            mg = default;
+            mg = default!;
             var eventType = $"{settings.PokeEventType}";
             var keys = Dex.Keys.ToArray();
 
@@ -782,9 +782,9 @@ namespace SysBot.Pokemon
                 var formIDs = Dex[Rng.SpeciesRNG].ToArray();
                 form = 255;
 
-                if (settings.PokeEventType is PokeEventType.EventPoke)
-                    mg = MysteryGiftRng(settings);
-                else if ((int)settings.PokeEventType <= 17)
+                //if (settings.PokeEventType is PokeEventType.EventPoke)
+                    //mg = MysteryGiftRng(settings);
+                if ((int)settings.PokeEventType <= 17)
                 {
                     for (int i = 0; i < formIDs.Length; i++)
                     {
@@ -809,20 +809,23 @@ namespace SysBot.Pokemon
                     BaseCanBeEgg(Rng.SpeciesRNG, 0, out _, out ushort baseSpecies);
                     Rng.SpeciesRNG = baseSpecies;
                 }
-                else if (settings.PokeEventType is PokeEventType.CottonCandy)
-                    form = formIDs[Random.Next(formIDs.Length)];
+                //else if (settings.PokeEventType is PokeEventType.CottonCandy)
+                   // form = formIDs[Random.Next(formIDs.Length)];
 
                 match = settings.PokeEventType switch
                 {
                     PokeEventType.Legends => IsLegendaryOrMythical(Rng.SpeciesRNG),
                     PokeEventType.Babies => Rng.SpeciesRNG is not 0,
                     PokeEventType.Halloween => Enum.IsDefined(typeof(Halloween), Rng.SpeciesRNG),
-                    PokeEventType.CottonCandy => IsCottonCandy(Rng.SpeciesRNG, form),
+                    //PokeEventType.CottonCandy => IsCottonCandy(Rng.SpeciesRNG, form),
                     PokeEventType.PokePets => Enum.IsDefined(typeof(PokePets), Rng.SpeciesRNG),
                     PokeEventType.RodentLite => Enum.IsDefined(typeof(RodentLite), Rng.SpeciesRNG),
                     PokeEventType.ClickbaitArticle => Enum.IsDefined(typeof(Clickbait), Rng.SpeciesRNG),
                     PokeEventType.HouseParty => Enum.IsDefined(typeof(HouseParty), Rng.SpeciesRNG),
-                    PokeEventType.EventPoke => mg != default,
+                    PokeEventType.LegendOfKoi => Rng.SpeciesRNG is (ushort)Species.Magikarp,
+                    PokeEventType.Paradox => Enum.IsDefined(typeof(Paradox), Rng.SpeciesRNG),
+                    PokeEventType.FroggyFrenzy => Enum.IsDefined(typeof(FroggyFrenzy), Rng.SpeciesRNG),
+                    //PokeEventType.EventPoke => mg != default,
                     _ => type == eventType,
                 };
             }

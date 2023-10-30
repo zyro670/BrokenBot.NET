@@ -319,5 +319,8 @@ namespace SysBot.Base
         public static byte[] IsProgramRunning(ulong pid, bool crlf = true) => Encode($"isProgramRunning 0x{pid:x16}", crlf);
 
         public static byte[] GetUnixTime(bool crlf = true) => Encode("getUnixTime", crlf);
+        public static byte[] TimeSkipBack(bool crlf = true) => Encode($"timeSkipBack", crlf);
+        public static byte[] TimeSkipForward(bool crlf = true) => Encode($"timeSkipForward", crlf);
+
     }
 }
