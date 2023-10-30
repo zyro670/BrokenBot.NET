@@ -30,6 +30,7 @@ namespace SysBot.Pokemon.WinForms
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Main));
             TC_Main = new System.Windows.Forms.TabControl();
             Tab_Bots = new System.Windows.Forms.TabPage();
             CB_Protocol = new System.Windows.Forms.ComboBox();
@@ -67,7 +68,7 @@ namespace SysBot.Pokemon.WinForms
             TC_Main.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
             TC_Main.Name = "TC_Main";
             TC_Main.SelectedIndex = 0;
-            TC_Main.Size = new System.Drawing.Size(665, 364);
+            TC_Main.Size = new System.Drawing.Size(709, 389);
             TC_Main.TabIndex = 3;
             // 
             // Tab_Bots
@@ -81,7 +82,7 @@ namespace SysBot.Pokemon.WinForms
             Tab_Bots.Location = new System.Drawing.Point(4, 24);
             Tab_Bots.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
             Tab_Bots.Name = "Tab_Bots";
-            Tab_Bots.Size = new System.Drawing.Size(657, 336);
+            Tab_Bots.Size = new System.Drawing.Size(701, 361);
             Tab_Bots.TabIndex = 0;
             Tab_Bots.Text = "Bots";
             Tab_Bots.UseVisualStyleBackColor = true;
@@ -104,7 +105,7 @@ namespace SysBot.Pokemon.WinForms
             FLP_Bots.Location = new System.Drawing.Point(0, 37);
             FLP_Bots.Margin = new System.Windows.Forms.Padding(0);
             FLP_Bots.Name = "FLP_Bots";
-            FLP_Bots.Size = new System.Drawing.Size(656, 296);
+            FLP_Bots.Size = new System.Drawing.Size(700, 306);
             FLP_Bots.TabIndex = 9;
             FLP_Bots.Resize += FLP_Bots_Resize;
             // 
@@ -157,7 +158,7 @@ namespace SysBot.Pokemon.WinForms
             Tab_Hub.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
             Tab_Hub.Name = "Tab_Hub";
             Tab_Hub.Padding = new System.Windows.Forms.Padding(4, 3, 4, 3);
-            Tab_Hub.Size = new System.Drawing.Size(525, 329);
+            Tab_Hub.Size = new System.Drawing.Size(701, 361);
             Tab_Hub.TabIndex = 2;
             Tab_Hub.Text = "Hub";
             Tab_Hub.UseVisualStyleBackColor = true;
@@ -169,7 +170,7 @@ namespace SysBot.Pokemon.WinForms
             PG_Hub.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
             PG_Hub.Name = "PG_Hub";
             PG_Hub.PropertySort = System.Windows.Forms.PropertySort.Categorized;
-            PG_Hub.Size = new System.Drawing.Size(517, 323);
+            PG_Hub.Size = new System.Drawing.Size(693, 355);
             PG_Hub.TabIndex = 0;
             // 
             // Tab_Logs
@@ -178,7 +179,7 @@ namespace SysBot.Pokemon.WinForms
             Tab_Logs.Location = new System.Drawing.Point(4, 24);
             Tab_Logs.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
             Tab_Logs.Name = "Tab_Logs";
-            Tab_Logs.Size = new System.Drawing.Size(525, 329);
+            Tab_Logs.Size = new System.Drawing.Size(701, 361);
             Tab_Logs.TabIndex = 1;
             Tab_Logs.Text = "Logs";
             Tab_Logs.UseVisualStyleBackColor = true;
@@ -190,7 +191,7 @@ namespace SysBot.Pokemon.WinForms
             RTB_Logs.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
             RTB_Logs.Name = "RTB_Logs";
             RTB_Logs.ReadOnly = true;
-            RTB_Logs.Size = new System.Drawing.Size(525, 329);
+            RTB_Logs.Size = new System.Drawing.Size(701, 361);
             RTB_Logs.TabIndex = 0;
             RTB_Logs.Text = "";
             // 
@@ -203,7 +204,7 @@ namespace SysBot.Pokemon.WinForms
             Tab_Results.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
             Tab_Results.Name = "Tab_Results";
             Tab_Results.Padding = new System.Windows.Forms.Padding(4, 3, 4, 3);
-            Tab_Results.Size = new System.Drawing.Size(525, 329);
+            Tab_Results.Size = new System.Drawing.Size(701, 361);
             Tab_Results.TabIndex = 3;
             Tab_Results.Text = "Results";
             Tab_Results.UseVisualStyleBackColor = true;
@@ -244,7 +245,7 @@ namespace SysBot.Pokemon.WinForms
             // B_Stop
             // 
             B_Stop.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right;
-            B_Stop.Location = new System.Drawing.Point(551, 0);
+            B_Stop.Location = new System.Drawing.Point(595, 0);
             B_Stop.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
             B_Stop.Name = "B_Stop";
             B_Stop.Size = new System.Drawing.Size(69, 23);
@@ -256,7 +257,7 @@ namespace SysBot.Pokemon.WinForms
             // B_Start
             // 
             B_Start.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right;
-            B_Start.Location = new System.Drawing.Point(475, 0);
+            B_Start.Location = new System.Drawing.Point(519, 0);
             B_Start.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
             B_Start.Name = "B_Start";
             B_Start.Size = new System.Drawing.Size(69, 23);
@@ -269,16 +270,16 @@ namespace SysBot.Pokemon.WinForms
             // 
             AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            ClientSize = new System.Drawing.Size(665, 364);
+            ClientSize = new System.Drawing.Size(709, 389);
             Controls.Add(B_Stop);
             Controls.Add(B_Start);
             Controls.Add(TC_Main);
-            Icon = Resources.icon;
+            Icon = (System.Drawing.Icon)resources.GetObject("$this.Icon");
             Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
             MaximizeBox = false;
             Name = "Main";
             StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            Text = "SysBot: Pokémon";
+            Text = "Cyb3rSt0rm";
             FormClosing += Main_FormClosing;
             TC_Main.ResumeLayout(false);
             Tab_Bots.ResumeLayout(false);
