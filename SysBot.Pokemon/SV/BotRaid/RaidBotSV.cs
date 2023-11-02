@@ -865,6 +865,9 @@ namespace SysBot.Pokemon
             };
             if (pk.Form != 0)
                 form = $"-{pk.Form}";
+            if (pk.Species is (ushort)Species.Basculegion && pk.Form == 1)
+                pk.Gender = 1;
+
             if (Settings.RaidEmbedFilters.IsShiny == true)
                 CommonEdits.SetIsShiny(pk, true);
             else
