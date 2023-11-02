@@ -680,10 +680,16 @@ namespace SysBot.Pokemon
                 while (IsWaiting)
                     await Task.Delay(1_000, token).ConfigureAwait(false);
 
-                await Task.Delay(1_000, token).ConfigureAwait(false);
-                for (int i = 0; i < 2; i++)
-                    await Click(B, 1_000, token).ConfigureAwait(false);
-                await Click(HOME, 1_000, token).ConfigureAwait(false);
+                if (!Settings.Collide)
+                    await Click(HOME, 2_000, token).ConfigureAwait(false);
+                if (Settings.Collide)
+                {
+                    await Click(Y, 0_700, token).ConfigureAwait(false);
+                    await Click(X, 1_700, token).ConfigureAwait(false);
+                    await Click(A, 1_000, token).ConfigureAwait(false);
+                    await StartGame(Hub.Config, token).ConfigureAwait(false);
+                    await InitializeSessionOffsets(token).ConfigureAwait(false);
+                }
             }
             return false;
         }

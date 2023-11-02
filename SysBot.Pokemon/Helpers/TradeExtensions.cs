@@ -113,7 +113,7 @@ namespace SysBot.Pokemon
             {
                 PB8 => 400,
                 PK9 => 28,
-                _ => 162, // PK8
+                _ => 186, // PK8
             };
 
             pkm.Met_Level = pkm switch

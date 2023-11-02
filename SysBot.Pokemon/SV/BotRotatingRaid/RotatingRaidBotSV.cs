@@ -256,13 +256,24 @@ namespace SysBot.Pokemon
                         bool denFound = false;
                         while (!denFound)
                         {
-                            await Click(B, 0_500, token).ConfigureAwait(false);
-                            await Click(HOME, 3_500, token).ConfigureAwait(false);
-                            Log("Closed out of the game!");
+                            if (Settings.RolloverFilters.RolloverPrevention == RolloverPrevention.TimeSkip)
+                            {
+                                Log("When this baby hits 88 Miles an hour..");
+                                await TimeSkipFwd(token).ConfigureAwait(false);
+                                await Task.Delay(1_000, token).ConfigureAwait(false);
+                                await TimeSkipBwd(token).ConfigureAwait(false);
+                            }
+                            else
+                            {
+                                await Click(B, 0_500, token).ConfigureAwait(false);
+                                await Click(HOME, 3_500, token).ConfigureAwait(false);
+                                Log("Closed out of the game!");
 
-                            await RolloverCorrectionSV(token).ConfigureAwait(false);
-                            await Click(A, 1_500, token).ConfigureAwait(false);
-                            Log("Back in the game!");
+                                await RolloverCorrectionSV(token).ConfigureAwait(false);
+                                await Click(A, 1_500, token).ConfigureAwait(false);
+
+                                Log("Back in the game!");
+                            }
 
                             while (!await IsConnectedOnline(ConnectedOffset, token).ConfigureAwait(false))
                             {
@@ -287,7 +298,6 @@ namespace SysBot.Pokemon
                             await Click(A, 6_000, token).ConfigureAwait(false);
                             await Click(B, 1_000, token).ConfigureAwait(false);
                             await Click(B, 2_000, token).ConfigureAwait(false);
-
                         };
                         await Task.Delay(0_050, token).ConfigureAwait(false);
                         if (denFound)
@@ -1129,6 +1139,9 @@ namespace SysBot.Pokemon
             };
             if (pk.Form != 0)
                 form = $"-{pk.Form}";
+            if (pk.Species is (ushort)Species.Basculegion && pk.Form == 1)
+                pk.Gender = 1;
+
             if (Settings.RaidEmbedParameters[RotationCount].IsShiny == true)
                 CommonEdits.SetIsShiny(pk, true);
             else
