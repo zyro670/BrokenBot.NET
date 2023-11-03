@@ -1,4 +1,5 @@
 ﻿using PKHeX.Core;
+using PKHeX.Core.AutoMod;
 using SysBot.Base;
 using System;
 using System.Collections.Generic;
@@ -480,9 +481,11 @@ namespace SysBot.Pokemon
 
                     for (int i = 0; i < encounters.Count; i++)
                     {
-                        bool match = await CheckEncounter(prints[i], encounters[i], coordList[i]).ConfigureAwait(false);
-                        if (!match && Settings.ContinueAfterMatch is ContinueAfterMatch.StopExit)
+                        var match = await CheckEncounter(prints[i], encounters[i], coordList[i]).ConfigureAwait(false);
+                        if (!match.Item1 && Settings.ContinueAfterMatch is ContinueAfterMatch.StopExit)
                             return;
+                        if (match.Item2)
+                            break;
                     }
 
                     encounters = new();
@@ -526,7 +529,7 @@ namespace SysBot.Pokemon
             }
         }
 
-        private async Task<bool> CheckEncounter(string print, PK9 pk, byte[]? cL)
+        private async Task<(bool, bool)> CheckEncounter(string print, PK9 pk, byte[]? cL)
         {
             var token = CancellationToken.None;
             var url = string.Empty;
@@ -556,6 +559,7 @@ namespace SysBot.Pokemon
                     int location = enc.Location;
                     pk.Met_Location = location;
                 }
+                pk.Legalize();
                 DumpPokemon(DumpSetting.DumpFolder, "overworld", pk);
             }
 
@@ -573,7 +577,7 @@ namespace SysBot.Pokemon
                     EchoUtil.EchoEmbed("", print, url, markurl, false);
                 }
 
-                return true; //No match, return true to keep scanning
+                return (true, false); //No match, return true to keep scanning
             }
 
             var ping = string.Empty;
@@ -587,7 +591,7 @@ namespace SysBot.Pokemon
                     Log("Undesired size found..");
                     url = TradeExtensions<PK9>.PokeImg(pk, false, false);
                     EchoUtil.EchoEmbed("", print, url, markurl, false);
-                    return true;
+                    return (true, false);
                 }
 
                 else if (pk.Scale is 0 or 255)
@@ -606,7 +610,7 @@ namespace SysBot.Pokemon
                     Log($"Undesired {specialmark} found..");
                     url = TradeExtensions<PK9>.PokeImg(pk, false, false);
                     EchoUtil.EchoEmbed("", print, url, markurl, false);
-                    return true;
+                    return (true, false);
                 }
             }
 
@@ -619,7 +623,7 @@ namespace SysBot.Pokemon
                     Log(res3);
                     url = TradeExtensions<PK9>.PokeImg(pk, false, false);
                     EchoUtil.EchoEmbed("", print, url, "", false);
-                    return true; // 1/100 condition unsatisfied, continue scanning
+                    return (true, false); // 1/100 condition unsatisfied, continue scanning
                 }
 
                 else if ((Species)pk.Species is Species.Dunsparce or Species.Dudunsparce or Species.Tandemaus or Species.Maushold && pk.EncryptionConstant % 100 == 0)
@@ -640,7 +644,7 @@ namespace SysBot.Pokemon
                     Log("Undesired species found..");
                     url = TradeExtensions<PK9>.PokeImg(pk, false, false);
                     EchoUtil.EchoEmbed("", print, url, markurl, false);
-                    return true;
+                    return (true, false);
                 }
             }
 
@@ -665,7 +669,7 @@ namespace SysBot.Pokemon
             {
                 url = TradeExtensions<PK9>.PokeImg(pk, false, false);
                 EchoUtil.EchoEmbed(ping, print, url, markurl, true);
-                return false;
+                return (false, false);
             }
 
             url = TradeExtensions<PK9>.PokeImg(pk, false, false);
@@ -689,9 +693,10 @@ namespace SysBot.Pokemon
                     await Click(A, 1_000, token).ConfigureAwait(false);
                     await StartGame(Hub.Config, token).ConfigureAwait(false);
                     await InitializeSessionOffsets(token).ConfigureAwait(false);
+                    return (false, true);
                 }
             }
-            return false;
+            return (false, false);
         }
 
         private async Task ResetFromSecretCave(CancellationToken token)
