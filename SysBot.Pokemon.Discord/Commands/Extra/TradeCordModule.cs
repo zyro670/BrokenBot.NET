@@ -93,10 +93,11 @@ namespace SysBot.Pokemon.Discord
 
             if (result.UsersToPing != null && result.UsersToPing.Length > 0)
             {
+                var borderColor = ExtraCommandUtil<T>.GetBorderColor(false,null);
                 var users = Context.Guild.Users.ToArray();
                 var embed = new EmbedBuilder()
                 {
-                    Color = Util.GetBorderColor(false),
+                    Color = borderColor,
                     Title = "TradeCord Event Notification",
                     Description = $"{events[index]} event is about to begin in {Context.Guild.Name}'s \"#{Context.Channel.Name}\" channel!",
                     Timestamp = DateTime.Now,
@@ -125,6 +126,8 @@ namespace SysBot.Pokemon.Discord
         [RequireQueueRole(nameof(DiscordManager.RolesTradeCord))]
         public async Task TradeCord()
         {
+
+
             string name = $"{Context.User.Username}'s Catch";
             if (!TradeCordParanoiaChecks(out string msg))
             {
@@ -215,12 +218,12 @@ namespace SysBot.Pokemon.Discord
                     msg += $"&^&\nAs you were running for your life, you tripped on {(article ? "an" : "a")} {result.Item}!";
                 }
                 else msg += result.Message;
-
+                
                 var authorF = new EmbedAuthorBuilder { Name = name };
                 var footerF = new EmbedFooterBuilder { Text = $"{(spookyRng >= 90 ? $"But deep inside you know there is no escape... {(result.EggPokeID != 0 ? $"Egg ID {result.EggPokeID}" : "")}" : result.EggPokeID != 0 ? $"Egg ID {result.EggPokeID}" : "")}" };
                 var embedF = new EmbedBuilder
                 {
-                    Color = Util.GetBorderColor(false, result.EggPokeID != 0 ? result.EggPoke : null),
+                    Color = ExtraCommandUtil<T>.GetBorderColor(false, result.EggPokeID != 0 ? result.EggPoke : null),
                     ImageUrl = spookyRng >= 90 ? sketchyCatches[imgRng] : "",
                     Description = descF,
                     Author = authorF,
@@ -281,7 +284,7 @@ namespace SysBot.Pokemon.Discord
 
             var embed = new EmbedBuilder
             {
-                Color = Util.GetBorderColor(false, result.Poke),
+                Color = ExtraCommandUtil<T>.GetBorderColor(false, result.Poke),
                 ImageUrl = pokeImg,
                 Description = desc,
                 Author = author,
@@ -356,7 +359,8 @@ namespace SysBot.Pokemon.Discord
                 await Util.EmbedUtil(Context, result.EmbedName, result.Message).ConfigureAwait(false);
                 return;
             }
-            await Util.ListUtil(Context, result.EmbedName, result.Message).ConfigureAwait(false);
+            await ExtraCommandUtil<T>.ListUtil(Context, result.EmbedName, new List<string> { result.Message }).ConfigureAwait(false);
+
         }
 
         [Command("TradeCordInfo")]
@@ -384,7 +388,7 @@ namespace SysBot.Pokemon.Discord
             var pokeImg = TradeExtensions<T>.PokeImg(result.Poke, canGmax, Hub.Config.TradeCord.UseFullSizeImages);
             string flavorText = $"\n\n{Helper.GetDexFlavorText(result.Poke.Species, result.Poke.Form, canGmax)}";
 
-            var embed = new EmbedBuilder { Color = Util.GetBorderColor(false, result.Poke), ThumbnailUrl = pokeImg }.WithFooter(x => { x.Text = flavorText; x.IconUrl = "https://i.imgur.com/nXNBrlr.png"; });
+            var embed = new EmbedBuilder { Color = ExtraCommandUtil<T>.GetBorderColor(false, result.Poke), ThumbnailUrl = pokeImg }.WithFooter(x => { x.Text = flavorText; x.IconUrl = "https://i.imgur.com/nXNBrlr.png"; });
             msg = $"\n\n{ReusableActions.GetFormattedShowdownText(result.Poke)}";
 
             await Util.EmbedUtil(Context, result.EmbedName, msg, embed).ConfigureAwait(false);
@@ -479,7 +483,7 @@ namespace SysBot.Pokemon.Discord
         [RequireQueueRole(nameof(DiscordManager.RolesTradeCord))]
         public async Task Gift([Summary("Numerical catch ID")] string id, [Summary("User mention")] string _)
         {
-            var embed = new EmbedBuilder { Color = Util.GetBorderColor(true) };
+            var embed = new EmbedBuilder { Color = ExtraCommandUtil<T>.GetBorderColor(true) };
             string name = $"{Context.User.Username}'s Gift";
 
             if (!TradeCordParanoiaChecks(out string msg))
@@ -600,7 +604,7 @@ namespace SysBot.Pokemon.Discord
                 await Util.EmbedUtil(Context, name, result.Message).ConfigureAwait(false);
                 return;
             }
-            await Util.ListUtil(Context, name, result.Message).ConfigureAwait(false);
+            await ExtraCommandUtil<T>.ListUtil(Context, result.EmbedName, new List<string> { result.Message }).ConfigureAwait(false);
         }
 
         [Command("TradeCordFavorites")]
@@ -632,7 +636,7 @@ namespace SysBot.Pokemon.Discord
         [RequireQueueRole(nameof(DiscordManager.RolesTradeCord))]
         public async Task TradeCordDex([Summary("Optional parameter \"missing\" for missing entries.")] string input = "")
         {
-            var embed = new EmbedBuilder { Color = Util.GetBorderColor(false) };
+            var embed = new EmbedBuilder { Color = ExtraCommandUtil<T>.GetBorderColor(false) };
             input = input.ToLower();
             var name = $"{Context.User.Username}'s {(input == "missing" ? "Missing Entries" : "Dex Info")}";
 
@@ -655,7 +659,7 @@ namespace SysBot.Pokemon.Discord
 
             if (input == "missing")
             {
-                await Util.ListUtil(Context, name, result.Message).ConfigureAwait(false);
+                await ExtraCommandUtil<T>.ListUtil(Context, result.EmbedName, new List<string> { result.Message }).ConfigureAwait(false);
                 return;
             }
             await Util.EmbedUtil(Context, name, result.Message, embed).ConfigureAwait(false);
@@ -667,7 +671,7 @@ namespace SysBot.Pokemon.Discord
         [RequireQueueRole(nameof(DiscordManager.RolesTradeCord))]
         public async Task TradeCordDexPerks([Summary("Optional perk name and amount to add, or \"clear\" to remove all perks.")][Remainder] string input = "")
         {
-            var embed = new EmbedBuilder { Color = Util.GetBorderColor(false) };
+            var embed = new EmbedBuilder { Color = ExtraCommandUtil<T>.GetBorderColor(false) };
             string name = $"{Context.User.Username}'s Perks";
             input = input.ToLower();
 
@@ -762,7 +766,7 @@ namespace SysBot.Pokemon.Discord
                   $"{(!result.Poke.IsEgg && result.Poke.CurrentLevel < 100 ? $"\n**Progress to next level:** {lvlProgress}%" : "")}";
 
             var author = new EmbedAuthorBuilder { Name = result.EmbedName, IconUrl = ballImg };
-            var embed = new EmbedBuilder { Color = Util.GetBorderColor(false, result.Poke), ThumbnailUrl = pokeImg }.WithFooter(x =>
+            var embed = new EmbedBuilder { Color = ExtraCommandUtil<T>.GetBorderColor(false, result.Poke), ThumbnailUrl = pokeImg }.WithFooter(x =>
             {
                 x.Text = footerMsg;
                 x.IconUrl = "https://i.imgur.com/nXNBrlr.png";
@@ -834,7 +838,7 @@ namespace SysBot.Pokemon.Discord
             var author = new EmbedAuthorBuilder { Name = name };
             var embed = new EmbedBuilder
             {
-                Color = Util.GetBorderColor(false, result.Poke),
+                Color = ExtraCommandUtil<T>.GetBorderColor(false, result.Poke),
                 ThumbnailUrl = pokeImg,
                 Description = result.Message,
                 Author = author,
@@ -877,7 +881,7 @@ namespace SysBot.Pokemon.Discord
         public async Task GiftItem([Remainder][Summary("Item name")] string input)
         {
             string name = $"{Context.User.Username}'s Gift Item";
-            var embed = new EmbedBuilder { Color = Util.GetBorderColor(true) };
+            var embed = new EmbedBuilder { Color = ExtraCommandUtil<T>.GetBorderColor(true) };
 
             if (!TradeCordParanoiaChecks(out string msg))
             {
@@ -968,7 +972,7 @@ namespace SysBot.Pokemon.Discord
                 return;
             }
 
-            await Util.ListUtil(Context, result.EmbedName, result.Message).ConfigureAwait(false);
+            await ExtraCommandUtil<T>.ListUtil(Context, result.EmbedName, new List<string> { result.Message }).ConfigureAwait(false);
         }
 
         [Command("TradeCordDropItem")]

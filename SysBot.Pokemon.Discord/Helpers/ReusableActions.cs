@@ -28,6 +28,17 @@ namespace SysBot.Pokemon.Discord
             File.Delete(tmp);
         }
 
+        public static string ToTitleCase(this string str)
+        {
+            if (string.IsNullOrEmpty(str))
+                return string.Empty;
+
+            var words = str.Split(' ').Select(word =>
+                char.ToUpper(word[0]) + (word.Length > 1 ? word.Substring(1).ToLower() : ""));
+
+            return string.Join(" ", words);
+        }
+
         public static async Task RepostPKMAsShowdownAsync(this ISocketMessageChannel channel, IAttachment att)
         {
             if (!EntityDetection.IsSizePlausible(att.Size))

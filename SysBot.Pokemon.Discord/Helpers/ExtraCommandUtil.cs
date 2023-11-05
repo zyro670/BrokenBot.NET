@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using PKHeX.Core;
+using SysBot.Base;
 
 namespace SysBot.Pokemon.Discord
 {
@@ -16,7 +17,7 @@ namespace SysBot.Pokemon.Discord
         private static readonly PokeTradeHubConfig Config = Info.Hub.Config;
         private static readonly Dictionary<ulong, ReactMessageContents> ReactMessageDict = new();
         private static bool DictWipeRunning = false;
-
+        private static readonly IEmote[] Reactions = { new Emoji("⬅️"), new Emoji("➡️") };
         private class ReactMessageContents
         {
             public List<string> Pages { get; set; } = new();
@@ -25,43 +26,51 @@ namespace SysBot.Pokemon.Discord
             public DateTime EntryTime { get; set; }
         }
 
-        public async Task ListUtil(SocketCommandContext ctx, string nameMsg, string entry)
+        public static async Task ListUtil(SocketCommandContext ctx, string nameMsg, List<string> pageContent)
         {
-            List<string> pageContent = ListUtilPrep(entry);
-            bool canReact = ctx.Guild.CurrentUser.GetPermissions(ctx.Channel as IGuildChannel).AddReactions;
-            var embed = new EmbedBuilder { Color = GetBorderColor(false) }.AddField(x =>
-            {
-                x.Name = nameMsg;
-                x.Value = pageContent[0];
-                x.IsInline = false;
-            }).WithFooter(x =>
-            {
-                x.IconUrl = "https://i.imgur.com/nXNBrlr.png";
-                x.Text = $"Page 1 of {pageContent.Count}";
-            });
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+            LogUtil.LogText($"Starting ListUtil for {nameMsg}.");
 
-            if (!canReact && pageContent.Count > 1)
+            bool canReact = ctx.Guild.CurrentUser.GetPermissions(ctx.Channel as IGuildChannel).AddReactions;
+            LogUtil.LogText($"Checked permissions: {canReact}");
+
+            var embed = new EmbedBuilder
             {
-                embed.AddField(x =>
-                {
-                    x.Name = "Missing \"Add Reactions\" Permission";
-                    x.Value = "Displaying only the first page of the list due to embed field limits.";
-                });
+                Color = GetBorderColor(false) // Use the instance to access GetBorderColor
             }
+            .AddField(nameMsg, pageContent[0], false)
+            .WithFooter($"Page 1 of {pageContent.Count}", "https://i.imgur.com/nXNBrlr.png")
+            .WithThumbnailUrl("https://i.imgur.com/5akyLET.png"); // Add this line for thumbnail
 
             var msg = await ctx.Message.Channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
+            LogUtil.LogText($"Message sent. Took {sw.ElapsedMilliseconds} ms");
+
             if (pageContent.Count > 1 && canReact)
             {
-                bool exists = ReactMessageDict.TryGetValue(ctx.User.Id, out _);
-                if (exists)
-                    ReactMessageDict[ctx.User.Id] = new() { Embed = embed, Pages = pageContent, MessageID = msg.Id, EntryTime = DateTime.Now };
-                else ReactMessageDict.Add(ctx.User.Id, new() { Embed = embed, Pages = pageContent, MessageID = msg.Id, EntryTime = DateTime.Now });
+                ReactMessageContents newContents = new() { Embed = embed, Pages = pageContent, MessageID = msg.Id, EntryTime = DateTime.UtcNow };
+                ReactMessageDict[ctx.User.Id] = newContents;
 
-                IEmote[] reactions = { new Emoji("⬅️"), new Emoji("➡️"), new Emoji("⬆️"), new Emoji("⬇️") };
-                _ = Task.Run(async () => await msg.AddReactionsAsync(reactions).ConfigureAwait(false));
+                // Use only left and right arrows
+                var minimalReactions = new[] { Reactions[0], Reactions[1] };
+
+                // Offload the reaction-adding to a separate task
+                _ = Task.Run(async () =>
+                {
+                    var reactionTasks = minimalReactions.Select(r => msg.AddReactionAsync(r));
+                    await Task.WhenAll(reactionTasks).ConfigureAwait(false);
+                    LogUtil.LogText($"Reactions added. Took {sw.ElapsedMilliseconds} ms");
+                });
+
                 if (!DictWipeRunning)
+                {
+                    DictWipeRunning = true;
                     _ = Task.Run(DictWipeMonitor);
+                }
             }
+
+            sw.Stop();
+            LogUtil.LogText($"ListUtil completed in {sw.ElapsedMilliseconds} ms.");
         }
 
         private static async Task DictWipeMonitor()
@@ -104,82 +113,73 @@ namespace SysBot.Pokemon.Discord
             }
         }
 
-        public static Task HandleReactionAsync(Cacheable<IUserMessage, ulong> cachedMsg, Cacheable<IMessageChannel, ulong> ch, SocketReaction reaction)
+        public static async Task HandleReactionAsync(Cacheable<IUserMessage, UInt64> cachedMessage, Cacheable<IMessageChannel, UInt64> channel, SocketReaction reaction)
         {
-            _ = Task.Run(async () =>
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+            LogUtil.LogText("HandleReactionAsync started.");
+
+            try
             {
-                IEmote[] reactions = { new Emoji("⬅️"), new Emoji("➡️"), new Emoji("⬆️"), new Emoji("⬇️") };
-                if (!reactions.Contains(reaction.Emote))
-                    return;
+                // Get the message from the cache or download it if not available
+                IUserMessage msg = cachedMessage.HasValue ? cachedMessage.Value : await cachedMessage.GetOrDownloadAsync().ConfigureAwait(false);
 
-                var tc = SysCord<T>.Runner.Hub.Config.Discord.TradeCordChannels.List;
-                if (!ch.HasValue || ch.Value is IDMChannel || (tc.Count != 0 && tc.FirstOrDefault(x => x.ID == ch.Id || x.Name == ch.Value.Name) == default))
-                    return;
-
-                IUserMessage msg;
-                if (!cachedMsg.HasValue)
-                    msg = await cachedMsg.GetOrDownloadAsync().ConfigureAwait(false);
-                else msg = cachedMsg.Value;
-
-                bool process = msg.Embeds.Count > 0 && (TradeCordHelper<T>.TCInitialized || msg.Embeds.First().Fields[0].Name.Contains("Giveaway Pool"));
-                if (!process || !reaction.User.IsSpecified)
-                    return;
-
+                // Get the user who reacted
                 var user = reaction.User.Value;
-                if (user.IsBot || !ReactMessageDict.ContainsKey(user.Id))
+
+                // Exit if the user is a bot or not in the dictionary
+                if (user.IsBot || !ReactMessageDict.TryGetValue(user.Id, out var contents))
                     return;
 
-                bool invoker = msg.Embeds.First().Fields[0].Name == ReactMessageDict[user.Id].Embed.Fields[0].Name;
+                // Check if the message corresponds to the current user's paginated message
+                bool invoker = msg.Embeds.First().Fields[0].Name == contents.Embed.Fields[0].Name;
                 if (!invoker)
                     return;
 
-                var contents = ReactMessageDict[user.Id];
+                // Ensure the message IDs match to avoid outdated references
                 bool oldMessage = msg.Id != contents.MessageID;
                 if (oldMessage)
                     return;
 
+                // Get the current page index
                 int page = contents.Pages.IndexOf((string)contents.Embed.Fields[0].Value);
                 if (page == -1)
                     return;
 
-                if (reaction.Emote.Name == reactions[0].Name || reaction.Emote.Name == reactions[1].Name)
+                // Handle page navigation based on the reaction
+                if (reaction.Emote.Name == "⬅️" || reaction.Emote.Name == "➡️")
                 {
-                    if (reaction.Emote.Name == reactions[0].Name)
+                    switch (reaction.Emote.Name)
                     {
-                        if (page == 0)
-                            page = contents.Pages.Count - 1;
-                        else page--;
-                    }
-                    else
-                    {
-                        if (page + 1 == contents.Pages.Count)
-                            page = 0;
-                        else page++;
+                        case "⬅️":
+                            page = (page == 0) ? contents.Pages.Count - 1 : page - 1;
+                            break;
+
+                        case "➡️":
+                            page = (page + 1 == contents.Pages.Count) ? 0 : page + 1;
+                            break;
+
+                        default:
+                            return;
                     }
 
+                    // Update the embed with the new page content and footer
                     contents.Embed.Fields[0].Value = contents.Pages[page];
                     contents.Embed.Footer.Text = $"Page {page + 1} of {contents.Pages.Count}";
-                    await msg.RemoveReactionAsync(reactions[reaction.Emote.Name == reactions[0].Name ? 0 : 1], user).ConfigureAwait(false);
+                    await msg.RemoveReactionAsync(reaction.Emote, user).ConfigureAwait(false);
                     await msg.ModifyAsync(msg => msg.Embed = contents.Embed.Build()).ConfigureAwait(false);
                 }
-                else if (reaction.Emote.Name == reactions[2].Name || reaction.Emote.Name == reactions[3].Name)
-                {
-                    List<string> tempList = new();
-                    foreach (var p in contents.Pages)
-                    {
-                        var split = p.Replace(", ", ",").Split(',');
-                        tempList.AddRange(split);
-                    }
 
-                    var tempEntry = string.Join(", ", reaction.Emote.Name == reactions[2].Name ? tempList.OrderBy(x => x.Split(' ')[1]) : tempList.OrderByDescending(x => x.Split(' ')[1]));
-                    contents.Pages = ListUtilPrep(tempEntry);
-                    contents.Embed.Fields[0].Value = contents.Pages[page];
-                    contents.Embed.Footer.Text = $"Page {page + 1} of {contents.Pages.Count}";
-                    await msg.RemoveReactionAsync(reactions[reaction.Emote.Name == reactions[2].Name ? 2 : 3], user).ConfigureAwait(false);
-                    await msg.ModifyAsync(msg => msg.Embed = contents.Embed.Build()).ConfigureAwait(false);
-                }
-            });
-            return Task.CompletedTask;
+                sw.Stop();
+                LogUtil.LogText($"HandleReactionAsync completed in {sw.ElapsedMilliseconds} ms.");
+            }
+            catch (Exception ex)
+            {
+                sw.Stop();
+                var msg = $"{ex.Message}\n{ex.StackTrace}\n{ex.InnerException}";
+                LogUtil.LogError(msg, "[HandleReactionAsync Event]");
+                LogUtil.LogText($"HandleReactionAsync failed in {sw.ElapsedMilliseconds} ms.");
+            }
         }
 
         public async Task<bool> ReactionVerification(SocketCommandContext ctx)
@@ -350,15 +350,15 @@ namespace SysBot.Pokemon.Discord
             return list;
         }
 
-        private static List<string> ListUtilPrep(string entry)
+        public static List<string> ListUtilPrep(string entry)
         {
             List<string> pageContent = new();
-            if (entry.Length > 1024)
+            if (entry.Length > 320)
             {
                 var index = 0;
                 while (true)
                 {
-                    var splice = SpliceAtWord(entry, index, 1024);
+                    var splice = SpliceAtWord(entry, index, 320);
                     if (splice.Count == 0)
                         break;
 
@@ -370,7 +370,7 @@ namespace SysBot.Pokemon.Discord
             return pageContent;
         }
 
-        public Color GetBorderColor(bool gift, PKM? pkm = null)
+        public static Color GetBorderColor(bool gift, PKM? pkm = null)
         {
             bool swsh = typeof(T) == typeof(PK8);
             if (pkm is null && swsh)
