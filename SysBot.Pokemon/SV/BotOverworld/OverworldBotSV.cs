@@ -224,7 +224,7 @@ namespace SysBot.Pokemon
                 }
             }
 
-            if (Settings.PicnicFilters.Item4 != 0)
+            if (Settings.PicnicFilters.Item4 != PicnicCondiments.None)
             {
                 for (int f = 0; f < Condiments.Count; f++)
                 {
@@ -250,6 +250,7 @@ namespace SysBot.Pokemon
                 List[Stored[2]],
                 List[Stored[3]],
             };
+
             MinimumIngredientCount = sanitized.Where(item => item > 0).Min();
 
             if (sanitized[1] == sanitized[2] || sanitized[2] == sanitized[3])
@@ -339,7 +340,7 @@ namespace SysBot.Pokemon
             int start = 0;
             while (!token.IsCancellationRequested)
             {
-                if (MinimumIngredientCount - sandwichCounter <= 1)
+                if (MinimumIngredientCount - sandwichCounter <= 1 && Settings.PicnicFilters.TypeOfSandwich != SandwichSelection.NoSandwich)
                 {
                     Log($"{Hub.Config.StopConditions.MatchFoundEchoMention} Insufficient ingredient count, please restock your basket!");
                     return;

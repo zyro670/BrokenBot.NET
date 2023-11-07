@@ -1,6 +1,6 @@
 ﻿using Discord;
 using Discord.Commands;
-using Discord.WebSocket;
+using Newtonsoft.Json;
 using PKHeX.Core;
 using System;
 using System.Collections.Generic;
@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using static SysBot.Pokemon.RaidBotSV;
 
 namespace SysBot.Pokemon.Discord
 {
@@ -770,6 +771,29 @@ namespace SysBot.Pokemon.Discord
                     SysCord<T>.Runner.Hub.Config.RotatingRaidSV.RaiderBanList.List.ToList().Remove(list[i]);
                 }
             await ReplyAsync(msg).ConfigureAwait(false);
+        }
+
+        [Command("modifyraidercount")]
+        [Alias("mrc")]
+        [Summary("Modifies the raider's penalty count for SV")]
+        [RequireSudo]
+        public async Task ModifyRaiderCount([Summary("Modifies the raider's penalty count for SV")] string nid, int count)
+        {
+            var path = "raidfilessv\\temp-session.json";
+            var json = File.ReadAllText(path);
+            var jsonData = JsonConvert.DeserializeObject<List<RaidSessionDetails>>(json)!;
+
+            foreach (var j in jsonData)
+            {
+                if (j.ID.ToString() == nid)
+                {
+                    j.PenaltyCount = count;
+                    await ReplyAsync($"Penalty Count for {j.Name} ({j.ID}) has been modified to {j.PenaltyCount}.").ConfigureAwait(false);
+                    json = JsonConvert.SerializeObject(jsonData, Formatting.Indented);
+                    File.WriteAllText(path, json);
+                    break;
+                }
+            }
         }
     }
 }

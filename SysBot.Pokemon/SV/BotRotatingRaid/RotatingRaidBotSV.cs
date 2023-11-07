@@ -1148,7 +1148,12 @@ namespace SysBot.Pokemon
                 CommonEdits.SetIsShiny(pk, false);
 
             if (Settings.RaidEmbedParameters[RotationCount].SpriteAlternateArt && Settings.RaidEmbedParameters[RotationCount].IsShiny)
+            {
                 turl = AltPokeImg(pk);
+                bool valid = await VerifySprite(turl).ConfigureAwait(false);
+                if (!valid)
+                    turl = TradeExtensions<PK9>.PokeImg(pk, false, false);
+            }
             else
                 turl = TradeExtensions<PK9>.PokeImg(pk, false, false);
 
