@@ -3,6 +3,7 @@ using SysBot.Base;
 using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Net.Http;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -497,6 +498,21 @@ namespace SysBot.Pokemon
             Encounter9RNG.GenerateData(blank, param, EncounterCriteria.Unrestricted, raid.Seed);
 
             return (blank, raid.Seed);
+        }
+
+        public static async Task<bool> VerifySprite(string url)
+        {
+            HttpClient client = new();
+            HttpResponseMessage response;
+            response = await client.GetAsync(url).ConfigureAwait(false);
+            if (response.IsSuccessStatusCode)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
         }
 
         public static string GetSpecialRewards(IReadOnlyList<(int, int, int)> rewards)
