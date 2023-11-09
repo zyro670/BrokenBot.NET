@@ -153,7 +153,7 @@ namespace SysBot.Pokemon
             [Category(Hosting), Description("When enabled, the bot will inject the current day seed to tomorrow's day seed.")]
             public bool KeepDaySeed { get; set; } = false;
 
-            [Category(Hosting), Description("When enabled, the bot will check if our dayseed changes to attempt preventing a lost outbreak.")]
+            [Category(Hosting), Description("When enabled, the bot will check if our dayseed changes to attempt preventing a lost raid.")]
             public bool PreventRollover { get; set; } = false;
 
             [Category(Hosting), Description("When PreventRollover is enabled, the bot will attempt to go back 1 hour every hour if using TimeSkip, otherwise back 1 day if using another selection. You must use zyro's usb-botbase release and Sync your Date/Time Settings if you select TimeSkip, otherwise Date/Time should be unsynced for the other options.")]

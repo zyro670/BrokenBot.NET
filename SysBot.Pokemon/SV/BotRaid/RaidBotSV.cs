@@ -49,7 +49,6 @@ namespace SysBot.Pokemon
         private string BaseDescription = string.Empty;
         private string[] PresetDescription = Array.Empty<string>();
         private string[] ModDescription = Array.Empty<string>();
-        private readonly Dictionary<ulong, int> RaidTracker = new();
         private List<BanList> GlobalBanList = new();
         private SAV9SV HostSAV = new();
         private DateTime StartTime = DateTime.Now;
@@ -57,6 +56,8 @@ namespace SysBot.Pokemon
 
         public override async Task MainLoop(CancellationToken token)
         {
+            InitializeSessionJson();
+
             if (string.IsNullOrEmpty(Settings.RaidEmbedFilters.Seed))
             {
                 Log("Please enter your seed in the Seed field before starting the bot.");
@@ -159,6 +160,24 @@ namespace SysBot.Pokemon
             DirectorySearch(data);
         }
 
+        private static void CreateJson(string path)
+        {
+            // Create new
+            List<RaidSessionDetails> _data = new()
+                {
+                    new RaidSessionDetails()
+                    {
+                        Name = string.Empty,
+                        ID = 0,
+                        Comment = string.Empty,
+                        PenaltyCount = 0,
+                    }
+                };
+
+            string json = JsonConvert.SerializeObject(_data.ToArray());
+            File.WriteAllText(path, json);
+        }
+
         private void DirectorySearch(string data)
         {
             RaidSettingsSV.RaidEmbedFiltersCategory param = new()
@@ -168,6 +187,29 @@ namespace SysBot.Pokemon
             };
             Settings.RaidEmbedFilters = param;
             Log($"Parameters generated for 0x{Settings.RaidEmbedFilters.Seed}.");
+        }
+
+        private void InitializeSessionJson()
+        {
+            var path = "raidfilessv\\temp-session.json";
+
+            if (File.Exists(path))
+            {
+                Log("Previous temp-session.json found, creating a new one for this session.");
+                File.Delete(path);
+                CreateJson(path);
+            }
+
+            if (!File.Exists(path))
+                CreateJson(path);
+        }
+
+        public class RaidSessionDetails
+        {
+            public ulong ID { get; set; }
+            public string Name { get; set; } = string.Empty;
+            public string Comment { get; set; } = string.Empty;
+            public int PenaltyCount { get; set; }
         }
 
         private async Task InnerLoop(CancellationToken token)
@@ -245,10 +287,36 @@ namespace SysBot.Pokemon
                 if (!await GetLobbyReady(token).ConfigureAwait(false))
                     continue;
 
-                // Read trainers until someone joins.
-                (partyReady, lobbyTrainers) = await ReadTrainers(token).ConfigureAwait(false);
-                if (!partyReady)
+                try
                 {
+                    // Read trainers until someone joins.
+                    (partyReady, lobbyTrainers) = await ReadTrainers(token).ConfigureAwait(false);
+                    if (!partyReady)
+                    {
+                        // Should add overworld recovery with a game restart fallback.
+                        await RegroupFromBannedUser(token).ConfigureAwait(false);
+
+                        if (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
+                        {
+                            Log("Something went wrong, attempting to recover.");
+                            await ReOpenGame(Hub.Config, token).ConfigureAwait(false);
+                            continue;
+                        }
+
+                        // Clear trainer OTs.
+                        Log("Clearing stored OTs");
+                        for (int i = 0; i < 3; i++)
+                        {
+                            List<long> ptr = new(Offsets.Trader2MyStatusPointer);
+                            ptr[2] += i * 0x30;
+                            await SwitchConnection.PointerPoke(new byte[16], ptr, token).ConfigureAwait(false);
+                        }
+                        continue;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log($"An error occurred while processing the lobby: {ex.Message}");
                     // Should add overworld recovery with a game restart fallback.
                     await RegroupFromBannedUser(token).ConfigureAwait(false);
 
@@ -268,7 +336,9 @@ namespace SysBot.Pokemon
                         await SwitchConnection.PointerPoke(new byte[16], ptr, token).ConfigureAwait(false);
                     }
                     continue;
+
                 }
+
                 await CompleteRaid(lobbyTrainers, token).ConfigureAwait(false);
                 raidsHosted++;
                 if (raidsHosted == Settings.TotalRaidsToHost && Settings.TotalRaidsToHost > 0)
@@ -384,8 +454,9 @@ namespace SysBot.Pokemon
 
                     Log("Returning to overworld...");
                     while (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
-                        await Click(A, 1_000, token).ConfigureAwait(false);
+                        await Click(A, 2_000, token).ConfigureAwait(false);
 
+                    Log("Back in the overworld.");
                     bool status = await DenStatus(StoredIndex, token).ConfigureAwait(false);
                     if (!status)
                     {
@@ -439,15 +510,22 @@ namespace SysBot.Pokemon
             {
                 var nid = trainers[i].Item1;
                 var name = trainers[i].Item2.OT;
-                if (RaidTracker.ContainsKey(nid) && nid != 0)
-                {
-                    var entry = RaidTracker[nid];
-                    var Count = entry + 1;
-                    RaidTracker[nid] = Count;
-                    Log($"Player: {name} completed the raid with catch count: {Count}.");
 
-                    if (Settings.CatchLimit != 0 && Count == Settings.CatchLimit)
-                        Log($"Player: {name} has met the catch limit {Count}/{Settings.CatchLimit}, adding to the block list for this session for {Settings.RaidEmbedFilters.Species}.");
+                var path = "raidfilessv\\temp-session.json";
+                var json = File.ReadAllText(path);
+                var jsonData = JsonConvert.DeserializeObject<List<RaidSessionDetails>>(json)!;
+                foreach (var j in jsonData)
+                {
+                    if (j.ID == nid && nid != 0)
+                    {
+                        j.PenaltyCount++;
+                        json = JsonConvert.SerializeObject(jsonData, Formatting.Indented);
+                        File.WriteAllText(path, json);
+                        Log($"Player: {name} completed the raid with catch count: {j.PenaltyCount}.");
+
+                        if (Settings.CatchLimit != 0 && j.PenaltyCount == Settings.CatchLimit)
+                            Log($"Player: {name} has met the catch limit {j.PenaltyCount}/{Settings.CatchLimit}, adding to the block list for this session for {Settings.RaidEmbedFilters.Species}.");
+                    }
                 }
             }
         }
@@ -564,10 +642,41 @@ namespace SysBot.Pokemon
         private async Task<bool> CheckIfTrainerBanned(TradeMyStatus trainer, ulong nid, int player, bool updateBanList, CancellationToken token)
         {
             Log($"Player {player}: {trainer.OT} | TID: {trainer.DisplayTID} | NID: {nid}");
-            if (!RaidTracker.ContainsKey(nid))
-                RaidTracker.Add(nid, 0);
 
-            int val = 0;
+            var path = "raidfilessv\\temp-session.json";
+            var json = File.ReadAllText(path);
+            var jsonData = JsonConvert.DeserializeObject<List<RaidSessionDetails>>(json)!;
+
+            bool isPresent = false;
+            RaidSessionDetails current = new();
+            foreach (var j in jsonData)
+            {
+                if (j.ID == nid && nid is not 0)
+                {
+                    isPresent = true;
+                    current.ID = j.ID;
+                    current.Name = j.Name;
+                    current.PenaltyCount = j.PenaltyCount;
+                    current.Comment = j.Comment;
+                    break;
+                }
+            }
+
+            if (!isPresent)
+            {
+                RaidSessionDetails raider = new()
+                {
+                    ID = nid,
+                    Name = trainer.OT,
+                    PenaltyCount = 0,
+                    Comment = string.Empty,
+                };
+                jsonData.Add(raider);
+                json = JsonConvert.SerializeObject(jsonData, Formatting.Indented);
+                File.WriteAllText(path, json);
+                jsonData = JsonConvert.DeserializeObject<List<RaidSessionDetails>>(json)!;
+            }
+
             var msg = string.Empty;
             var banResultCC = Settings.RaidsBetweenUpdate == -1 ? (false, "") : await BanService.IsRaiderBanned(trainer.OT, Settings.BanListURL, Connection.Label, updateBanList).ConfigureAwait(false);
             var banResultCFW = RaiderBanList.List.FirstOrDefault(x => x.ID == nid);
@@ -593,28 +702,36 @@ namespace SysBot.Pokemon
             bool isBanned = banResultCFW != default || banGlobalCFW || banResultCC.Item1;
 
             bool blockResult = false;
-            var blockCheck = RaidTracker.ContainsKey(nid);
+            var blockCheck = isPresent;
             if (blockCheck)
             {
-                RaidTracker.TryGetValue(nid, out val);
-                if (val >= Settings.CatchLimit && Settings.CatchLimit != 0) // Soft pity - block user
+                if (current.PenaltyCount >= Settings.CatchLimit && Settings.CatchLimit != 0) // Soft pity - block user
                 {
                     blockResult = true;
-                    RaidTracker[nid] = val + 1;
-                    Log($"Player: {trainer.OT} current penalty count: {val}.");
+                    current.PenaltyCount++;
+                    Log($"Player: {trainer.OT} current penalty count: {current.PenaltyCount}.");
+                    foreach (var j in jsonData)
+                    {
+                        if (j.ID == current.ID)
+                        {
+                            j.PenaltyCount = current.PenaltyCount;
+                            json = JsonConvert.SerializeObject(jsonData, Formatting.Indented);
+                            File.WriteAllText(path, json);
+                        }
+                    }
                 }
-                if (val == Settings.CatchLimit + 2 && Settings.CatchLimit != 0) // Hard pity - ban user
+                if (current.PenaltyCount == Settings.CatchLimit + 2 && Settings.CatchLimit != 0) // Hard pity - ban user
                 {
                     msg = $"{trainer.OT} is now banned for repeatedly attempting to go beyond the catch limit for {Settings.RaidEmbedFilters.Species} on {DateTime.Now}.";
                     Log(msg);
                     RaiderBanList.List.Add(new() { ID = nid, Name = trainer.OT, Comment = msg });
                     blockResult = false;
-                    await EnqueueEmbed(null, $"Penalty #{val}\n" + msg, false, true, false, false, token).ConfigureAwait(false);
+                    await EnqueueEmbed(null, $"Penalty #{current.PenaltyCount}\n" + msg, false, true, false, false, token).ConfigureAwait(false);
                     return true;
                 }
                 if (blockResult && !isBanned)
                 {
-                    msg = $"Penalty #{val}\n{trainer.OT} has already reached the catch limit.\nPlease do not join again.\nRepeated attempts to join like this will result in a ban from future raids.";
+                    msg = $"Penalty #{current.PenaltyCount}\n{trainer.OT} has already reached the catch limit.\nPlease do not join again.\nRepeated attempts to join like this will result in a ban from future raids.";
                     Log(msg);
                     await EnqueueEmbed(null, msg, false, true, false, false, token).ConfigureAwait(false);
                     return true;
@@ -623,7 +740,7 @@ namespace SysBot.Pokemon
 
             if (isBanned)
             {
-                msg = banResultCC.Item1 ? banResultCC.Item2 : banGlobalCFW ? $"{trainer.OT} was found in the global ban list.\nReason: {user.Comment}" : $"Penalty #{val}\n{banResultCFW!.Name} was found in the host's ban list.\n{banResultCFW.Comment}";
+                msg = banResultCC.Item1 ? banResultCC.Item2 : banGlobalCFW ? $"{trainer.OT} was found in the global ban list.\nReason: {user.Comment}" : $"Penalty #{current.PenaltyCount}\n{banResultCFW!.Name} was found in the host's ban list.\n{banResultCFW.Comment}";
                 Log(msg);
                 await EnqueueEmbed(null, msg, false, true, false, false, token).ConfigureAwait(false);
                 return true;
@@ -874,7 +991,12 @@ namespace SysBot.Pokemon
                 CommonEdits.SetIsShiny(pk, false);
 
             if (Settings.SpriteAlternateArt && Settings.RaidEmbedFilters.IsShiny)
+            {
                 turl = AltPokeImg(pk);
+                bool valid = await VerifySprite(turl).ConfigureAwait(false);
+                if (!valid)
+                    turl = TradeExtensions<PK9>.PokeImg(pk, false, false);
+            }
             else
                 turl = TradeExtensions<PK9>.PokeImg(pk, false, false);
 
@@ -1103,11 +1225,7 @@ namespace SysBot.Pokemon
 
                         for (int j = 0; j < raidDescription.Length; j++)
                         {
-                            raidDescription[j] = raidDescription[j]
-                            .Replace("{tera}", tera)
-                            .Replace("{difficulty}", $"{stars}")
-                            .Replace("{stars}", starcount)
-                            .Trim();
+                            raidDescription[j] = raidDescription[j].Replace("{tera}", tera).Replace("{difficulty}", $"{stars}").Replace("{stars}", starcount).Trim();
                             raidDescription[j] = Regex.Replace(raidDescription[j], @"\s+", " ");
                         }
                         if (Settings.PresetFilters.IncludeMoves)
