@@ -1419,7 +1419,6 @@ namespace SysBot.Pokemon
             container.SetEncounters(allEncounters);
             container.SetRewards(allRewards);
 
-
             if (init)
             {
                 for (int rc = 0; rc < Settings.RaidEmbedParameters.Count; rc++)
@@ -1439,7 +1438,6 @@ namespace SysBot.Pokemon
                     }
                 }
             }
-
 
             bool done = false;
             for (int i = 0; i < container.Raids.Count; i++)
@@ -1513,11 +1511,7 @@ namespace SysBot.Pokemon
 
                             for (int j = 0; j < raidDescription.Length; j++)
                             {
-                                raidDescription[j] = raidDescription[j]
-                                .Replace("{tera}", tera)
-                                .Replace("{difficulty}", $"{stars}")
-                                .Replace("{stars}", starcount)
-                                .Trim();
+                                raidDescription[j] = raidDescription[j].Replace("{tera}", tera).Replace("{difficulty}", $"{stars}").Replace("{stars}", starcount).Trim();
                                 raidDescription[j] = Regex.Replace(raidDescription[j], @"\s+", " ");
                             }
 
