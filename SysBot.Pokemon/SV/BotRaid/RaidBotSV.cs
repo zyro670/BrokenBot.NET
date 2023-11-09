@@ -160,6 +160,24 @@ namespace SysBot.Pokemon
             DirectorySearch(data);
         }
 
+        private static void CreateJson(string path)
+        {
+            // Create new
+            List<RaidSessionDetails> _data = new()
+                {
+                    new RaidSessionDetails()
+                    {
+                        Name = string.Empty,
+                        ID = 0,
+                        Comment = string.Empty,
+                        PenaltyCount = 0,
+                    }
+                };
+
+            string json = JsonConvert.SerializeObject(_data.ToArray());
+            File.WriteAllText(path, json);
+        }
+
         private void DirectorySearch(string data)
         {
             RaidSettingsSV.RaidEmbedFiltersCategory param = new()
@@ -179,24 +197,11 @@ namespace SysBot.Pokemon
             {
                 Log("Previous temp-session.json found, creating a new one for this session.");
                 File.Delete(path);
+                CreateJson(path);
             }
 
             if (!File.Exists(path))
-            {
-                List<RaidSessionDetails> _data = new()
-                {
-                    new RaidSessionDetails()
-                    {
-                        Name = string.Empty,
-                        ID = 0,
-                        Comment = string.Empty,
-                        PenaltyCount = 0,
-                    }
-                };
-
-                string json = JsonConvert.SerializeObject(_data.ToArray());
-                File.WriteAllText(path, json);
-            }
+                CreateJson(path);
         }
 
         public class RaidSessionDetails
@@ -282,10 +287,36 @@ namespace SysBot.Pokemon
                 if (!await GetLobbyReady(token).ConfigureAwait(false))
                     continue;
 
-                // Read trainers until someone joins.
-                (partyReady, lobbyTrainers) = await ReadTrainers(token).ConfigureAwait(false);
-                if (!partyReady)
+                try
                 {
+                    // Read trainers until someone joins.
+                    (partyReady, lobbyTrainers) = await ReadTrainers(token).ConfigureAwait(false);
+                    if (!partyReady)
+                    {
+                        // Should add overworld recovery with a game restart fallback.
+                        await RegroupFromBannedUser(token).ConfigureAwait(false);
+
+                        if (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
+                        {
+                            Log("Something went wrong, attempting to recover.");
+                            await ReOpenGame(Hub.Config, token).ConfigureAwait(false);
+                            continue;
+                        }
+
+                        // Clear trainer OTs.
+                        Log("Clearing stored OTs");
+                        for (int i = 0; i < 3; i++)
+                        {
+                            List<long> ptr = new(Offsets.Trader2MyStatusPointer);
+                            ptr[2] += i * 0x30;
+                            await SwitchConnection.PointerPoke(new byte[16], ptr, token).ConfigureAwait(false);
+                        }
+                        continue;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log($"An error occurred while processing the lobby: {ex.Message}");
                     // Should add overworld recovery with a game restart fallback.
                     await RegroupFromBannedUser(token).ConfigureAwait(false);
 
@@ -305,7 +336,9 @@ namespace SysBot.Pokemon
                         await SwitchConnection.PointerPoke(new byte[16], ptr, token).ConfigureAwait(false);
                     }
                     continue;
+
                 }
+
                 await CompleteRaid(lobbyTrainers, token).ConfigureAwait(false);
                 raidsHosted++;
                 if (raidsHosted == Settings.TotalRaidsToHost && Settings.TotalRaidsToHost > 0)
@@ -421,8 +454,9 @@ namespace SysBot.Pokemon
 
                     Log("Returning to overworld...");
                     while (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
-                        await Click(A, 1_000, token).ConfigureAwait(false);
+                        await Click(A, 2_000, token).ConfigureAwait(false);
 
+                    Log("Back in the overworld.");
                     bool status = await DenStatus(StoredIndex, token).ConfigureAwait(false);
                     if (!status)
                     {
@@ -1191,11 +1225,7 @@ namespace SysBot.Pokemon
 
                         for (int j = 0; j < raidDescription.Length; j++)
                         {
-                            raidDescription[j] = raidDescription[j]
-                            .Replace("{tera}", tera)
-                            .Replace("{difficulty}", $"{stars}")
-                            .Replace("{stars}", starcount)
-                            .Trim();
+                            raidDescription[j] = raidDescription[j].Replace("{tera}", tera).Replace("{difficulty}", $"{stars}").Replace("{stars}", starcount).Trim();
                             raidDescription[j] = Regex.Replace(raidDescription[j], @"\s+", " ");
                         }
                         if (Settings.PresetFilters.IncludeMoves)
