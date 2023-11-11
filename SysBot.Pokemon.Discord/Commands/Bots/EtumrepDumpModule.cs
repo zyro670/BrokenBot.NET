@@ -12,7 +12,7 @@ namespace SysBot.Pokemon.Discord.Commands
         [Command("etumrepDump")]
         [Alias("ed", "edump")]
         [Summary("Dumps the Pokémon you show via Link Trade, with the option to run EtumrepMMO and PermuteMMO.")]
-        [RequireQueueRole(nameof(DiscordManager.RolesEtumrepDump))]
+        [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
         public async Task EtumrepDumpAsync(int code)
         {
             var sig = Context.User.GetFavor();
@@ -22,7 +22,7 @@ namespace SysBot.Pokemon.Discord.Commands
         [Command("etumrepDump")]
         [Alias("ed", "edump")]
         [Summary("Dumps the Pokémon you show via Link Trade, with the option to run EtumrepMMO and PermuteMMO.")]
-        [RequireQueueRole(nameof(DiscordManager.RolesEtumrepDump))]
+        [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
         public async Task EtumrepDumpAsync([Summary("Trade Code")][Remainder] string code)
         {
             int tradeCode = Util.ToInt32(code);
@@ -33,7 +33,7 @@ namespace SysBot.Pokemon.Discord.Commands
         [Command("etumrepDump")]
         [Alias("ed", "edump")]
         [Summary("Dumps the Pokémon you show via Link Trade, with the option to run EtumrepMMO and PermuteMMO.")]
-        [RequireQueueRole(nameof(DiscordManager.RolesEtumrepDump))]
+        [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
         public async Task EtumrepDumpAsync()
         {
             var code = Info.GetRandomTradeCode();

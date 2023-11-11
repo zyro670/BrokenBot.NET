@@ -10,8 +10,10 @@
         Display,
         EtumrepDump,
         FixOT,
-        TradeCord,
+        Mystery,
         Giveaway,
         SupportTrade,
+        TradeCord,
+        SurpriseTrade,
     }
 }

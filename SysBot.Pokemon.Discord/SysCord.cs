@@ -11,6 +11,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using static Discord.GatewayIntents;
+using Discord.Net;
 
 namespace SysBot.Pokemon.Discord
 {
@@ -145,12 +146,11 @@ namespace SysBot.Pokemon.Discord
 
             await _commands.AddModulesAsync(assembly, _services).ConfigureAwait(false);
             var genericTypes = assembly.DefinedTypes.Where(z => z.IsSubclassOf(typeof(ModuleBase<SocketCommandContext>)) && z.IsGenericType);
-            bool initTC = typeof(T) == typeof(PK8) || typeof(T) == typeof(PB8) || typeof(T) == typeof(PK9);
+            
             foreach (var t in genericTypes)
             {
                 var genModule = t.MakeGenericType(typeof(T));
-                if (!initTC && t.Name == "TradeCordModule`1")
-                    continue;
+                
                 await _commands.AddModuleAsync(genModule, _services).ConfigureAwait(false);
             }
             var modules = _commands.Modules.ToList();
@@ -174,32 +174,55 @@ namespace SysBot.Pokemon.Discord
             _client.Ready += LoadLoggingAndEcho;
             _client.MessageReceived += HandleMessageAsync;
             _client.ReactionAdded += ExtraCommandUtil<T>.HandleReactionAsync;
-            _client.UserBanned += ExtraCommandUtil<T>.TCUserBanned;
+            _client.Connected += ConnectionEstablished;
+            _client.Disconnected += DisconnectedfromDiscordGateway;
             _client.ButtonExecuted += ExtraCommandUtil<T>.ButtonExecuted;
             _client.SelectMenuExecuted += ExtraCommandUtil<T>.SelectMenuExecuted;
             _client.ModalSubmitted += ExtraCommandUtil<T>.ModalSubmitted;
         }
 
+        private async Task ConnectionEstablished()
+        {
+            await Log(new LogMessage(LogSeverity.Info, "ConnectionEstablished", "Connection established!")).ConfigureAwait(false);
+            await LoadLoggingAndEcho().ConfigureAwait(false);
+        }
+
+        private async Task DisconnectedfromDiscordGateway (Exception exception)
+        {
+            await Log(new LogMessage(LogSeverity.Info, "DisconnectedfromDiscordGateway", "Disconnected from Discord Gateway!")).ConfigureAwait(false);
+        }
         private async Task HandleMessageAsync(SocketMessage arg)
         {
-            // Bail out if it's a System Message.
-            if (arg is not SocketUserMessage msg)
-                return;
 
-            // We don't want the bot to respond to itself or other bots.
-            if (msg.Author.Id == _client.CurrentUser.Id || msg.Author.IsBot)
-                return;
-
-            // Create a number to track where the prefix ends and the command begins
-            int pos = 0;
-            if (msg.HasStringPrefix(Hub.Config.Discord.CommandPrefix, ref pos))
+            try
             {
-                bool handled = await TryHandleCommandAsync(msg, pos).ConfigureAwait(false);
-                if (handled)
+                await Log(new LogMessage(LogSeverity.Info, "HandleMessageAsync", $"Message received: {arg}")).ConfigureAwait(false);
+                // Bail out if it's a System Message.
+                if (arg is not SocketUserMessage msg)
                     return;
-            }
 
-            await TryHandleMessageAsync(msg).ConfigureAwait(false);
+                // We don't want the bot to respond to itself or other bots.
+                if (msg.Author.Id == _client.CurrentUser.Id || msg.Author.IsBot)
+                    return;
+
+                // Create a number to track where the prefix ends and the command begins
+                int pos = 0;
+                if (msg.HasStringPrefix(Hub.Config.Discord.CommandPrefix, ref pos))
+                {
+                    bool handled = await TryHandleCommandAsync(msg, pos).ConfigureAwait(false);
+                    if (handled)
+                        return;
+                }
+
+                await TryHandleMessageAsync(msg).ConfigureAwait(false);
+
+                await Log(new LogMessage(LogSeverity.Info, "HandleMessageAsync", $"Message received exiting: {arg}")).ConfigureAwait(false);
+            }
+            catch (RateLimitedException ex)
+            {
+                LogUtil.LogText($"Rate limited on endpoint: {ex.Message} {ex.Data}{ex.Request}");
+
+            }
         }
 
         private async Task TryHandleMessageAsync(SocketMessage msg)

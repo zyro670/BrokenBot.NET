@@ -13,9 +13,30 @@ namespace SysBot.Pokemon.Discord
         [Command("dump")]
         [Alias("d")]
         [Summary("Dumps the Pokémon you show via Link Trade.")]
-        [RequireQueueRole(nameof(DiscordManager.RolesDump))]
+        [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
         public async Task DumpAsync(int code)
         {
+            
+            var iconURL = Context.User.GetAvatarUrl();
+            var dumpMessage = $" You have been added to the Pokémon **Dump** queue. \n Check your DM's for further instructions.";
+            var embedDumpMessage = new EmbedBuilder()
+            {
+                Author = new EmbedAuthorBuilder()
+                {
+                    Name = Context.User.Username,
+                    IconUrl = iconURL
+                },
+                Color = Color.Blue
+            }
+            
+            .WithDescription(dumpMessage)
+            .WithImageUrl("https://i.imgur.com/sJnvhDE.jpg")
+            .WithThumbnailUrl("https://i.imgur.com/5akyLET.png")
+            .WithCurrentTimestamp()
+            .Build();
+
+            await Context.Channel.SendMessageAsync(null, false, embedDumpMessage);
+
             var sig = Context.User.GetFavor();
             await QueueHelper<T>.AddToQueueAsync(Context, code, Context.User.Username, sig, new T(), PokeRoutineType.Dump, PokeTradeType.Dump).ConfigureAwait(false);
         }
@@ -23,7 +44,7 @@ namespace SysBot.Pokemon.Discord
         [Command("dump")]
         [Alias("d")]
         [Summary("Dumps the Pokémon you show via Link Trade.")]
-        [RequireQueueRole(nameof(DiscordManager.RolesDump))]
+        [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
         public async Task DumpAsync([Summary("Trade Code")][Remainder] string code)
         {
             int tradeCode = Util.ToInt32(code);
@@ -34,7 +55,7 @@ namespace SysBot.Pokemon.Discord
         [Command("dump")]
         [Alias("d")]
         [Summary("Dumps the Pokémon you show via Link Trade.")]
-        [RequireQueueRole(nameof(DiscordManager.RolesDump))]
+        [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
         public async Task DumpAsync()
         {
             var code = Info.GetRandomTradeCode();

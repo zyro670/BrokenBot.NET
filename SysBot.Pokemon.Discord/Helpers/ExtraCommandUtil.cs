@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using PKHeX.Core;
 using SysBot.Base;
+using System.Threading;
 
 namespace SysBot.Pokemon.Discord
 {
@@ -26,6 +27,12 @@ namespace SysBot.Pokemon.Discord
             public DateTime EntryTime { get; set; }
         }
 
+        public static List<string> GetPageContent(List<string> content, int pageNumber, int itemsPerPage)
+        {
+            int skipItems = (pageNumber - 1) * itemsPerPage;
+            return content.Skip(skipItems).Take(itemsPerPage).ToList();
+        }
+
         public static async Task ListUtil(SocketCommandContext ctx, string nameMsg, List<string> pageContent)
         {
             Stopwatch sw = new Stopwatch();
@@ -37,11 +44,17 @@ namespace SysBot.Pokemon.Discord
 
             var embed = new EmbedBuilder
             {
+                Author = new EmbedAuthorBuilder
+                {
+                    Name = ctx.User.Username,
+                    IconUrl = ctx.User.GetAvatarUrl()
+                },
                 Color = GetBorderColor(false) // Use the instance to access GetBorderColor
             }
             .AddField(nameMsg, pageContent[0], false)
             .WithFooter($"Page 1 of {pageContent.Count}", "https://i.imgur.com/nXNBrlr.png")
-            .WithThumbnailUrl("https://i.imgur.com/5akyLET.png"); // Add this line for thumbnail
+            .WithThumbnailUrl("https://i.imgur.com/5akyLET.png") // Add this line for thumbnail
+            .WithCurrentTimestamp();
 
             var msg = await ctx.Message.Channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
             LogUtil.LogText($"Message sent. Took {sw.ElapsedMilliseconds} ms");
@@ -89,29 +102,6 @@ namespace SysBot.Pokemon.Discord
             }
         }
 
-        public static async Task TCUserBanned(SocketUser user, SocketGuild guild)
-        {
-            if (!TradeCordHelper<T>.TCInitialized)
-                return;
-
-            var instance = SysCord<T>.Runner.Hub.Config;
-            var helper = new TradeCordHelper<T>(instance.TradeCord);
-            var ctx = new TradeCordHelper<T>.TC_CommandContext() { Context = TCCommandContext.DeleteUser, ID = user.Id, Username = user.Username };
-            var result = await helper.ProcessTradeCord(ctx, new string[] { user.Id.ToString() }).ConfigureAwait(false);
-            if (result.Success)
-            {
-                var channels = instance.Discord.EchoChannels.List;
-                for (int i = 0; i < channels.Count; i++)
-                {
-                    ISocketMessageChannel? channel = (ISocketMessageChannel?)guild.Channels.FirstOrDefault(x => x.Id == channels[i].ID);
-                    if (channel == default)
-                        continue;
-
-                    await channel.SendMessageAsync($"**[TradeCord]** Automatically deleted TradeCord data for: \n**{user.Username}{user.Discriminator}** ({user.Id}) in: **{guild.Name}**.\n Reason: Banned.").ConfigureAwait(false);
-                }
-                Base.LogUtil.LogInfo($"Automatically deleted TradeCord data for: {user.Username}{user.Discriminator} ({user.Id}) in: {guild.Name}.", "TradeCord: ");
-            }
-        }
 
         public static async Task HandleReactionAsync(Cacheable<IUserMessage, UInt64> cachedMessage, Cacheable<IMessageChannel, UInt64> channel, SocketReaction reaction)
         {
@@ -184,71 +174,43 @@ namespace SysBot.Pokemon.Discord
 
         public async Task<bool> ReactionVerification(SocketCommandContext ctx)
         {
-            var sw = new Stopwatch();
             IEmote reaction = new Emoji("👍");
             var msg = await ctx.Channel.SendMessageAsync($"{ctx.User.Username}, please react to the attached emoji in order to confirm you're not using a script.").ConfigureAwait(false);
             await msg.AddReactionAsync(reaction).ConfigureAwait(false);
 
-            sw.Start();
-            while (sw.ElapsedMilliseconds < 20_000)
+            var tokenSource = new CancellationTokenSource();
+            tokenSource.CancelAfter(20000);
+
+            try
             {
-                await msg.UpdateAsync().ConfigureAwait(false);
-                var react = msg.Reactions.FirstOrDefault(x => x.Value.ReactionCount > 1 && x.Value.IsMe);
-                if (react.Key == default)
-                    continue;
-
-                if (react.Key.Name == reaction.Name)
+                while (!tokenSource.Token.IsCancellationRequested)
                 {
-                    var reactUsers = await msg.GetReactionUsersAsync(reaction, 100).FlattenAsync().ConfigureAwait(false);
-                    var usr = reactUsers.FirstOrDefault(x => x.Id == ctx.User.Id && !x.IsBot);
-                    if (usr == default)
-                        continue;
-
-                    await msg.AddReactionAsync(new Emoji("✅")).ConfigureAwait(false);
-                    return false;
+                    await msg.UpdateAsync().ConfigureAwait(false);
+                    var react = msg.Reactions.FirstOrDefault(x => x.Value.ReactionCount > 1 && x.Value.IsMe);
+                    if (react.Key != default && react.Key.Name == reaction.Name)
+                    {
+                        var reactUsers = await msg.GetReactionUsersAsync(reaction, 100).FlattenAsync().ConfigureAwait(false);
+                        var usr = reactUsers.FirstOrDefault(x => x.Id == ctx.User.Id && !x.IsBot);
+                        if (usr != default)
+                        {
+                            await msg.AddReactionAsync(new Emoji("✅")).ConfigureAwait(false);
+                            return false;
+                        }
+                    }
+                    await Task.Delay(500, tokenSource.Token).ConfigureAwait(false);  // Optional: Add a short delay to reduce API calls
                 }
             }
+            catch (TaskCanceledException)
+            {
+
+                // Task was cancelled because timeout reached.
+            }
+
             await msg.AddReactionAsync(new Emoji("❌")).ConfigureAwait(false);
             return true;
         }
 
-        public async Task<int> EventVoteCalc(SocketCommandContext ctx, List<PokeEventType> events)
-        {
-            IEmote[] reactions = { new Emoji("1️⃣"), new Emoji("2️⃣"), new Emoji("3️⃣"), new Emoji("4️⃣"), new Emoji("5️⃣") };
-            string text = "The community vote has started! You have 30 seconds to vote for the next event!\n";
-            for (int i = 0; i < events.Count; i++)
-                text += $"{i + 1}. {events[i]}\n";
 
-            var embed = new EmbedBuilder { Color = Color.DarkBlue }.AddField(x =>
-            {
-                x.Name = "Community Event Vote";
-                x.Value = text;
-                x.IsInline = false;
-            });
-
-            var msg = await ctx.Message.Channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
-            await msg.AddReactionsAsync(reactions).ConfigureAwait(false);
-
-            await Task.Delay(30_000).ConfigureAwait(false);
-            await msg.UpdateAsync().ConfigureAwait(false);
-            List<int> reactList = new();
-            for (int i = 0; i < 5; i++)
-                reactList.Add(msg.Reactions.Values.ToArray()[i].ReactionCount);
-
-            var topVote = reactList.Max();
-            bool tieBreak = reactList.FindAll(x => x == topVote).Count > 1;
-            if (tieBreak)
-            {
-                List<int> indexes = new();
-                for (int i = 0; i < reactList.Count; i++)
-                {
-                    if (reactList[i] == topVote)
-                        indexes.Add(i);
-                }
-                return indexes[new Random().Next(indexes.Count)];
-            }
-            return reactList.IndexOf(topVote);
-        }
 
         public async Task EmbedUtil(SocketCommandContext ctx, string name, string value, EmbedBuilder? embed = null)
         {
@@ -268,6 +230,7 @@ namespace SysBot.Pokemon.Discord
             }
             await ctx.Message.Channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
         }
+
 
         public static Task ButtonExecuted(SocketMessageComponent component)
         {

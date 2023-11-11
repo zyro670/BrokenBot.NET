@@ -144,11 +144,6 @@ namespace SysBot.Pokemon
                 if (pk.GetRibbon((int)mark))
                     return true;
             }
-            for (var mark = RibbonIndex.MarkJumbo; mark <= RibbonIndex.MarkMini; mark++)
-            {
-                if (pk.GetRibbon((int)mark))
-                    return true;
-            }
             return false;
         }
 
@@ -156,14 +151,6 @@ namespace SysBot.Pokemon
         {
             result = default;
             for (var mark = RibbonIndex.MarkLunchtime; mark <= RibbonIndex.MarkSlump; mark++)
-            {
-                if (pk.GetRibbon((int)mark))
-                {
-                    result = mark;
-                    return true;
-                }
-            }
-            for (var mark = RibbonIndex.MarkJumbo; mark <= RibbonIndex.MarkMini; mark++)
             {
                 if (pk.GetRibbon((int)mark))
                 {
@@ -202,7 +189,7 @@ namespace SysBot.Pokemon
             }
             if (pk is PK9 pk9)
             {
-                set += $"\nScale: {PokeSizeDetailedUtil.GetSizeRating(pk9.Scale)} ({pk9.Scale})";
+                set += $"\nScale: {PokeSizeDetailedUtil.GetSizeRating(pk9.Scale)}";
             }
             return set;
         }
@@ -212,8 +199,7 @@ namespace SysBot.Pokemon
             " the Peckish"," the Sleepy"," the Dozy"," the Early Riser"," the Cloud Watcher"," the Sodden"," the Thunderstruck"," the Snow Frolicker"," the Shivering"," the Parched"," the Sandswept"," the Mist Drifter",
             " the Chosen One"," the Catch of the Day"," the Curry Connoisseur"," the Sociable"," the Recluse"," the Rowdy"," the Spacey"," the Anxious"," the Giddy"," the Radiant"," the Serene"," the Feisty"," the Daydreamer",
             " the Joyful"," the Furious"," the Beaming"," the Teary-Eyed"," the Chipper"," the Grumpy"," the Scholar"," the Rampaging"," the Opportunist"," the Stern"," the Kindhearted"," the Easily Flustered"," the Driven",
-            " the Apathetic"," the Arrogant"," the Reluctant"," the Humble"," the Pompous"," the Lively"," the Worn-Out", " of the Distant Past", " the Twinkling Star", " the Paldea Champion", " the Great", " the Teeny", " the Treasure Hunter",
-            " the Reliable Partner", " the Gourmet", " the One-in-a-Million", " the Former Alpha", " the Unrivaled", " the Former Titan",
+            " the Apathetic"," the Arrogant"," the Reluctant"," the Humble"," the Pompous"," the Lively"," the Worn-Out",
         };
 
         public static void ReadUnwantedMarks(StopConditionSettings settings, out IReadOnlyList<string> marks) =>
@@ -235,7 +221,7 @@ namespace SysBot.Pokemon
         {
             string alpha = string.Empty;
             if (pk.IsAlpha) alpha = $"Alpha - ";
-            var set = $"\n{alpha}{(pk.ShinyXor == 0 ? "■ - " : pk.ShinyXor <= 16 ? "★ - " : "")}{SpeciesName.GetSpeciesNameGeneration(pk.Species, 2, 8)}{TradeExtensions<PK8>.FormOutput(pk.Species, pk.Form, out _)}\nNature: {(Nature)pk.Nature} | Gender: {(Gender)pk.Gender}\nEC: {pk.EncryptionConstant:X8} | PID: {pk.PID:X8}\nIVs: {pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}";
+            var set = $"\n{alpha}{(pk.ShinyXor == 0 ? "■ - " : pk.ShinyXor <= 16 ? "★ - " : "") }{SpeciesName.GetSpeciesNameGeneration(pk.Species, 2, 8)}{TradeExtensions<PK8>.FormOutput(pk.Species, pk.Form, out _)}\nNature: {(Nature)pk.Nature} | Gender: {(Gender)pk.Gender}\nEC: {pk.EncryptionConstant:X8} | PID: {pk.PID:X8}\nIVs: {pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}";
             return set;
         }
 

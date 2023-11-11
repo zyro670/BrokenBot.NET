@@ -33,7 +33,8 @@ namespace SysBot.Pokemon.Discord
                 x.Value =
                     $"Bot Count: {botCount}\n" +
                     $"Bot State: {SummarizeBots(allBots)}\n" +
-                    $"Pool Count: {hub.Ledy.Pool.Count}\n";
+                    $"Pool Count: {hub.Ledy.Pool.Count}\n" +
+                    $"GiveawayPool Count: {hub.LedyPlus.GiveawayPool.Count}\n";
                 x.IsInline = false;
             });
 

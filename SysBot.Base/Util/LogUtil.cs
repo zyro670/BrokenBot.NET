@@ -93,5 +93,10 @@ namespace SysBot.Base
                 err = err.InnerException;
             }
         }
+
+        public static void LogText(Func<string> toString)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

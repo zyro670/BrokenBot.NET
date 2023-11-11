@@ -3,6 +3,7 @@
     public enum LedyResponseType
     {
         Random,
+        Surprise,
         MatchPool,
         MatchRequest,
         AbuseDetected,

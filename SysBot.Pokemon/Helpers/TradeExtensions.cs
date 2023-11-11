@@ -3,9 +3,15 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using Discord;
+using Discord.Commands;
 using PKHeX.Core;
 using PKHeX.Core.AutoMod;
+using SysBot.Base;
+using SysBot.Pokemon.Helpers;
 
 namespace SysBot.Pokemon
 {
@@ -17,6 +23,7 @@ namespace SysBot.Pokemon
         public static byte[] XCoords = { 0 };
         public static byte[] YCoords = { 0 };
         public static byte[] ZCoords = { 0 };
+        public static Dictionary<string, (byte[], byte[], byte[])> Coordinates = new();
         public static readonly string[] Characteristics =
         {
             "Takes plenty of siestas",
@@ -29,20 +36,14 @@ namespace SysBot.Pokemon
 
         public static readonly int[] Amped = { 3, 4, 2, 8, 9, 19, 22, 11, 13, 14, 0, 6, 24 };
         public static readonly int[] LowKey = { 1, 5, 7, 10, 12, 15, 16, 17, 18, 20, 21, 23 };
-        public static readonly ushort[] ShinyLock = {  (ushort)Species.Victini, (ushort)Species.Hoopa, (ushort)Species.Keldeo, (ushort)Species.Meloetta, (ushort)Species.Volcanion, (ushort)Species.Cosmog, (ushort)Species.Cosmoem, (ushort)Species.Magearna, (ushort)Species.Marshadow, (ushort)Species.Eternatus,
-        (ushort)Species.Kubfu, (ushort)Species.Urshifu, (ushort)Species.Zarude, (ushort)Species.Glastrier, (ushort)Species.Spectrier, (ushort)Species.Calyrex, (ushort)Species.Enamorus, (ushort)Species.WalkingWake, (ushort)Species.IronLeaves,
-        (ushort)Species.ChienPao, (ushort)Species.WoChien, (ushort)Species.TingLu, (ushort)Species.ChiYu, (ushort)Species.Koraidon, (ushort)Species.Miraidon};
-        public static readonly ushort[] MegaPrimals = { (ushort)Species.Venusaur, (ushort)Species.Charizard, (ushort)Species.Blastoise, (ushort)Species.Beedrill, (ushort)Species.Pidgeot, (ushort)Species.Alakazam,
-        (ushort)Species.Slowbro, (ushort)Species.Gengar, (ushort)Species.Kangaskhan, (ushort)Species.Pinsir, (ushort)Species.Gyarados, (ushort)Species.Aerodactyl, (ushort)Species.Mewtwo, (ushort)Species.Ampharos,
-        (ushort)Species.Steelix, (ushort)Species.Scizor, (ushort)Species.Heracross, (ushort)Species.Houndoom, (ushort)Species.Tyranitar, (ushort)Species.Sceptile, (ushort)Species.Blaziken, (ushort)Species.Swampert,
-        (ushort)Species.Gardevoir, (ushort)Species.Sableye, (ushort)Species.Mawile, (ushort)Species.Aggron, (ushort)Species.Medicham, (ushort)Species.Manectric, (ushort)Species.Sharpedo, (ushort)Species.Camerupt,
-        (ushort)Species.Altaria, (ushort)Species.Banette, (ushort)Species.Absol, (ushort)Species.Glalie, (ushort)Species.Salamence, (ushort)Species.Metagross, (ushort)Species.Latias, (ushort)Species.Latios,
-        (ushort)Species.Rayquaza, (ushort)Species.Lopunny, (ushort)Species.Garchomp, (ushort)Species.Lucario, (ushort)Species.Abomasnow, (ushort)Species.Gallade, (ushort)Species.Audino, (ushort)Species.Diancie,
-        (ushort)Species.Kyogre, (ushort)Species.Groudon};
+        public static readonly ushort[] ShinyLock = {  (ushort)Species.Victini, (ushort)Species.Keldeo, (ushort)Species.Volcanion, (ushort)Species.Cosmog, (ushort)Species.Cosmoem, (ushort)Species.Magearna, (ushort)Species.Marshadow, (ushort)Species.Eternatus,
+                                                    (ushort)Species.Kubfu, (ushort)Species.Urshifu, (ushort)Species.Zarude, (ushort)Species.Glastrier, (ushort)Species.Spectrier, (ushort)Species.Calyrex };
 
         public static bool ShinyLockCheck(ushort species, string form, string ball = "")
         {
             if (ShinyLock.Contains(species))
+                return true;
+            else if (form != "" && (species is (int)Species.Zapdos or (int)Species.Moltres or (int)Species.Articuno))
                 return true;
             else if (ball.Contains("Beast") && (species is (int)Species.Poipole or (int)Species.Naganadel))
                 return true;
@@ -51,15 +52,6 @@ namespace SysBot.Pokemon
             else if (species is (int)Species.Pikachu && form != "" && form != "-Partner")
                 return true;
             else if ((species is (ushort)Species.Zacian or (ushort)Species.Zamazenta) && !ball.Contains("Cherish"))
-                return true;
-            else if (species is (ushort)Species.Gimmighoul && form != "-Roaming")
-                return true;
-            else return false;
-        }
-
-        public static bool MegaPrimalCheck(ushort species)
-        {
-            if (MegaPrimals.Contains(species))
                 return true;
             else return false;
         }
@@ -104,36 +96,7 @@ namespace SysBot.Pokemon
             return ot || nick;
         }
 
-        public static void DittoTrade(PKM pkm)
-        {
-            var dittoStats = new string[] { "atk", "spe", "spa" };
-            var nickname = pkm.Nickname.ToLower();
-            pkm.StatNature = pkm.Nature;
-            pkm.Met_Location = pkm switch
-            {
-                PB8 => 400,
-                PK9 => 28,
-                _ => 186, // PK8
-            };
-
-            pkm.Met_Level = pkm switch
-            {
-                PB8 => 29,
-                PK9 => 34,
-                _ => pkm.Met_Level,
-            };
-
-            if (pkm is PK9 pk9)
-            {
-                pk9.Obedience_Level = (byte)pk9.Met_Level;
-                pk9.TeraTypeOriginal = MoveType.Normal;
-                pk9.TeraTypeOverride = (MoveType)19;
-            }
-            pkm.Ball = 21;
-            pkm.IVs = new int[] { 31, nickname.Contains(dittoStats[0]) ? 0 : 31, 31, nickname.Contains(dittoStats[1]) ? 0 : 31, nickname.Contains(dittoStats[2]) ? 0 : 31, 31 };
-            pkm.ClearHyperTraining();
-            TrashBytes(pkm, new LegalityAnalysis(pkm));
-        }
+        
 
         public static void EggTrade(PKM pk, IBattleTemplate template)
         {
@@ -157,7 +120,7 @@ namespace SysBot.Pokemon
                 PK9 => 30023,
                 _ => 60002, //PK8
             };
-            pk.MetDate = DateOnly.Parse("2020/10/20");
+            pk.MetDate = DateOnly.FromDateTime(DateTime.Now);
             pk.EggMetDate = pk.MetDate;
             pk.HeldItem = 0;
             pk.CurrentLevel = 1;
@@ -219,7 +182,7 @@ namespace SysBot.Pokemon
 
             var la = new LegalityAnalysis(pk);
             var enc = la.EncounterMatch;
-            pk.CurrentFriendship = enc is IHatchCycle s ? s.EggCycles : pk.PersonalInfo.HatchCycles;
+            pk.CurrentFriendship = pk.PersonalInfo.HatchCycles;
 
             Span<ushort> relearn = stackalloc ushort[4];
             la.GetSuggestedRelearnMoves(relearn, enc);
@@ -229,13 +192,7 @@ namespace SysBot.Pokemon
             pk.Move1_PPUps = pk.Move2_PPUps = pk.Move3_PPUps = pk.Move4_PPUps = 0;
             pk.SetMaximumPPCurrent(pk.Moves);
             pk.SetSuggestedHyperTrainingData();
-            ALMTraceback tblist = new()
-            {
-                Identifier = TracebackType.Misc,
-                Comment = "Set all valid ribbons",
-            };
-            ITracebackHandler tb = default!;
-            tb.Handle(tblist);
+            ITracebackHandler tb = new TraceBackHandler();
             pk.SetSuggestedRibbons(template, enc, true, tb);
         }
 
@@ -404,13 +361,7 @@ namespace SysBot.Pokemon
             var mgPkm = mg.ConvertToPKM(info);
             bool canConvert = EntityConverter.IsConvertibleToFormat(mgPkm, info.Generation);
             mgPkm = canConvert ? EntityConverter.ConvertToType(mgPkm, typeof(T), out result) : mgPkm;
-            ALMTraceback tblist = new()
-            {
-                Identifier = TracebackType.Trainer,
-                Comment = "Modified handler to HT",
-            };
-            ITracebackHandler tb = default!;
-            tb.Handle(tblist);
+            var tb = new TraceBackHandler();
 
             if (mgPkm is not null && result is EntityConverterResult.Success)
             {
@@ -447,6 +398,54 @@ namespace SysBot.Pokemon
             else return (T)mgPkm;
         }
 
+        public static string HeldItem(PKM pk)
+        {
+            
+            return pk.HeldItem.ToString();
+        }
+        public static async Task<string> ItemImg(string itemName)
+        {
+            // Sanitize the item name by removing unwanted characters, preserve only alphanumeric and periods
+            string sanitizedItemName = Regex.Replace(itemName, @"[^\w\.]+", "").ToLower();
+
+            // List of possible URL patterns
+            List<string> urlPatterns = new List<string>
+    {
+        "https://www.serebii.net/itemdex/sprites/pgl/{0}.png",
+        "https://www.serebii.net/itemdex/sprites/sv/{0}.png",
+        "https://www.serebii.net/itemdex/sprites/legends/{0}.png",
+    };
+
+            using (var client = new HttpClient())
+            {
+                // Try each URL pattern
+                foreach (var pattern in urlPatterns)
+                {
+                    string testUrl = string.Format(pattern, sanitizedItemName);
+
+                    // Asynchronously send a HEAD request to check if the URL is valid
+                    try
+                    {
+                        var request = new HttpRequestMessage(HttpMethod.Head, testUrl);
+                        var response = await client.SendAsync(request);
+                        if (response.IsSuccessStatusCode)
+                        {
+                            // Return the first valid URL found
+                            return testUrl;
+                        }
+                    }
+                    catch
+                    {
+
+                        LogUtil.LogText($"Exception occurred while checking URL: {testUrl}");
+
+                    }
+                }
+            }
+
+            // Return a default image URL if none are valid
+            return "https://i.imgur.com/aVU5a7w.png";
+        }
         public static string PokeImg(PKM pkm, bool canGmax, bool fullSize)
         {
             bool md = false;
@@ -455,13 +454,29 @@ namespace SysBot.Pokemon
             if (fullSize)
                 baseLink = "https://raw.githubusercontent.com/zyro670/HomeImages/master/512x512/poke_capture_0001_000_mf_n_00000000_f_n.png".Split('_');
             else baseLink = "https://raw.githubusercontent.com/zyro670/HomeImages/master/128x128/poke_capture_0001_000_mf_n_00000000_f_n.png".Split('_');
+            string newbase = string.Empty;
+            string pkmform = string.Empty;
+            if (pkm.Form != 0)
+                pkmform = $"-{pkm.Form}";
+
+            if ((Species)pkm.Species > Species.Enamorus || (Species)pkm.Species == Species.Wooper && pkm.Form != 0 || (Species)pkm.Species == Species.Tauros && pkm.Form != 0)
+            {
+                if 
+                    (pkm.IsShiny)
+                    newbase = $"https://raw.githubusercontent.com/Kingj20361/PokeTextures/main/Placeholder_Sprites/scaled_up_sprites/Shiny/" + $"{pkm.Species}{pkmform}" + ".png";
+                else if (!pkm.IsShiny)
+                    newbase = $"https://raw.githubusercontent.com/Kingj20361/PokeTextures/main/Placeholder_Sprites/scaled_up_sprites/" + $"{pkm.Species}{pkmform}" + ".png";
+                
+                return newbase;
+            }
 
             if (Enum.IsDefined(typeof(GenderDependent), pkm.Species) && !canGmax && pkm.Form is 0)
             {
-                if (pkm.Gender == 0 && pkm.Species != (int)Species.Torchic)
+                if (pkm.Gender is 0 && pkm.Species is not (ushort)Species.Torchic)
                     md = true;
                 else fd = true;
             }
+                        
 
             int form = pkm.Species switch
             {
@@ -493,7 +508,7 @@ namespace SysBot.Pokemon
                 return $"https://raw.githubusercontent.com/zyro670/HomeImages/master/128x128/poke_capture_0" + $"{pkm.Species}" + "_00" + $"{pkm.Form}" + "_" + $"{g}" + "_n_00000000_f_" + $"{s}" + ".png";
             }
 
-            baseLink[2] = pkm.Species < 10 ? $"000{pkm.Species}" : pkm.Species < 100 && pkm.Species > 9 ? $"00{pkm.Species}" : pkm.Species >= 1000 ? $"{pkm.Species}" : $"0{pkm.Species}";
+            baseLink[2] = pkm.Species < 10 ? $"000{pkm.Species}" : pkm.Species < 100 && pkm.Species > 9 ? $"00{pkm.Species}" : $"0{pkm.Species}";
             baseLink[3] = pkm.Form < 10 ? $"00{form}" : $"0{form}";
             baseLink[4] = pkm.PersonalInfo.OnlyFemale ? "fo" : pkm.PersonalInfo.OnlyMale ? "mo" : pkm.PersonalInfo.Genderless ? "uk" : fd ? "fd" : md ? "md" : "mf";
             baseLink[5] = canGmax ? "g" : "n";
@@ -512,10 +527,12 @@ namespace SysBot.Pokemon
             formString[0] = "";
             if (form >= formString.Length)
                 form = (byte)(formString.Length - 1);
-            return formString[form].Contains('-') ? formString[form] : formString[form] == "" ? "" : $"-{formString[form]}";
+            string formattedFormName = formString[form].TrimStart('-'); // Remove leading "-"
+            return string.IsNullOrEmpty(formattedFormName) ? "" : formattedFormName;
+
         }
 
-        public static bool DifferentFamily(IReadOnlyList<T> pkms)
+        public static bool DifferentFamily<T>(IReadOnlyList<T> pkms) where T : PKM
         {
             var criteriaList = new List<(ushort Species, byte Form)>();
             foreach (var pkm in pkms)

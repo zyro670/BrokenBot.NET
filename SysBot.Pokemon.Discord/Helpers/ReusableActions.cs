@@ -28,16 +28,8 @@ namespace SysBot.Pokemon.Discord
             File.Delete(tmp);
         }
 
-        public static string ToTitleCase(this string str)
-        {
-            if (string.IsNullOrEmpty(str))
-                return string.Empty;
+       
 
-            var words = str.Split(' ').Select(word =>
-                char.ToUpper(word[0]) + (word.Length > 1 ? word.Substring(1).ToLower() : ""));
-
-            return string.Join(" ", words);
-        }
 
         public static async Task RepostPKMAsShowdownAsync(this ISocketMessageChannel channel, IAttachment att)
         {
@@ -63,6 +55,16 @@ namespace SysBot.Pokemon.Discord
             return RequestSignificance.None;
         }
 
+        public static string ToTitleCase(this string str)
+        {
+            if (string.IsNullOrEmpty(str))
+                return string.Empty;
+
+            var words = str.Split(' ').Select(word =>
+                char.ToUpper(word[0]) + (word.Length > 1 ? word.Substring(1).ToLower() : ""));
+
+            return string.Join(" ", words);
+        }
         public static async Task EchoAndReply(this ISocketMessageChannel channel, string msg)
         {
             // Announce it in the channel the command was entered only if it's not already an echo channel.
@@ -96,15 +98,7 @@ namespace SysBot.Pokemon.Discord
                 else newShowdown[index] = "\nShiny: Star\r";
             }
 
-            string mark = string.Empty;
-            if (pkm is PK9 pk9)
-            {
-                if (StopConditionSettings.HasMark(pk9, out RibbonIndex encmark))
-                    mark = $"\nPokémon has the **{encmark.ToString().Replace("Mark", "")} Mark**!";
-
-            }
-
-            var extra = new string[] { $"\nOT: {pkm.OT_Name}", $"\nTID: {pkm.GetDisplayTID()}", $"\nSID: {pkm.GetDisplaySID()}", $"{(pkm.IsEgg ? "\nIsEgg: Yes" : "")}", $"{mark.Trim()}" };
+            var extra = new string[] { $"\nOT: {pkm.OT_Name}", $"\nTID: {pkm.GetDisplayTID()}", $"\nSID: {pkm.GetDisplaySID()}", $"{(pkm.IsEgg ? "\nIsEgg: Yes" : "")}" }; 
             newShowdown.InsertRange(1, extra);
             return Format.Code(string.Join("", newShowdown).Trim());
         }

@@ -336,22 +336,15 @@ namespace SysBot.Pokemon
                     continue;
 
                 // Read trainers until someone joins.
-                try
+                (partyReady, lobbyTrainers) = await ReadTrainers(token).ConfigureAwait(false);
+                if (!partyReady)
                 {
-                    // Read trainers until someone joins.
-                    (partyReady, lobbyTrainers) = await ReadTrainers(token).ConfigureAwait(false);
-                    if (!partyReady)
+                    if (LostRaid >= Settings.LobbyOptions.SkipRaidLimit && Settings.LobbyOptions.LobbyMethodOptions == LobbyMethodOptions.SkipRaid)
                     {
-                        if (LostRaid >= Settings.LobbyOptions.SkipRaidLimit && Settings.LobbyOptions.LobbyMethodOptions == LobbyMethodOptions.SkipRaid)
-                        {
-                            await SkipRaidOnLosses(token).ConfigureAwait(false);
-                            continue;
-                        }
+                        await SkipRaidOnLosses(token).ConfigureAwait(false);
+                        continue;
                     }
-                }
-                catch (Exception ex)
-                {
-                    Log($"An error occurred while processing the lobby: {ex.Message}");
+
                     // Should add overworld recovery with a game restart fallback.
                     await RegroupFromBannedUser(token).ConfigureAwait(false);
 
@@ -372,13 +365,11 @@ namespace SysBot.Pokemon
                     }
                     continue;
                 }
-
                 await CompleteRaid(lobbyTrainers, token).ConfigureAwait(false);
                 raidsHosted++;
                 if (raidsHosted == Settings.TotalRaidsToHost && Settings.TotalRaidsToHost > 0)
                     break;
             }
-
             if (Settings.TotalRaidsToHost > 0 && raidsHosted != 0)
                 Log("Total raids to host has been met.");
         }

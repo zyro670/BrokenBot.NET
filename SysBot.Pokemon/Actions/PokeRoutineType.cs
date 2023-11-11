@@ -88,6 +88,6 @@
 
     public static class PokeRoutineTypeExtensions
     {
-        public static bool IsTradeBot(this PokeRoutineType type) => type is (>= PokeRoutineType.FlexTrade and <= PokeRoutineType.Dump) || type is PokeRoutineType.FixOT or PokeRoutineType.TradeCord or PokeRoutineType.EtumrepDump;
+        public static bool IsTradeBot(this PokeRoutineType type) => type is (>= PokeRoutineType.FlexTrade and <= PokeRoutineType.Dump) || type is PokeRoutineType.FixOT  or PokeRoutineType.EtumrepDump;
     }
 }

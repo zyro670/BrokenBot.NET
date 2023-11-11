@@ -11,7 +11,7 @@ namespace SysBot.Pokemon.Discord
     {
         [Command("addSudo")]
         [Summary("Adds mentioned user to global sudo")]
-        [RequireOwner]
+        [RequireSudo]
         // ReSharper disable once UnusedParameter.Global
         public async Task SudoUsers([Remainder] string _)
         {
@@ -23,7 +23,7 @@ namespace SysBot.Pokemon.Discord
 
         [Command("removeSudo")]
         [Summary("Removes mentioned user from global sudo")]
-        [RequireOwner]
+        [RequireSudo]
         // ReSharper disable once UnusedParameter.Global
         public async Task RemoveSudoUsers([Remainder] string _)
         {
@@ -35,7 +35,7 @@ namespace SysBot.Pokemon.Discord
 
         [Command("addChannel")]
         [Summary("Adds a channel to the list of channels that are accepting commands.")]
-        [RequireOwner]
+        [RequireSudo]
         // ReSharper disable once UnusedParameter.Global
         public async Task AddChannel()
         {
@@ -46,7 +46,7 @@ namespace SysBot.Pokemon.Discord
 
         [Command("removeChannel")]
         [Summary("Removes a channel from the list of channels that are accepting commands.")]
-        [RequireOwner]
+        [RequireSudo]
         // ReSharper disable once UnusedParameter.Global
         public async Task RemoveChannel()
         {
@@ -58,7 +58,7 @@ namespace SysBot.Pokemon.Discord
         [Command("leave")]
         [Alias("bye")]
         [Summary("Leaves the current server.")]
-        [RequireOwner]
+        [RequireSudo]
         // ReSharper disable once UnusedParameter.Global
         public async Task Leave()
         {
@@ -69,7 +69,7 @@ namespace SysBot.Pokemon.Discord
         [Command("leaveguild")]
         [Alias("lg")]
         [Summary("Leaves guild based on supplied ID.")]
-        [RequireOwner]
+        [RequireSudo]
         // ReSharper disable once UnusedParameter.Global
         public async Task LeaveGuild(string userInput)
         {
@@ -91,7 +91,7 @@ namespace SysBot.Pokemon.Discord
 
         [Command("leaveall")]
         [Summary("Leaves all servers the bot is currently in.")]
-        [RequireOwner]
+        [RequireSudo]
         // ReSharper disable once UnusedParameter.Global
         public async Task LeaveAll()
         {
@@ -100,34 +100,12 @@ namespace SysBot.Pokemon.Discord
             {
                 await guild.LeaveAsync().ConfigureAwait(false);
             }
-        }
-
-        [Command("addtc")]
-        [Summary("Adds a channel to the list of TradeCord channels that are accepting commands.")]
-        [RequireOwner]
-        // ReSharper disable once UnusedParameter.Global
-        public async Task AddTC()
-        {
-            var obj = GetReference(Context.Message.Channel);
-            SysCordSettings.Settings.TradeCordChannels.AddIfNew(new[] { obj });
-            await ReplyAsync("Done.").ConfigureAwait(false);
-        }
-
-        [Command("removetc")]
-        [Summary("Removes a channel from the list of TradeCord channels that are accepting commands.")]
-        [RequireOwner]
-        // ReSharper disable once UnusedParameter.Global
-        public async Task RemoveTC()
-        {
-            var obj = GetReference(Context.Message.Channel);
-            SysCordSettings.Settings.TradeCordChannels.RemoveAll(z => z.ID == obj.ID);
-            await ReplyAsync("Done.").ConfigureAwait(false);
-        }
+        }                          
 
         [Command("sudoku")]
         [Alias("kill", "shutdown")]
         [Summary("Causes the entire process to end itself!")]
-        [RequireOwner]
+        [RequireSudo]
         // ReSharper disable once UnusedParameter.Global
         public async Task ExitProgram()
         {
@@ -148,5 +126,6 @@ namespace SysBot.Pokemon.Discord
             Name = channel.Name,
             Comment = $"Added by {Context.User.Username} on {DateTime.Now:yyyy.MM.dd-hh:mm:ss}",
         };
+
     }
 }

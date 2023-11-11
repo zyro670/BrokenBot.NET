@@ -11,7 +11,7 @@ namespace SysBot.Pokemon.Discord.Commands
         [Command("permute")]
         [Alias("p")]
         [Summary("Gets shiny path results for the specified filter and provided JSON.")]
-        [RequireQueueRole(nameof(DiscordManager.RolesEtumrepDump))]
+        [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
         public async Task PermuteAsync()
         {
             var ch = await Context.User.CreateDMChannelAsync().ConfigureAwait(false);

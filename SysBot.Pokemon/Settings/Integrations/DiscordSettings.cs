@@ -9,7 +9,7 @@ namespace SysBot.Pokemon
         private const string Channels = nameof(Channels);
         private const string Roles = nameof(Roles);
         private const string Users = nameof(Users);
-        public override string ToString() => "Discord Integration Settings";
+        public override string ToString() => "Discord Stream_Configuration Settings";
 
         // Startup
 
@@ -39,36 +39,15 @@ namespace SysBot.Pokemon
         [Category(Roles), Description("Users with this role are allowed to enter the Trade queue.")]
         public RemoteControlAccessList RoleCanTrade { get; set; } = new() { AllowIfEmpty = false };
 
-        [Category(Roles), Description("Users with this role are allowed to enter the Seed Check queue.")]
-        public RemoteControlAccessList RoleCanSeedCheck { get; set; } = new() { AllowIfEmpty = false };
-
-        [Category(Roles), Description("Users with this role are allowed to enter the Clone queue.")]
-        public RemoteControlAccessList RoleCanClone { get; set; } = new() { AllowIfEmpty = false };
-
-        [Category(Roles), Description("Users with this role are allowed to enter the Dump queue.")]
-        public RemoteControlAccessList RoleCanDump { get; set; } = new() { AllowIfEmpty = false };
+        [Category(Roles), Description("Users with this role are allowed to use Giveaway.")]
+        public RemoteControlAccessList RoleCanGiveaway { get; set; } = new() { AllowIfEmpty = false };
 
         [Category(Roles), Description("Users with this role are allowed to remotely control the console (if running as Remote Control Bot.")]
         public RemoteControlAccessList RoleRemoteControl { get; set; } = new() { AllowIfEmpty = false };
 
         [Category(Roles), Description("Users with this role are allowed to bypass command restrictions.")]
-        public RemoteControlAccessList RoleSudo { get; set; } = new() { AllowIfEmpty = false };
-
-        [Category(Roles), Description("Users with this role are allowed to enter the Etumrep Dump queue.")]
-        public RemoteControlAccessList RoleCanEtumrepDump { get; set; } = new() { AllowIfEmpty = false };
-
-        [Category(Roles), Description("Users with this role are allowed to enter the FixOT queue.")]
-        public RemoteControlAccessList RoleCanFixOT { get; set; } = new() { AllowIfEmpty = false };
-
-        [Category(Roles), Description("Users with this role are allowed to use SupportTrade.")]
-        public RemoteControlAccessList RoleCanSupportTrade { get; set; } = new() { AllowIfEmpty = false };
-
-        [Category(Roles), Description("Users with this role are allowed to use TradeCord.")]
-        public RemoteControlAccessList RoleCanTradeCord { get; set; } = new() { AllowIfEmpty = false };
-
-        [Category(Roles), Description("Users with this role are allowed to use Giveaway.")]
-        public RemoteControlAccessList RoleCanGiveaway { get; set; } = new() { AllowIfEmpty = false };
-
+        public RemoteControlAccessList RoleSudo { get; set; } = new() { AllowIfEmpty = false };        
+        
         // Operation
 
         [Category(Roles), Description("Users with this role are allowed to join the queue with a better position.")]
@@ -96,10 +75,7 @@ namespace SysBot.Pokemon
         public RemoteControlAccessList EchoChannels { get; set; } = new();
 
         [Category(Channels), Description("Echo channels that will log special encounter messages.")]
-        public RemoteControlAccessList EncounterEchoChannels { get; set; } = new();
-
-        [Category(Channels), Description("Channel IDs where TradeCord commands are allowed.")]
-        public RemoteControlAccessList TradeCordChannels { get; set; } = new();
+        public RemoteControlAccessList EncounterEchoChannels { get; set; } = new();      
 
         [Category(Operation), Description("Returns PKMs of Pokémon shown in the trade to the user.")]
         public bool ReturnPKMs { get; set; } = true;

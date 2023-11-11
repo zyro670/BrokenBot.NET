@@ -43,6 +43,7 @@ namespace SysBot.Pokemon
             APILegality.PrioritizeGameVersion = cfg.PrioritizeGameVersion;
             APILegality.SetBattleVersion = cfg.SetBattleVersion;
             APILegality.Timeout = cfg.Timeout;
+            
 
             if (!(APILegality.AllowHOMETransferGeneration = cfg.AllowHOMETransferGeneration))
                 typeof(ParseSettings).GetProperty(nameof(ParseSettings.Gen8TransferTrackerNotPresent))!.SetValue(null, Severity.Invalid);

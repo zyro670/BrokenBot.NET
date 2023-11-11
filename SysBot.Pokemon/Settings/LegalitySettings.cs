@@ -6,14 +6,21 @@ namespace SysBot.Pokemon
 {
     public class LegalitySettings
     {
-        private string DefaultTrainerName = "SysBot";
+        private string DefaultTrainerName = "AshKetchum";
         private const string Generate = nameof(Generate);
         private const string Misc = nameof(Misc);
         public override string ToString() => "Legality Generating Settings";
 
+
+        // Misc
+
+        [Category(Misc), Description("Override Pokémon OT info with trade partner OT")]
+        public bool UseTradePartnerInfo { get; set; } = false;
+
+        [Category(Misc), Description("Zero out HOME trackers for cloned and user-requested PKM files. It is recommended to leave this disabled to avoid creating invalid HOME data.")]
+        public bool ResetHOMETracker { get; set; } = false;
+      
         // Generate
-        [Category(Generate), Description("MGDB directory path for Wonder Cards.")]
-        public string MGDBPath { get; set; } = string.Empty;
 
         [Category(Generate), Description("Folder for PKM files with trainer data to use for regenerated PKM files.")]
         public string GeneratePathTrainerInfo { get; set; } = string.Empty;
@@ -59,6 +66,9 @@ namespace SysBot.Pokemon
         [Category(Generate), Description("The order in which Pokémon encounter types are attempted.")]
         public List<EncounterTypeGroup> PrioritizeEncounters { get; set; } = new List<EncounterTypeGroup>() { EncounterTypeGroup.Egg, EncounterTypeGroup.Slot, EncounterTypeGroup.Static, EncounterTypeGroup.Mystery, EncounterTypeGroup.Trade };
 
+        [Category(Generate), Description("Allow XOROSHIRO when generating Gen 8 Raid Pokémon.")]
+        public bool UseXOROSHIRO { get; set; } = true;
+
         [Category(Generate), Description("Adds Battle Version for games that support it (SWSH only) for using past-gen Pokémon in online competitive play.")]
         public bool SetBattleVersion { get; set; }
 
@@ -77,9 +87,9 @@ namespace SysBot.Pokemon
         [Category(Generate), Description("Maximum time in seconds to spend when generating a set before canceling. This prevents difficult sets from freezing the bot.")]
         public int Timeout { get; set; } = 15;
 
-        // Misc
+        [Category(Generate), Description("MGDB directory path for Wonder Cards.")]
+        public string MGDBPath { get; set; } = string.Empty;
 
-        [Category(Misc), Description("Zero out HOME trackers for cloned and user-requested PKM files. It is recommended to leave this disabled to avoid creating invalid HOME data.")]
-        public bool ResetHOMETracker { get; set; } = false;
+        
     }
 }

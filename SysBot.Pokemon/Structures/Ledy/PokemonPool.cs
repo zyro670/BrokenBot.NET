@@ -100,7 +100,7 @@ namespace SysBot.Pokemon
 
                 if (DisallowRandomRecipientTrade(dest, la.EncounterMatch))
                 {
-                    LogUtil.LogInfo("Provided file was loaded but can't be Surprise Traded: " + dest.FileName, nameof(PokemonPool<T>));
+                    LogUtil.LogInfo("Provided file was loaded but can't be SurpriseTrade Traded: " + dest.FileName, nameof(PokemonPool<T>));
                     surpriseBlocked++;
                 }
 
@@ -123,37 +123,23 @@ namespace SysBot.Pokemon
                 loadedAny = true;
             }
 
-            // Anti-spam: Same trainer names.
-            if (Files.Count != 1 && Files.Select(z => z.Value.RequestInfo.OT_Name).Distinct().Count() == 1)
-            {
-                LogUtil.LogInfo("Provided pool to distribute has the same OT for all loaded. Pool is not valid; please distribute from a variety of trainers.", nameof(PokemonPool<T>));
-                surpriseBlocked = Count;
-                Files.Clear();
-            }
+            
 
             if (surpriseBlocked == Count)
-                LogUtil.LogInfo("Surprise trading will fail; failed to load any compatible files.", nameof(PokemonPool<T>));
+                LogUtil.LogInfo("SurpriseTrade trading will fail; failed to load any compatible files.", nameof(PokemonPool<T>));
 
             return loadedAny;
         }
 
         private static bool DisallowRandomRecipientTrade(T pk, IEncounterTemplate enc)
         {
-            // Anti-spam
-            if (pk.IsNicknamed && enc is not EncounterTrade9 { IsFixedNickname: true} && pk.Nickname.Length > 6)
-                return true;
-
-            // Anti-spam
-            if (pk.IsNicknamed && StringsUtil.IsSpammyString(pk.Nickname))
-                return true;
-            if (StringsUtil.IsSpammyString(pk.OT_Name) && !AutoLegalityWrapper.IsFixedOT(enc, pk))
-                return true;
+            
             return DisallowRandomRecipientTrade(pk);
         }
 
         public static bool DisallowRandomRecipientTrade(T pk)
         {
-            // Surprise Trade currently bans Mythicals and Legendaries, not Sub-Legendaries.
+            // SurpriseTrade Trade currently bans Mythicals and Legendaries, not Sub-Legendaries.
             if (SpeciesCategory.IsLegendary(pk.Species))
                 return true;
             if (SpeciesCategory.IsMythical(pk.Species))

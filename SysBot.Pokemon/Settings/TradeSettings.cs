@@ -12,10 +12,14 @@ namespace SysBot.Pokemon
         private const string TradeConfig = nameof(TradeConfig);
         private const string Dumping = nameof(Dumping);
         private const string Counts = nameof(Counts);
+        private const string FeatureToggle = nameof(FeatureToggle);
         public override string ToString() => "Trade Bot Settings";
 
         [Category(TradeConfig), Description("Time to wait for a trade partner in seconds.")]
         public int TradeWaitTime { get; set; } = 30;
+
+        [Category(TradeConfig), Description("Sends Embeds with requested Pokemon trades.")]
+        public bool UseTradeEmbeds { get; set; } = false;
 
         [Category(TradeConfig), Description("Max amount of time in seconds pressing A to wait for a trade to process.")]
         public int MaxTradeConfirmTime { get; set; } = 25;
@@ -34,6 +38,9 @@ namespace SysBot.Pokemon
 
         [Category(Dumping), Description("Dump Trade: If enabled, Dumping routine will output legality check information to the user.")]
         public bool DumpTradeLegalityCheck { get; set; } = true;
+       
+        [Category(FeatureToggle), Description("Choose whether to use full-size Home images from ProjectPokémon or downsized ones.")]
+        public bool UseFullSizeImages { get; set; } = true;
 
         [Category(TradeConfig), Description("When enabled, the screen will be turned off during normal bot loop operation to save power.")]
         public bool ScreenOff { get; set; }
@@ -73,7 +80,7 @@ namespace SysBot.Pokemon
         private int _completedTradeCords;
         private int _completedDisplays;
 
-        [Category(Counts), Description("Completed Surprise Trades")]
+        [Category(Counts), Description("Completed SurpriseTrade Trades")]
         public int CompletedSurprise
         {
             get => _completedSurprise;
@@ -143,6 +150,7 @@ namespace SysBot.Pokemon
             set => _completedTradeCords = value;
         }
 
+
         [Category(Counts), Description("Completed Display Trades (Specific User)")]
         public int CompletedDisplays
         {
@@ -165,6 +173,7 @@ namespace SysBot.Pokemon
         public void AddCompletedSupportTrades() => Interlocked.Increment(ref _completedSupportTrades);
         public void AddCompletedTradeCords() => Interlocked.Increment(ref _completedTradeCords);
 
+
         public IEnumerable<string> GetNonZeroCounts()
         {
             if (!EmitCountsOnStatusCheck)
@@ -180,15 +189,14 @@ namespace SysBot.Pokemon
             if (CompletedDistribution != 0)
                 yield return $"Distribution Trades: {CompletedDistribution}";
             if (CompletedSurprise != 0)
-                yield return $"Surprise Trades: {CompletedSurprise}";
+                yield return $"SurpriseTrade Trades: {CompletedSurprise}";
             if (CompletedEtumrepDumps != 0)
                 yield return $"Etumrep Dump Trades: {CompletedEtumrepDumps}";
             if (CompletedFixOTs != 0)
                 yield return $"FixOT Trades: {CompletedFixOTs}";
             if (CompletedSupportTrades != 0)
                 yield return $"Support Trades: {CompletedSupportTrades}";
-            if (CompletedTradeCords != 0)
-                yield return $"TradeCord Trades: {CompletedTradeCords}";
+            
             if (CompletedDisplays != 0)
                 yield return $"Display Trades: {CompletedDisplays}";
         }

@@ -1,14 +1,18 @@
 ﻿using Discord;
 using Discord.Commands;
-using Newtonsoft.Json;
+using Discord.WebSocket;
 using PKHeX.Core;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text;
+using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Sysbot.Pokemon.Discord;
+using Newtonsoft.Json;
 using static SysBot.Pokemon.RaidBotSV;
 
 namespace SysBot.Pokemon.Discord
@@ -21,13 +25,31 @@ namespace SysBot.Pokemon.Discord
         private readonly ExtraCommandUtil<T> Util = new();
         private readonly LairBotSettings LairSettings = SysCord<T>.Runner.Hub.Config.LairSWSH;
         private readonly RollingRaidSettings RollingRaidSettings = SysCord<T>.Runner.Hub.Config.RollingRaidSWSH;
-                
+        private readonly ArceusBotSettings ArceusSettings = SysCord<T>.Runner.Hub.Config.ArceusLA;
+       
         [Command("fixOT")]
         [Alias("fix", "f")]
         [Summary("Fixes OT and Nickname of a Pokémon you show via Link Trade if an advert is detected.")]
-        [RequireQueueRole(nameof(DiscordManager.RolesFixOT))]
+        [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
         public async Task FixAdOT()
         {
+            var fixOTMessage = $" You have been added to the Pokémon **Fix OT** queue. \n Check your DM's for further instructions.";
+            var embedfixOTMessage = new EmbedBuilder()
+            {
+                Author = new EmbedAuthorBuilder()
+                {
+                    Name = Context.User.Username,
+                    IconUrl = Context.User.GetAvatarUrl()
+                },
+                Color = Color.Blue
+            }
+            .WithDescription(fixOTMessage)
+            .WithImageUrl("https://i.imgur.com/x0OGXAN.png")
+            .WithThumbnailUrl("https://i.imgur.com/5akyLET.png")
+            .WithCurrentTimestamp()
+            .Build();
+
+            await Context.Channel.SendMessageAsync(null, false, embedfixOTMessage);
             var code = Info.GetRandomTradeCode();
             var sig = Context.User.GetFavor();
             await QueueHelper<T>.AddToQueueAsync(Context, code, Context.User.Username, sig, new T(), PokeRoutineType.FixOT, PokeTradeType.FixOT).ConfigureAwait(false);
@@ -36,7 +58,7 @@ namespace SysBot.Pokemon.Discord
         [Command("fixOT")]
         [Alias("fix", "f")]
         [Summary("Fixes OT and Nickname of a Pokémon you show via Link Trade if an advert is detected.")]
-        [RequireQueueRole(nameof(DiscordManager.RolesFixOT))]
+        [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
         public async Task FixAdOT([Summary("Trade Code")] int code)
         {
             var sig = Context.User.GetFavor();
@@ -63,7 +85,7 @@ namespace SysBot.Pokemon.Discord
         [Command("itemTrade")]
         [Alias("it", "item")]
         [Summary("Makes the bot trade you a Pokémon holding the requested item, or Ditto if stat spread keyword is provided.")]
-        [RequireQueueRole(nameof(DiscordManager.RolesSupportTrade))]
+        [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
         public async Task ItemTrade([Remainder] string item)
         {
             var code = Info.GetRandomTradeCode();
@@ -73,18 +95,30 @@ namespace SysBot.Pokemon.Discord
         [Command("itemTrade")]
         [Alias("it", "item")]
         [Summary("Makes the bot trade you a Pokémon holding the requested item.")]
-        [RequireQueueRole(nameof(DiscordManager.RolesSupportTrade))]
+        [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
         public async Task ItemTrade([Summary("Trade Code")] int code, [Remainder] string item)
         {
+            
+
             Species species = Info.Hub.Config.Trade.ItemTradeSpecies == Species.None ? Species.Diglett : Info.Hub.Config.Trade.ItemTradeSpecies;
             var set = new ShowdownSet($"{SpeciesName.GetSpeciesNameGeneration((ushort)species, 2, 8)} @ {item.Trim()}");
             var template = AutoLegalityWrapper.GetTemplate(set);
             var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
             var pkm = sav.GetLegal(template, out var result);
             pkm = EntityConverter.ConvertToType(pkm, typeof(T), out _) ?? pkm;
+
+            var imageUrl = await TradeExtensions<T>.ItemImg(item);
+            var embedBuilder = new EmbedBuilder()
+                .WithColor(new Color(0, 0, 255)) // Blue color
+                .WithAuthor(Context.User.Username, Context.User.GetAvatarUrl() ?? Context.User.GetDefaultAvatarUrl())
+                .WithImageUrl(imageUrl)
+                .WithThumbnailUrl("https://i.imgur.com/5akyLET.png")
+                .WithCurrentTimestamp();
+
             if (pkm.HeldItem == 0 && !Info.Hub.Config.Trade.Memes)
             {
-                await ReplyAsync($"{Context.User.Username}, the item you entered wasn't recognized.").ConfigureAwait(false);
+                embedBuilder.WithDescription($"{Context.User.Username}, the item you entered wasn't recognized.");
+                await ReplyAsync(embed: embedBuilder.Build()).ConfigureAwait(false);
                 return;
             }
 
@@ -95,63 +129,19 @@ namespace SysBot.Pokemon.Discord
             if (pkm is not T pk || !la.Valid)
             {
                 var reason = result == "Timeout" ? "That set took too long to generate." : "I wasn't able to create something from that.";
-                var imsg = $"Oops! {reason} Here's my best attempt for that {species}!";
-                await Context.Channel.SendPKMAsync(pkm, imsg).ConfigureAwait(false);
+                embedBuilder.WithDescription($"Oops! {reason} Here's my best attempt for that {species}!");
+                await Context.Channel.SendMessageAsync(embed: embedBuilder.Build()).ConfigureAwait(false);
                 return;
             }
             pk.ResetPartyStats();
 
             var sig = Context.User.GetFavor();
+
+            embedBuilder.WithDescription("You have been added to the **Item Trade** queue! \n Check your DM's for further instructions.");
+            await Context.Channel.SendMessageAsync(embed: embedBuilder.Build()).ConfigureAwait(false);
+
             await QueueHelper<T>.AddToQueueAsync(Context, code, Context.User.Username, sig, pk, PokeRoutineType.LinkTrade, PokeTradeType.SupportTrade).ConfigureAwait(false);
-        }
-
-        [Command("dittoTrade")]
-        [Alias("dt", "ditto")]
-        [Summary("Makes the bot trade you a Ditto with a requested stat spread and language.")]
-        [RequireQueueRole(nameof(DiscordManager.RolesSupportTrade))]
-        public async Task DittoTrade([Summary("A combination of \"ATK/SPA/SPE\" or \"6IV\"")] string keyword, [Summary("Language")] string language, [Summary("Nature")] string nature)
-        {
-            var code = Info.GetRandomTradeCode();
-            await DittoTrade(code, keyword, language, nature).ConfigureAwait(false);
-        }
-
-        [Command("dittoTrade")]
-        [Alias("dt", "ditto")]
-        [Summary("Makes the bot trade you a Ditto with a requested stat spread and language.")]
-        [RequireQueueRole(nameof(DiscordManager.RolesSupportTrade))]
-        public async Task DittoTrade([Summary("Trade Code")] int code, [Summary("A combination of \"ATK/SPA/SPE\" or \"6IV\"")] string keyword, [Summary("Language")] string language, [Summary("Nature")] string nature)
-        {
-            keyword = keyword.ToLower().Trim();
-            if (Enum.TryParse(language, true, out LanguageID lang))
-                language = lang.ToString();
-            else
-            {
-                await Context.Message.ReplyAsync($"Couldn't recognize language: {language}.").ConfigureAwait(false);
-                return;
-            }
-            nature = nature.Trim()[..1].ToUpper() + nature.Trim()[1..].ToLower();
-            var set = new ShowdownSet($"{keyword}(Ditto)\nLanguage: {language}\nNature: {nature}");
-            var template = AutoLegalityWrapper.GetTemplate(set);
-            var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
-            var pkm = sav.GetLegal(template, out var result);
-            TradeExtensions<T>.DittoTrade((T)pkm);
-
-            var la = new LegalityAnalysis(pkm);
-            if (Info.Hub.Config.Trade.Memes && await TrollAsync(Context, pkm is not T || !la.Valid, pkm).ConfigureAwait(false))
-                return;
-
-            if (pkm is not T pk || !la.Valid)
-            {
-                var reason = result == "Timeout" ? "That set took too long to generate." : "I wasn't able to create something from that.";
-                var imsg = $"Oops! {reason} Here's my best attempt for that Ditto!";
-                await Context.Channel.SendPKMAsync(pkm, imsg).ConfigureAwait(false);
-                return;
-            }
-
-            pk.ResetPartyStats();
-            var sig = Context.User.GetFavor();
-            await QueueHelper<T>.AddToQueueAsync(Context, code, Context.User.Username, sig, pk, PokeRoutineType.LinkTrade, PokeTradeType.SupportTrade).ConfigureAwait(false);
-        }
+        }      
 
         [Command("peek")]
         [Summary("Take and send a screenshot from the specified Switch.")]
@@ -408,19 +398,34 @@ namespace SysBot.Pokemon.Discord
             bool noItem = pkm.HeldItem == 0 && itemTrade;
             var path = Info.Hub.Config.Trade.MemeFileNames.Split(',');
             if (Info.Hub.Config.Trade.MemeFileNames == "" || path.Length == 0)
-                path = new string[] { "https://i.imgur.com/qaCwr09.png" }; //If memes enabled but none provided, use a default one.
+                path = new string[] { "https://i.imgur.com/zLk0ioA.png" }; //If memes enabled but none provided, use a default one.
 
             if (invalid || !ItemRestrictions.IsHeldItemAllowed(pkm) || noItem || (pkm.Nickname.ToLower() == "egg" && !Breeding.CanHatchAsEgg(pkm.Species)))
             {
-                var msg = $"{(noItem ? $"{context.User.Username}, the item you entered wasn't recognized." : $"Oops! I wasn't able to create that {GameInfo.Strings.Species[pkm.Species]}.")} Here's a meme instead!\n";
-                await context.Channel.SendMessageAsync($"{(invalid || noItem ? msg : "")}{path[rng.Next(path.Length)]}").ConfigureAwait(false);
+                var trollMemeMsg = $"{(noItem ? $"The item you entered wasn't recognized." : $"Oops! I wasn't able to create that {GameInfo.Strings.Species[pkm.Species]}.")} \n Here's a meme instead!\n";
+
+                // Create the embed builder
+                var embedBuilder = new EmbedBuilder()
+                    .WithAuthor(context.Client.CurrentUser)
+                    .WithColor(Color.Blue)
+                    .WithImageUrl(path[rng.Next(path.Length)])
+                    .WithCurrentTimestamp()
+                    .WithThumbnailUrl("https://i.imgur.com/5akyLET.png")
+                    .WithDescription(trollMemeMsg)
+                    
+                    .WithAuthor(author => {
+                        author
+                        .WithName(context.User.Username) // Replace with your actual author name
+                        .WithIconUrl(context.User.GetAvatarUrl()); // Replace with your actual icon URL
+                    });
+
+                // Send the embed to the channel
+                await context.Channel.SendMessageAsync(embed: embedBuilder.Build()).ConfigureAwait(false);
                 return true;
             }
             return false;
-        }
+        }                
 
-
-        // NotTrade Additions       
         [Command("repeek")]
         [Summary("Take and send a screenshot from the specified Switch.")]
         [RequireOwner]
@@ -477,20 +482,20 @@ namespace SysBot.Pokemon.Discord
             int type = int.Parse(content);
 
             var description = string.Empty;
-            var prevpath = "bodyparam.txt";
+            var prevpath = "bodyparam.txt";            
             var filepath = "RaidFilesSV\\bodyparam.txt";
-            if (File.Exists(prevpath))
+            if (File.Exists(prevpath))            
                 Directory.Move(filepath, prevpath + Path.GetFileName(filepath));
-
+            
             if (File.Exists(filepath))
                 description = File.ReadAllText(filepath);
 
             var data = string.Empty;
             var prevpk = "pkparam.txt";
             var pkpath = "RaidFilesSV\\pkparam.txt";
-            if (File.Exists(prevpk))
+            if (File.Exists(prevpk))            
                 Directory.Move(pkpath, prevpk + Path.GetFileName(pkpath));
-
+            
             if (File.Exists(pkpath))
                 data = File.ReadAllText(pkpath);
 
@@ -503,7 +508,7 @@ namespace SysBot.Pokemon.Discord
 
             RotatingRaidSettingsSV.RotatingRaidParameters newparam = new()
             {
-                CrystalType = (TeraCrystalType)type,
+                CrystalType = (TeraCrystalType)type,                
                 Description = new[] { description },
                 PartyPK = new[] { data },
                 Species = parse,
@@ -520,123 +525,145 @@ namespace SysBot.Pokemon.Discord
 
         [Command("removeRaidParams")]
         [Alias("rrp")]
-        [Summary("Removes a raid parameter.")]
+        [Summary("Adds new raid parameter.")]
         [RequireSudo]
-        public async Task RemoveRaidParam([Summary("Seed Index")] int index)
+        public async Task RemoveRaidParam([Summary("Seed")] string seed)
         {
+
+            var remove = uint.Parse(seed, NumberStyles.AllowHexSpecifier);
             var list = SysCord<T>.Runner.Hub.Config.RotatingRaidSV.RaidEmbedParameters;
-            if (index >= 0 && index < list.Count)
+            foreach (var s in list)
             {
-                var raid = list[index];
-                list.RemoveAt(index);
-                var msg = $"Raid for {raid.Title} | {raid.Seed:X8} has been removed!";
-                await ReplyAsync(msg).ConfigureAwait(false);
+                var def = uint.Parse(s.Seed, NumberStyles.AllowHexSpecifier);
+                if (def == remove)
+                {
+                    list.Remove(s);
+                    var msg = $"Raid for {s.Species} | {s.Seed:X8} has been removed!";
+                    await ReplyAsync(msg).ConfigureAwait(false);
+                    return;
+                }
             }
-            else
-                await ReplyAsync("Invalid raid parameter index.").ConfigureAwait(false);
         }
 
         [Command("toggleRaidParams")]
         [Alias("trp")]
         [Summary("Toggles raid parameter.")]
         [RequireSudo]
-        public async Task ToggleRaidParam([Summary("Seed Index")] int index)
+        public async Task DeactivateRaidParam([Summary("Seed")] string seed)
         {
+
+            var deactivate = uint.Parse(seed, NumberStyles.AllowHexSpecifier);
             var list = SysCord<T>.Runner.Hub.Config.RotatingRaidSV.RaidEmbedParameters;
-            if (index >= 0 && index < list.Count)
+            foreach (var s in list)
             {
-                var raid = list[index];
-                raid.ActiveInRotation = !raid.ActiveInRotation;
-                var m = raid.ActiveInRotation ? "enabled" : "disabled";
-                var msg = $"Raid for {raid.Title} | {raid.Seed:X8} has been {m}!";
-                await ReplyAsync(msg).ConfigureAwait(false);
+                var def = uint.Parse(s.Seed, NumberStyles.AllowHexSpecifier);
+                if (def == deactivate)
+                {
+                    if (s.ActiveInRotation == true)
+                        s.ActiveInRotation = false;
+                    else
+                        s.ActiveInRotation = true;
+                    var m = s.ActiveInRotation == true ? "enabled" : "disabled";
+                    var msg = $"Raid for {s.Species} | {s.Seed:X8} has been {m}!";
+                    await ReplyAsync(msg).ConfigureAwait(false);
+                    return;
+                }
             }
-            else
-                await ReplyAsync("Invalid raid parameter Index.").ConfigureAwait(false);
         }
 
         [Command("togglecodeRaidParams")]
         [Alias("tcrp")]
         [Summary("Toggles code raid parameter.")]
         [RequireSudo]
-        public async Task ToggleCodeRaidParam([Summary("Seed Index")] int index)
+        public async Task ToggleCodeRaidParam([Summary("Seed")] string seed)
         {
+
+            var deactivate = uint.Parse(seed, NumberStyles.AllowHexSpecifier);
             var list = SysCord<T>.Runner.Hub.Config.RotatingRaidSV.RaidEmbedParameters;
-            if (index >= 0 && index < list.Count)
+            foreach (var s in list)
             {
-                var raid = list[index];
-                raid.IsCoded = !raid.IsCoded;
-                var m = raid.IsCoded ? "coded" : "uncoded";
-                var msg = $"Raid for {raid.Title} | {raid.Seed:X8} is now {m}!";
-                await ReplyAsync(msg).ConfigureAwait(false);
+                var def = uint.Parse(s.Seed, NumberStyles.AllowHexSpecifier);
+                if (def == deactivate)
+                {
+                    if (s.IsCoded == true)
+                        s.IsCoded = false;
+                    else
+                        s.IsCoded = true;
+                    var m = s.IsCoded == true ? "coded" : "uncoded";
+                    var msg = $"Raid for {s.Species} | {s.Seed:X8} is now {m}!";
+                    await ReplyAsync(msg).ConfigureAwait(false);
+                    return;
+                }
             }
-            else
-                await ReplyAsync("Invalid raid parameter Index.").ConfigureAwait(false);
         }
 
         [Command("changeRaidParamTitle")]
         [Alias("crpt")]
-        [Summary("Changes the title of a  raid parameter.")]
+        [Summary("Adds new raid parameter.")]
         [RequireSudo]
-        public async Task ChangeRaidParamTitle([Summary("Seed Index")] int index, [Summary("Title")] string title)
+        public async Task ChangeRaidParamTite([Summary("Seed")] string seed, [Summary("Content Type")] string title)
         {
+
+            var deactivate = uint.Parse(seed, NumberStyles.AllowHexSpecifier);
             var list = SysCord<T>.Runner.Hub.Config.RotatingRaidSV.RaidEmbedParameters;
-            if (index >= 0 && index < list.Count)
+            foreach (var s in list)
             {
-                var raid = list[index];
-                raid.Title = title;
-                var msg = $"Raid Title for {raid.Title} | {raid.Seed:X8} has been changed to: {title}!";
-                await ReplyAsync(msg).ConfigureAwait(false);
+                var def = uint.Parse(s.Seed, NumberStyles.AllowHexSpecifier);
+                if (def == deactivate)
+                {
+                    s.Title = title;
+                    var msg = $"Raid Title for {s.Species} | {s.Seed:X8} has been changed!";
+                    await ReplyAsync(msg).ConfigureAwait(false);
+                    return;
+                }
             }
-            else
-                await ReplyAsync("Invalid raid parameter Index.").ConfigureAwait(false);
         }
 
         [Command("viewraidList")]
         [Alias("vrl", "rotatinglist")]
-        [Summary("Prints the raids in the current collection.")]
+        [Summary("Prints the first 20 raids in the current collection.")]
         public async Task GetRaidListAsync()
         {
-            var list = SysCord<T>.Runner.Hub.Config.RotatingRaidSV.RaidEmbedParameters;
-            int count = list.Count;
-            int fields = (int)Math.Ceiling((double)count / 15);
-            var embed = new EmbedBuilder
+            var list = SysCord<T>.Runner.Hub.Config.RotatingRaidSV.RaidEmbedParameters.Take(19);
+            string msg = string.Empty;
+            foreach (var s in list)
             {
-                Title = "Raid List"
-            };
-            for (int i = 0; i < fields; i++)
-            {
-                int start = i * 15;
-                int end = Math.Min(start + 14, count - 1);
-                var fieldBuilder = new StringBuilder();
-                for (int j = start; j <= end; j++)
-                {
-                    var raid = list[j];
-                    int paramNumber = j;
-                    fieldBuilder.AppendLine($"{paramNumber}.) {raid.Title} - {raid.Seed} - Status: {(raid.ActiveInRotation ? "Active" : "Inactive")}");
-                }
-                embed.AddField($"Raid List - Part {i + 1}", fieldBuilder.ToString(), false);
+                if (s.ActiveInRotation)
+                    msg += s.Title + " - " + s.Seed + " - Status: Active" + Environment.NewLine;
+                else
+                    msg += s.Title + " - " + s.Seed + " - Status: Inactive" + Environment.NewLine;
             }
-            await ReplyAsync($"These are the raids currently in the list (total: {count}):", embed: embed.Build()).ConfigureAwait(false);
+            var embed = new EmbedBuilder();
+            embed.AddField(x =>
+            {
+                x.Name = "Raid List";
+                x.Value = msg;
+                x.IsInline = false;
+            });
+            await ReplyAsync("These are the first 20 raids currently in the list:", embed: embed.Build()).ConfigureAwait(false);
         }
 
         [Command("toggleRaidPK")]
         [Alias("trpk")]
         [Summary("Toggles raid parameter.")]
         [RequireSudo]
-        public async Task ToggleRaidParamPK([Summary("Seed Index")] int index, [Summary("Showdown Set")][Remainder] string content)
+        public async Task ToggleRaidParamPK([Summary("Seed")] string seed, [Summary("Showdown Set")][Remainder] string content)
         {
+
+            var deactivate = uint.Parse(seed, NumberStyles.AllowHexSpecifier);
             var list = SysCord<T>.Runner.Hub.Config.RotatingRaidSV.RaidEmbedParameters;
-            if (index >= 0 && index < list.Count)
+            foreach (var s in list)
             {
-                var raid = list[index];
-                raid.PartyPK = new[] { content };
-                var m = string.Join("\n", raid.PartyPK);
-                var msg = $"RaidPK for {raid.Title} | {raid.Seed:X8} has been updated to:\n{m}!";
-                await ReplyAsync(msg).ConfigureAwait(false);
+                var def = uint.Parse(s.Seed, NumberStyles.AllowHexSpecifier);
+                if (def == deactivate)
+                {
+                    s.PartyPK = new[] { content };
+                    var m = string.Join("\n", s.PartyPK);
+                    var msg = $"RaidPK for {s.Species} | {s.Seed:X8} has been updated to \n{m}!";
+                    await ReplyAsync(msg).ConfigureAwait(false);
+                    return;
+                }
             }
-            else
-                await ReplyAsync("Invalid raid parameter Index.").ConfigureAwait(false);
         }
 
         [Command("raidhelp")]
@@ -647,15 +674,14 @@ namespace SysBot.Pokemon.Discord
             var embed = new EmbedBuilder();
             List<string> cmds = new()
             {
-                "$scl - Sets the catch limit for your raids.\n",
                 "$crb - Clear all in raider ban list.\n",
                 "$vrl - View all raids in the list.\n",
-                "$arp - Add parameter to the collection.\nEx: [Command] [Index] [Species] [Difficulty]\n",
-                "$rrp - Remove parameter from the collection.\nEx: [Command] [Index]\n",
-                "$trp - Toggle the parameter as Active/Inactive in the collection.\nEx: [Command] [Index]\n",
-                "$tcrp - Toggle the parameter as Coded/Uncoded in the collection.\nEx: [Command] [Index]\n",
-                "$trpk - Set a PartyPK for the parameter via a showdown set.\nEx: [Command] [Index] [ShowdownSet]\n",
-                "$crpt - Set the title for the parameter.\nEx: [Command] [Index]"
+                "$arp - Add parameter to the collection.\nEx: [Command] [Seed] [Species] [Difficulty]\n",
+                "$rrp - Remove parameter from the collection.\nEx: [Command] [Seed]\n",
+                "$trp - Toggle the parameter as Active/Inactive in the collection.\nEx: [Command] [Seed]\n",
+                "$tcrp - Toggle the parameter as Coded/Uncoded in the collection.\nEx: [Command] [Seed]\n",
+                "$trpk - Set a PartyPK for the parameter via a showdown set.\nEx: [Command] [Seed] [ShowdownSet]\n",
+                "$crpt - Set the title for the parameter.\nEx: [Command] [Seed]"
             };
             string msg = string.Join("", cmds.ToList());
             embed.AddField(x =>
@@ -665,40 +691,6 @@ namespace SysBot.Pokemon.Discord
                 x.IsInline = false;
             });
             await ReplyAsync("Here's your raid help!", embed: embed.Build()).ConfigureAwait(false);
-        }
-
-        [Command("unbanraider")]
-        [Alias("ubr")]
-        [Summary("Removes the specificed NID from the banlist for Raids in SV.")]
-        [RequireSudo]
-        public async Task UnbanRaider([Summary("Removes the specificed NID from the banlist for Raids in SV.")] string nid)
-        {
-            var list = SysCord<T>.Runner.Hub.Config.RaidSV.RaiderBanList.List.ToArray();
-            string msg = $"{Context.User.Mention} no user found with that NID.";
-            for (int i = 0; i < list.Length; i++)
-                if ($"{list[i].ID}".Equals(nid))
-                {
-                    msg = $"{Context.User.Mention} user {list[i].Name} - {list[i].ID} has been unbanned.";
-                    SysCord<T>.Runner.Hub.Config.RaidSV.RaiderBanList.List.ToList().Remove(list[i]);
-                }
-            await ReplyAsync(msg).ConfigureAwait(false);
-        }
-
-        [Command("unbanrotatingraider")]
-        [Alias("ubrr")]
-        [Summary("Removes the specificed NID from the banlist for Raids in SV.")]
-        [RequireSudo]
-        public async Task UnbanRotatingRaider([Summary("Removes the specificed NID from the banlist for Raids in SV.")] string nid)
-        {
-            var list = SysCord<T>.Runner.Hub.Config.RotatingRaidSV.RaiderBanList.List.ToArray();
-            string msg = $"{Context.User.Mention} no user found with that NID.";
-            for (int i = 0; i < list.Length; i++)
-                if ($"{list[i].ID}".Equals(nid))
-                {
-                    msg = $"{Context.User.Mention} user {list[i].Name} - {list[i].ID} has been unbanned.";
-                    SysCord<T>.Runner.Hub.Config.RotatingRaidSV.RaiderBanList.List.ToList().Remove(list[i]);
-                }
-            await ReplyAsync(msg).ConfigureAwait(false);
         }
 
         [Command("modifyraidercount")]
@@ -723,5 +715,6 @@ namespace SysBot.Pokemon.Discord
                 }
             }
         }
+
     }
 }

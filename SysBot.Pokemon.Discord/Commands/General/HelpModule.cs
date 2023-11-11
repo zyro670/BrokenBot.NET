@@ -1,5 +1,6 @@
 ﻿using Discord;
 using Discord.Commands;
+using SysBot.Base;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -13,12 +14,15 @@ namespace SysBot.Pokemon.Discord
         public HelpModule(CommandService service)
         {
             _service = service;
+            LogUtil.LogText($"Initialized HelpModule with service: {_service.GetType().Name}");
         }
 
         [Command("help")]
         [Summary("Lists available commands.")]
         public async Task HelpAsync()
         {
+            LogUtil.LogText("HelpAsync method (no parameters) called");
+
             List<Embed> embeds = new();
             var builder = new EmbedBuilder
             {
@@ -76,6 +80,7 @@ namespace SysBot.Pokemon.Discord
             if (builder.Fields.Count > 0)
                 embeds.Add(builder.Build());
 
+            LogUtil.LogText("Sending reply with help embeds");
             await ReplyAsync("Help has arrived!", false, null, null, null, null, null, null, embeds.ToArray()).ConfigureAwait(false);
         }
 
@@ -83,10 +88,13 @@ namespace SysBot.Pokemon.Discord
         [Summary("Lists information about a specific command.")]
         public async Task HelpAsync([Summary("The command you want help for")] string command)
         {
+            LogUtil.LogText($"HelpAsync method (with parameter: {command}) called");
+
             var result = _service.Search(Context, command);
 
             if (!result.IsSuccess)
             {
+                LogUtil.LogText($"Command {command} not found");
                 await ReplyAsync($"Sorry, I couldn't find a command like **{command}**.").ConfigureAwait(false);
                 return;
             }
@@ -109,6 +117,7 @@ namespace SysBot.Pokemon.Discord
                 });
             }
 
+            LogUtil.LogText("Sending reply with specific command help embed");
             await ReplyAsync("Help has arrived!", false, builder.Build()).ConfigureAwait(false);
         }
 

@@ -1,4 +1,5 @@
 ﻿using PKHeX.Core;
+using SysBot.Base;
 using System;
 using System.Collections.Generic;
 
@@ -14,8 +15,9 @@ namespace SysBot.Pokemon
         private readonly PokeTradeQueue<T> Dump = new(PokeTradeType.Dump);
         private readonly PokeTradeQueue<T> EtumrepDump = new(PokeTradeType.EtumrepDump);
         private readonly PokeTradeQueue<T> FixOT = new(PokeTradeType.FixOT);
-        private readonly PokeTradeQueue<T> TradeCord = new(PokeTradeType.TradeCord);
+        private readonly PokeTradeQueue<T> Mystery = new(PokeTradeType.Mystery);
         private readonly PokeTradeQueue<T> Giveaway = new(PokeTradeType.Giveaway);
+        private readonly PokeTradeQueue<T> Surprise = new(PokeTradeType.SurpriseTrade);
         public readonly TradeQueueInfo<T> Info;
         public readonly PokeTradeQueue<T>[] AllQueues;
 
@@ -23,7 +25,7 @@ namespace SysBot.Pokemon
         {
             Hub = hub;
             Info = new TradeQueueInfo<T>(hub);
-            AllQueues = new[] { Seed, Dump, Clone, Trade, EtumrepDump, FixOT, TradeCord, Giveaway };
+            AllQueues = new[] { Seed, Dump, Clone, Trade, EtumrepDump, FixOT, Giveaway, Mystery, Surprise };
 
             foreach (var q in AllQueues)
                 q.Queue.Settings = hub.Config.Favoritism;
@@ -36,7 +38,8 @@ namespace SysBot.Pokemon
             PokeRoutineType.Dump => Dump,
             PokeRoutineType.FixOT => FixOT,
             PokeRoutineType.EtumrepDump => EtumrepDump,
-            PokeRoutineType.TradeCord => TradeCord,
+            PokeRoutineType.SurpriseTrade => Surprise,
+            
             _ => Trade,
         };
 
@@ -55,11 +58,41 @@ namespace SysBot.Pokemon
 
             if (Hub.Ledy.Pool.Count == 0)
                 return false;
-
+            
             var random = Hub.Ledy.Pool.GetRandomPoke();
+            
             var code = cfg.RandomCode ? Hub.Config.Trade.GetRandomTradeCode() : cfg.TradeCode;
             var trainer = new PokeTradeTrainerInfo("Random Distribution");
             detail = new PokeTradeDetail<T>(random, trainer, PokeTradeHub<T>.LogNotifier, PokeTradeType.Random, code, false);
+            return true;
+        }
+
+        public bool TryDequeueLedyPlus(out PokeTradeDetail<T> detail, bool force = false)
+        {
+            detail = default!;
+            var cfg = Hub.Config.Distribution;
+            if (!cfg.DistributeWhileIdle && !force)
+                return false;
+
+            if (Hub.LedyPlus.GiveawayPool.Count == 0)
+                return false;
+
+            var random = Hub.LedyPlus.GiveawayPool.GetRandomPoke();
+
+            var code = cfg.RandomCode ? Hub.Config.Trade.GetRandomTradeCode() : cfg.TradeCode;
+            var trainer = new PokeTradeTrainerInfo("Random Giveaway");
+            detail = new PokeTradeDetail<T>(random, trainer, PokeTradeHub<T>.LogNotifier, PokeTradeType.Random, code, false);
+            return true;
+        }
+
+        public bool TryDequeueLedySurprise(out PokeTradeDetail<T> detail, bool force = false)
+        {
+            detail = default!;
+            var cfg = Hub.Config.SurpriseTrade;
+            if (!cfg.SurpriseTradeWhileIdle && !force)
+                return false;
+                               
+                        
             return true;
         }
 
@@ -137,8 +170,10 @@ namespace SysBot.Pokemon
                 return true;
             if (TryDequeueInternal(PokeRoutineType.FixOT, out detail, out priority))
                 return true;
-            if (TryDequeueInternal(PokeRoutineType.TradeCord, out detail, out priority))
+            if (TryDequeueInternal(PokeRoutineType.SurpriseTrade, out detail, out priority))
                 return true;
+
+            
             return false;
         }
 

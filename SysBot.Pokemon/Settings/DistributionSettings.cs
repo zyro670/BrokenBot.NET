@@ -8,12 +8,16 @@ namespace SysBot.Pokemon
     {
         private const string Distribute = nameof(Distribute);
         private const string Synchronize = nameof(Synchronize);
+        
         public override string ToString() => "Distribution Trade Settings";
 
         // Distribute
 
         [Category(Distribute), Description("When enabled, idle LinkTrade bots will randomly distribute PKM files from the DistributeFolder.")]
         public bool DistributeWhileIdle { get; set; } = true;
+
+        [Category(Distribute), Description("When enabled, idle LinkTrade bots will randomly SurpriseTrade Trade PKM files from the SurpriseTradeFolder.")]
+        public bool SurpriseTradeWhileIdle { get; set; }
 
         [Category(Distribute), Description("When enabled, the DistributionFolder will yield randomly rather than in the same sequence.")]
         public bool Shuffled { get; set; }

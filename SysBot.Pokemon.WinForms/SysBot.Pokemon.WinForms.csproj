@@ -7,19 +7,22 @@
 		<UseWindowsForms>true</UseWindowsForms>
 		<PackageId>SysBot.Pokemon.WinForms</PackageId>
 		<Company>Project Pokémon</Company>
-		<Authors>Kaphotics</Authors>
 		<Product>SysBot.Pokemon.WinForms</Product>
 		<Description>Nintendo Switch Pokémon Bot Manager</Description>
-		<ApplicationIcon>icon.ico</ApplicationIcon>
+		<ApplicationIcon>Icon.ico</ApplicationIcon>
 		<StartupObject>SysBot.Pokemon.WinForms.Program</StartupObject>
-		<AssemblyName>SysBot</AssemblyName>
+		<AssemblyName>Pokemon_Trading_Bot</AssemblyName>
 		<Version>01.00.00</Version>
 		<Platforms>x64</Platforms>
 		<GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Discord.Net" Version="3.9.0" />
+	  <Content Include="Icon.ico" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Discord.Net" Version="3.12.0" />
 		<PackageReference Include="PKHeX.Core" Version="23.10.11" />
 		<PackageReference Include="System.Resources.Extensions" Version="7.0.0" />
 	</ItemGroup>

@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
+using System;
 using System.Linq;
-using System.Text;
 using PKHeX.Core;
 using SysBot.Base;
 using SysBot.Pokemon.Discord;
@@ -11,7 +8,6 @@ namespace SysBot.Pokemon.Twitch
 {
     public static class TwitchCommandsHelper<T> where T : PKM, new()
     {
-        private static readonly RotatingRaidBotSV? rotatingRaid;
         // Helper functions for commands
         public static bool AddToWaitingList(string setstring, string display, string username, ulong mUserId, bool sub, out string msg)
         {
@@ -49,12 +45,11 @@ namespace SysBot.Pokemon.Twitch
                 if (nickname == "egg" && Breeding.CanHatchAsEgg(pkm.Species))
                     TradeExtensions<T>.EggTrade(pkm, template);
 
-                if (pkm.Species == 132 && (nickname.Contains("atk") || nickname.Contains("spa") || nickname.Contains("spe") || nickname.Contains("6iv")))
-                    TradeExtensions<T>.DittoTrade(pkm);
+                
 
                 if (!pkm.CanBeTraded())
                 {
-                    msg = $"Skipping trade, @{username}: Provided Pokémon content is blocked from trading!";
+                    msg = $"Skipping trade, @{username}: Provided Pok�mon content is blocked from trading!";
                     return false;
                 }
 
@@ -71,7 +66,7 @@ namespace SysBot.Pokemon.Twitch
                     }
                 }
 
-                var reason = result == "Timeout" ? "Set took too long to generate." : "Unable to legalize the Pokémon.";
+                var reason = result == "Timeout" ? "Set took too long to generate." : "Unable to legalize the Pok�mon.";
                 msg = $"Skipping trade, @{username}: {reason}";
             }
             catch (Exception ex)
@@ -113,94 +108,25 @@ namespace SysBot.Pokemon.Twitch
                 : $"Your trade code is {detail.Trade.Code:0000 0000}";
         }
 
-        public static string FormatMessages(string[] strings, string startSpacer)
-        {
-            int GetMaxCharacterWidth()
-            {
-                int maxCharWidth = 0;
-                for (int i = 0; i < 0x110000; i++)
-                {
-                    char ch = (char)i;
-                    UnicodeCategory category = CharUnicodeInfo.GetUnicodeCategory(ch);
-                    if (category == UnicodeCategory.OtherLetter || category == UnicodeCategory.OtherSymbol)
-                        maxCharWidth = Math.Max(maxCharWidth, CharWidth(ch));
-                }
-                return maxCharWidth;
-            }
-
-            int CharWidth(char ch)
-            {
-                string str = ch.ToString();
-                return str.Length;
-            }
-
-            List<string> CalculateFillers(List<string> strings, int maxCharWidth)
-            {
-                List<string> fillers = new();
-                foreach (string str in strings)
-                {
-                    int requiredFillers = Math.Max(0, (30 - str.Length - maxCharWidth) / maxCharWidth);
-                    int SubtractedFillers = requiredFillers / 12;
-                    int totalFillers = requiredFillers - SubtractedFillers;
-                    fillers.Add(new string('⠀', totalFillers));
-                }
-                return fillers;
-            }
-
-            int maxCharWidth = GetMaxCharacterWidth();
-            List<string> stringList = strings.ToList();
-            List<string> fillers = CalculateFillers(stringList, maxCharWidth);
-            StringBuilder formattedText = new(startSpacer + Environment.NewLine);
-
-            for (int i = 0; i < stringList.Count; i++)
-            {
-                string str = stringList[i].Replace(" ", "⠀");
-                string spacer = " ";
-                string formattedLine = str + fillers[i] + spacer + Environment.NewLine;
-                formattedText.Append(formattedLine);
-            }
-
-            return formattedText.ToString();
-        }
-
         public static string GetRaidList()
         {
-            var list = SysCord<T>.Runner.Hub.Config.RotatingRaidSV.RaidEmbedParameters;
-            var rotationCount = rotatingRaid!.RotationCount;
-
-            int startIndex = rotationCount % list.Count;
-            int endIndex = startIndex + 4;
-
-            var selectedParams = new List<RotatingRaidSettingsSV.RotatingRaidParameters>();
-            if (endIndex <= list.Count)            
-                selectedParams = list.GetRange(startIndex, 4);            
-            else
+            var list = SysCord<T>.Runner.Hub.Config.RotatingRaidSV.RaidEmbedParameters.Take(19);
+            string msg = string.Empty;
+            int raidcount = 0;
+            foreach (var s in list)
             {
-                selectedParams.AddRange(list.GetRange(startIndex, list.Count - startIndex));
-                int remainingCount = endIndex - list.Count;
-                if (remainingCount > 0)                
-                    selectedParams.AddRange(list.GetRange(0, remainingCount));                
-            }
-
-            List<string> titles = new()
-            {
-                "════ Current Raid ════",
-                $"{startIndex + 1}.) {selectedParams[0]?.Title}",
-                "════ Upcoming Raids ════"
-            };
-            for (int i = 1; i < selectedParams.Count; i++)
-            {
-                int location = (startIndex + i) % list.Count + 1;
-                if (selectedParams[i]?.Title != null)
+                if (s.ActiveInRotation)
                 {
-                    titles.Add($"{location}.) {selectedParams[i].Title}");
+                    raidcount++;
+                    msg += $"{raidcount}.) " + s.Title + " - " + s.Seed + " - Status: Active | ";
+                }
+                else
+                {
+                    raidcount++;
+                    msg += $"{raidcount}.) " + s.Title + " - " + s.Seed + " - Status: Inactive | ";
                 }
             }
-
-            string startSpacer = new('⠀', 10);
-            string formattedOutput = FormatMessages(titles.ToArray(), startSpacer);
-
-            return formattedOutput;
+            return "These are the first 20 raids currently in the list:\n" + msg;
         }
     }
 }

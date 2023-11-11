@@ -120,13 +120,7 @@ namespace SysBot.Pokemon.Discord
             var userID = Context.User.Id;
             return ClearTrade(userID);
         }
-
-        //private static string ClearTrade(string username)
-        //{
-        //    var result = Info.ClearTrade(username);
-        //    return GetClearTradeMessage(result);
-        //}
-
+                
         private static string ClearTrade(ulong userID)
         {
             var result = Info.ClearTrade(userID);
@@ -143,5 +137,7 @@ namespace SysBot.Pokemon.Discord
                 _ => "Sorry, you are not currently in the queue.",
             };
         }
+
+       
     }
 }

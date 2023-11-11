@@ -7,8 +7,8 @@ namespace SysBot.Pokemon
     {
         public readonly Dictionary<string, LedyRequest<T>> UserRequests = new();
         public readonly Dictionary<string, LedyRequest<T>> Distribution;
+        
         public readonly PokemonPool<T> Pool;
-
         private readonly List<LedyUser> Previous = new();
 
         public LedyDistributor(PokemonPool<T> pool)
@@ -16,6 +16,8 @@ namespace SysBot.Pokemon
             Pool = pool;
             Distribution = Pool.Files;
         }
+
+        
 
         private const Species NoMatchSpecies = Species.None;
 
@@ -63,7 +65,7 @@ namespace SysBot.Pokemon
                 return new LedyResponse<T>(match.RequestInfo, LedyResponseType.MatchRequest);
             if (Distribution.TryGetValue(nick, out match))
                 return new LedyResponse<T>(match.RequestInfo, LedyResponseType.MatchPool);
-
+            
             return null;
         }
 

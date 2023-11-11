@@ -33,14 +33,14 @@ namespace SysBot.Pokemon.Discord
                 if (!la.Valid)
                 {
                     var reason = result == "Timeout" ? $"That {spec} set took too long to generate." : result == "VersionMismatch" ? "Request refused: PKHeX and Auto-Legality Mod version mismatch." : $"I wasn't able to create a {spec} from that set."; 
-                    var imsg = $"Oops! {reason}";
+                    var imsg = $"Oops! **{reason}**";
                     if (result == "Failed")
                         imsg += $"\n{AutoLegalityWrapper.GetLegalizationHint(template, sav, pkm)}";
                     await channel.SendMessageAsync(imsg).ConfigureAwait(false);
                     return;
                 }
 
-                var msg = $"Here's your ({result}) legalized PKM for {spec} ({la.EncounterOriginal.Name})!";
+                var msg = $"Here's your (**{result}**) legalized Pokemon for {spec} ({la.EncounterOriginal.Name})!";
                 await channel.SendPKMAsync(pkm, msg + $"\n{ReusableActions.GetFormattedShowdownText(pkm)}").ConfigureAwait(false);
             }
             catch (Exception ex)

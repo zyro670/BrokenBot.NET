@@ -288,14 +288,14 @@ namespace SysBot.Pokemon
             RecordUtil<PokeTradeBotLA>.Record($"Initiating\t{trainerNID:X16}\t{tradePartner.TrainerName}\t{poke.Trainer.TrainerName}\t{poke.Trainer.ID}\t{poke.ID}\t{toSend.EncryptionConstant:X8}");
             Log($"Found Link Trade partner: {tradePartner.TrainerName}-{tradePartner.TID7} (ID: {trainerNID})");
 
-            var partnerCheck = await CheckPartnerReputation(this, poke, trainerNID, tradePartner.TrainerName, AbuseSettings, token);
+            var partnerCheck = await CheckPartnerReputation(this, poke, trainerNID, tradePartner.TrainerName, AbuseSettings, PreviousUsers, PreviousUsersDistribution, EncounteredUsers, token);
             if (partnerCheck != PokeTradeResult.Success)
             {
                 await ExitTrade(false, token).ConfigureAwait(false);
                 return partnerCheck;
             }
 
-            poke.SendNotification(this, $"Found Link Trade partner: {tradePartner.TrainerName}. Waiting for a Pokémon...");
+            poke.SendNotification(this, $"Found Link Trade partner: **{tradePartner.TrainerName}**. Waiting for a Pokémon...");
 
             if (poke.Type == PokeTradeType.Dump)
             {
@@ -332,12 +332,17 @@ namespace SysBot.Pokemon
             }
 
             PokeTradeResult update;
-            var trainer = new PartnerDataHolder(0, tradePartner.TrainerName, tradePartner.TID7);
+            var trainer = new PartnerDataHolder(0, tradePartner.TrainerName, tradePartner.TID7.ToString());
             (toSend, update) = await GetEntityToSend(sav, poke, offered, toSend, trainer, token).ConfigureAwait(false);
             if (update != PokeTradeResult.Success)
             {
                 await ExitTrade(false, token).ConfigureAwait(false);
                 return update;
+            }
+
+            if (Hub.Config.Legality.UseTradePartnerInfo)
+            {
+                await SetBoxPkmWithSwappedIDDetailsPLA(toSend, tradePartner, sav, token);
             }
 
             Log("Confirming trade.");
@@ -372,9 +377,6 @@ namespace SysBot.Pokemon
 
             // Only log if we completed the trade.
             UpdateCountsAndExport(poke, received, toSend);
-
-            // Log for Trade Abuse tracking.
-            LogSuccessfulTrades(poke, trainerNID, tradePartner.TrainerName);
 
             await ExitTrade(false, token).ConfigureAwait(false);
             return PokeTradeResult.Success;
@@ -566,7 +568,10 @@ namespace SysBot.Pokemon
         {
             var id = await SwitchConnection.PointerPeek(4, Offsets.LinkTradePartnerTIDPointer, token).ConfigureAwait(false);
             var name = await SwitchConnection.PointerPeek(TradePartnerLA.MaxByteLengthStringObject, Offsets.LinkTradePartnerNamePointer, token).ConfigureAwait(false);
-            return new TradePartnerLA(id, name);
+            var traderOffset = await SwitchConnection.PointerAll(Offsets.LinkTradePartnerTIDPointer, token).ConfigureAwait(false);
+            var idbytes = await SwitchConnection.ReadBytesAbsoluteAsync(traderOffset + 0x04, 4, token).ConfigureAwait(false);
+
+            return new TradePartnerLA(id, idbytes, name);
         }
 
         protected virtual async Task<(PA8 toSend, PokeTradeResult check)> GetEntityToSend(SAV8LA sav, PokeTradeDetail<PA8> poke, PA8 offered, PA8 toSend, PartnerDataHolder partnerID, CancellationToken token)
@@ -731,7 +736,7 @@ namespace SysBot.Pokemon
                 Hub.BotSync.Barrier.RemoveParticipant();
                 Log($"Left the Barrier. Count: {Hub.BotSync.Barrier.ParticipantCount}");
             }
-        }        
+        }
 
         private async Task<PokeTradeResult> ProcessEtumrepTradeAsync(PokeTradeDetail<PA8> detail, CancellationToken token)
         {
@@ -900,6 +905,38 @@ namespace SysBot.Pokemon
 
             await SetBoxPokemonAbsolute(BoxStartOffset, clone, token, sav).ConfigureAwait(false);
             return (clone, PokeTradeResult.Success);
+        }
+        private async Task<bool> SetBoxPkmWithSwappedIDDetailsPLA(PA8 toSend, TradePartnerLA tradePartner, SAV8LA sav, CancellationToken token)
+        {
+            Log($"Trade partner: {tradePartner.TrainerName} - TID7: {tradePartner.TID7} - SID7: {tradePartner.SID7}");
+
+            var cln = (PA8)toSend.Clone();
+            cln.OT_Gender = tradePartner.Gender;
+            cln.TrainerTID7 = (uint)tradePartner.TID7;
+            cln.TrainerSID7 = (uint)tradePartner.SID7;
+            cln.Language = tradePartner.Language;
+            cln.OT_Name = tradePartner.TrainerName;
+
+            cln.ClearNickname();
+
+            if (toSend.IsShiny)
+                cln.SetShiny();
+
+            cln.RefreshChecksum();
+
+            var tradeLA = new LegalityAnalysis(cln);
+            if (tradeLA.Valid)
+            {
+                Log($"Pokemon passed legality check using trade partner Info");
+                Log($"New Offered Pokemon: {(Species)cln.Species}, TName: {cln.OT_Name}, TID: {cln.DisplayTID}, SID: {cln.DisplaySID}, Language: {cln.Language}, OTGender: {cln.OT_Gender}");
+                await SetBoxPokemonAbsolute(BoxStartOffset, cln, token, sav).ConfigureAwait(false);
+            }
+            else
+            {
+                Log($"Pokemon did not pass legality check. Trade Partner Info could not be used.");
+            }
+
+            return tradeLA.Valid;
         }
     }
 }

@@ -9,7 +9,7 @@ namespace SysBot.Pokemon
         private const string Startup = nameof(Startup);
         private const string Operation = nameof(Operation);
         private const string Messages = nameof(Messages);
-        public override string ToString() => "YouTube Integration Settings";
+        public override string ToString() => "YouTube Stream_Configuration Settings";
 
         // Startup
 

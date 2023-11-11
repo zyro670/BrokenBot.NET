@@ -2,7 +2,6 @@
 using SysBot.Base;
 using System;
 using System.ComponentModel;
-using System.Data.Entity.Core.Common.CommandTrees.ExpressionBuilder;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -352,6 +351,8 @@ namespace SysBot.Pokemon
                 if (CreateRaidOnDeck)
                 {
                     await GenerateRaidInfo(i, hub, type, token).ConfigureAwait(false);
+                    await GenerateRaidMoveset(i, hub, type, token).ConfigureAwait(false);
+                    await GenerateRaidRewards(i, hub, type, token).ConfigureAwait(false);
                 }
                 if (CreateTradeStartSprite)
                 {
@@ -366,48 +367,49 @@ namespace SysBot.Pokemon
             }
         }
 
+        private async Task GenerateRaidRewards(int i, PokeTradeHub<PK9> hub, int type, CancellationToken token)
+        {
+            await Task.Delay(0_050, token).ConfigureAwait(false);
+            var rew = string.Empty;
+            switch (type)
+            {
+                case 0: rew = hub.Config.RaidSV.RaidEmbedFilters.Description.Last(); break;
+                case 1: rew = hub.Config.RotatingRaidSV.RaidEmbedParameters[i].Description.Last(); break;
+            }
+            var value = string.Format(RaidRewardsInQueueFormat, rew);
+            File.WriteAllText("raidrewards.txt", value);
+        }
+
         private async Task GenerateRaidInfo(int i, PokeTradeHub<PK9> hub, int type, CancellationToken token)
         {
             await Task.Delay(0_050, token).ConfigureAwait(false);
-            var info = string.Empty;
-            var title = string.Empty;
-            string[] description = Array.Empty<string>();
+            var rew = string.Empty;
             switch (type)
             {
-                case 0: title = hub.Config.RaidSV.RaidEmbedFilters.Title; info = hub.Config.RaidSV.RaidEmbedFilters.Description[1]; description = hub.Config.RaidSV.RaidEmbedFilters.Description; break;
-                case 1: title = hub.Config.RotatingRaidSV.RaidEmbedParameters[i].Title; info = hub.Config.RotatingRaidSV.RaidEmbedParameters[i].Description[1]; description = hub.Config.RotatingRaidSV.RaidEmbedParameters[i].Description; break;
+                case 0: rew = hub.Config.RaidSV.RaidEmbedFilters.Description[1]; break;
+                case 1: rew = hub.Config.RotatingRaidSV.RaidEmbedParameters[i].Description[1]; break;
             }
-            var titleval = string.Format(RaidInfoFormat, title);
-            if (!string.IsNullOrEmpty(titleval))
-                File.WriteAllText("raidtitle.txt", titleval);
-            else
-                File.WriteAllText("raidtitle.txt", "No raid title found.");
-
-            var infoval = string.Format(RaidInfoFormat, info);
-            if (!string.IsNullOrEmpty(infoval))
-                File.WriteAllText("raidinfo.txt", infoval);
-            else
-                File.WriteAllText("raidinfo.txt", "No raid info found.");
-
-            if (description.Length > 0)
-            {
-                string[] moves = description.ToString()!.Split("**Moveset**");
-                string value = string.Format(RaidMovesetFormat, string.Join(Environment.NewLine, moves[1]).Trim());
-                if (!string.IsNullOrEmpty(value))
-                    File.WriteAllText("raidmoveset.txt", value);
-                else
-                    File.WriteAllText("raidmoveset.txt", "No moveset found.");
-
-                string[] rewards = moves.ToString()!.Split("**Special Rewards**");
-                var rewardvalue = string.Format(RaidRewardsInQueueFormat, string.Join(Environment.NewLine, rewards[1]).Trim());
-                if (!string.IsNullOrEmpty(rewardvalue))
-                    File.WriteAllText("raidrewards.txt", rewardvalue);
-                else
-                    File.WriteAllText("raidrewards.txt", "No special rewards found.");
-            }
+            var value = string.Format(RaidInfoFormat, rew);
+            File.WriteAllText("raidinfo.txt", value);
         }
 
-        private static async Task GenerateRaidBotSprite(PokeRoutineExecutorBase b, PK9 pk, CancellationToken token)
+        private async Task GenerateRaidMoveset(int i, PokeTradeHub<PK9> hub, int type, CancellationToken token)
+        {
+            await Task.Delay(0_050, token).ConfigureAwait(false);
+            string moves = string.Empty;
+            string extra = string.Empty;
+            switch (type)
+            {
+                case 0: moves = hub.Config.RaidSV.RaidEmbedFilters.Description[3]; extra = hub.Config.RaidSV.RaidEmbedFilters.Description[4]; break;
+                case 1: moves = hub.Config.RotatingRaidSV.RaidEmbedParameters[i].Description[3]; extra = hub.Config.RotatingRaidSV.RaidEmbedParameters[i].Description[4]; break;
+            }
+            if (!string.IsNullOrEmpty(extra))
+                moves = moves + Environment.NewLine + extra;
+            var value = string.Format(RaidMovesetFormat, moves);
+            File.WriteAllText("raidmoveset.txt", value);
+        }
+
+        private async Task GenerateRaidBotSprite(PokeRoutineExecutorBase b, PK9 pk, CancellationToken token)
         {
             await Task.Delay(0_050, token).ConfigureAwait(false);
             var func = CreateSpriteFile;
@@ -417,9 +419,9 @@ namespace SysBot.Pokemon
             func.Invoke(pk, $"sprite_{file}.png");
         }
 
-        private static async Task GenerateNextRaidBotSprite(PokeRoutineExecutorBase b, PK9 pk, CancellationToken token)
+        private async Task GenerateNextRaidBotSprite(PokeRoutineExecutorBase b, PK9 pk, CancellationToken token)
         {
-            await Task.Delay(0_100, token).ConfigureAwait(false);
+            await Task.Delay(0_050, token).ConfigureAwait(false);
             var func = CreateSpriteFile;
             if (func == null)
                 return;
