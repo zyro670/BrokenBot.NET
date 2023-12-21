@@ -498,14 +498,14 @@ namespace SysBot.Pokemon
                 string nickname = input;
                 input = ListNameSanitize(input);
                 bool speciesAndForm = input.Contains('-');
-                var speciesID = TradeExtensions<T>.EnumParse<Species>(speciesAndForm ? input.Split('-')[0] : input);
+                var speciesID = ParseSpeciesFromSanitizedLabel(input);
                 bool isSpecies = (ushort)speciesID > 0;
                 bool isBall = Enum.TryParse(input, true, out Ball enumBall);
                 bool isShiny = filters.FirstOrDefault(x => x == "Shiny") != default;
                 bool gmax = filters.FirstOrDefault(x => x == "Gmax") != default;
                 var filterBall = filters.FirstOrDefault(x => x != "Shiny" && x != "Gmax");
-                var strings = GameInfo.GetStrings(LanguageID.English.GetLanguage2CharName()).forms;
-                bool isForm = strings.Contains(input);
+                var formStrings = GameInfo.GetStrings(LanguageID.English.GetLanguage2CharName()).forms;
+                bool isForm = formStrings.Contains(input);
 
                 if (input == "")
                 {
@@ -520,14 +520,14 @@ namespace SysBot.Pokemon
                     return false;
                 }
 
-                var catches = dict.Values.ToList();
+                List<TCCatch> catches = dict.Values.ToList();
                 List<TCCatch> matches = new();
                 matches = filters.Count switch
                 {
-                    1 => catches.FindAll(x => !x.Traded && (isShiny ? x.Shiny : filterBall != default ? x.Ball == filterBall : x.Gmax) && (input == "All" ? x.Species != "" : input == "Legendaries" ? x.Legendary : input == "Events" ? x.Event : input == "Eggs" ? x.Egg : input == "Shinies" ? x.Shiny : speciesAndForm ? x.Species + x.Form == input : isSpecies ? x.Species == input : isForm ? x.Form == $"-{input}" : x.Nickname == nickname)),
-                    2 => catches.FindAll(x => !x.Traded && (isShiny && filterBall != default ? x.Shiny && x.Ball == filterBall : isShiny && gmax ? x.Shiny && x.Gmax : x.Ball == filterBall && x.Gmax) && (input == "All" ? x.Species != "" : input == "Legendaries" ? x.Legendary : input == "Events" ? x.Event : input == "Eggs" ? x.Egg : speciesAndForm ? x.Species + x.Form == input : isSpecies ? x.Species == input : isForm ? x.Form == $"-{input}" : x.Nickname == nickname)),
-                    3 => catches.FindAll(x => !x.Traded && x.Shiny && x.Ball == filterBall && x.Gmax && (input == "All" ? x.Species != "" : input == "Legendaries" ? x.Legendary : input == "Events" ? x.Event : input == "Eggs" ? x.Egg : speciesAndForm ? x.Species + x.Form == input : isSpecies ? x.Species == input : isForm ? x.Form == $"-{input}" : x.Nickname == nickname)),
-                    _ => catches.FindAll(x => !x.Traded && (input == "All" ? x.Species != "" : input == "Legendaries" ? x.Legendary : input == "Events" ? x.Event : input == "Eggs" ? x.Egg : input == "Shinies" ? x.Shiny : input == "Gmax" ? x.Gmax : isBall ? x.Ball == $"{enumBall}" : speciesAndForm ? x.Species + x.Form == input : isSpecies ? x.Species == input : isForm ? x.Form == $"-{input}" : x.Nickname == nickname)),
+                    1 => catches.FindAll((TCCatch x) => !x.Traded && (isShiny ? x.Shiny : filterBall != default ? x.Ball == filterBall : x.Gmax) && (input == "All" ? x.Species != "" : input == "Legendaries" ? x.Legendary : input == "Events" ? x.Event : input == "Eggs" ? x.Egg : input == "Shinies" ? x.Shiny : speciesAndForm ? x.Species + x.Form == input : isSpecies ? x.Species == input : isForm ? x.Form == $"-{input}" : x.Nickname == nickname)),
+                    2 => catches.FindAll((TCCatch x) => !x.Traded && (isShiny && filterBall != default ? x.Shiny && x.Ball == filterBall : isShiny && gmax ? x.Shiny && x.Gmax : x.Ball == filterBall && x.Gmax) && (input == "All" ? x.Species != "" : input == "Legendaries" ? x.Legendary : input == "Events" ? x.Event : input == "Eggs" ? x.Egg : speciesAndForm ? x.Species + x.Form == input : isSpecies ? x.Species == input : isForm ? x.Form == $"-{input}" : x.Nickname == nickname)),
+                    3 => catches.FindAll((TCCatch x) => !x.Traded && x.Shiny && x.Ball == filterBall && x.Gmax && (input == "All" ? x.Species != "" : input == "Legendaries" ? x.Legendary : input == "Events" ? x.Event : input == "Eggs" ? x.Egg : speciesAndForm ? x.Species + x.Form == input : isSpecies ? x.Species == input : isForm ? x.Form == $"-{input}" : x.Nickname == nickname)),
+                    _ => catches.FindAll((TCCatch x) => !x.Traded && (input == "All" ? x.Species != "" : input == "Legendaries" ? x.Legendary : input == "Events" ? x.Event : input == "Eggs" ? x.Egg : input == "Shinies" ? x.Shiny : input == "Gmax" ? x.Gmax : isBall ? x.Ball == $"{enumBall}" : speciesAndForm ? x.Species + x.Form == input : isSpecies ? x.Species == input : isForm ? x.Form == $"-{input}" : x.Nickname == nickname)),
                 };
 
                 if (matches.Count == 0)

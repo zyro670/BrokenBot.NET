@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Collections.Generic;
+using System.Collections.Frozen;
 using PKHeX.Core;
 using PKHeX.Core.AutoMod;
 using static PKHeX.Core.AutoMod.Aesthetics;
@@ -666,6 +667,38 @@ namespace SysBot.Pokemon
             return name;
         }
 
+        protected Species ParseSpeciesFromSanitizedLabel(string label)
+        {
+            var speciesWithDash = ((IReadOnlyList<string>)[
+                "Nidoran-M", "Nidoran-F", "Porygon-Z",
+                "Jangmo-o", "Hakamo-o", "Kommo-o",
+                "Wo-Chien", "Chien-Pao", "Ting-Lu", "Chi-Yu"
+            ]).ToFrozenSet<string>;
+            var speciesWithSpace = ((IReadOnlyList<string>)[
+                "Mr. Mime", "Mime Jr.",
+                "Tapu Koko", "Tapu Lele", "Tapu Bulu", "Tapu Fini",
+                "Mr. Rime",
+                "Great Tusk", "Scream Tail", "Brute Bonnet", "Flutter Mane",
+                "Slither Wing", "Sandy Shocks", "Iron Treads", "Iron Bundle",
+                "Iron Hands", "Iron Jugulis", "Iron Moth", "Iron Thorns",
+                "Roaring Moon", "Iron Valiant",
+                "Walking Wake", "Iron Leaves",
+                "Gouging Fire", "Raging Bolt", "Iron Boulder", "Iron Crown"
+            ]).ToFrozenSet<string>;
+
+            if (label.Contains('’')) // For Farfetch’d and Sirfetch’d
+            {
+                label = label.Where((char x) => x != '’');
+            }
+            else if (speciesWithDash.Contains(label) || speciesWithSpace.Contains(label))
+            {
+                label = label.Where(char.IsLetterOrDigit);
+            }
+
+            bool speciesAndForm = label.Contains('-');
+            return TradeExtensions<T>.EnumParse<Species>(speciesAndForm ? label.Split('-')[0] : label);
+        }
+
         protected bool CanGenerateEgg(ref TCUser user, out IReadOnlyList<EvoCriteria> criteria, out int[] balls, out bool update)
         {
             update = false;
@@ -782,8 +815,8 @@ namespace SysBot.Pokemon
                 var formIDs = Dex[Rng.SpeciesRNG].ToArray();
                 form = 255;
 
-                //if (settings.PokeEventType is PokeEventType.EventPoke)
-                    //mg = MysteryGiftRng(settings);
+                // if (settings.PokeEventType is PokeEventType.EventPoke)
+                    // mg = MysteryGiftRng(settings);
                 if ((int)settings.PokeEventType <= 17)
                 {
                     for (int i = 0; i < formIDs.Length; i++)
@@ -809,8 +842,8 @@ namespace SysBot.Pokemon
                     BaseCanBeEgg(Rng.SpeciesRNG, 0, out _, out ushort baseSpecies);
                     Rng.SpeciesRNG = baseSpecies;
                 }
-                //else if (settings.PokeEventType is PokeEventType.CottonCandy)
-                   // form = formIDs[Random.Next(formIDs.Length)];
+                // else if (settings.PokeEventType is PokeEventType.CottonCandy)
+                    // form = formIDs[Random.Next(formIDs.Length)];
 
                 match = settings.PokeEventType switch
                 {
@@ -833,7 +866,7 @@ namespace SysBot.Pokemon
 
         private bool IsCottonCandy(ushort species, byte form)
         {
-            var color = (PersonalColor)(Game is GameVersion.SWSH ? PersonalTable.SWSH.GetFormEntry(species, form).Color : Game is GameVersion.SV ? PersonalTable.SV.GetFormEntry(species, form).Color : 
+            var color = (PersonalColor)(Game is GameVersion.SWSH ? PersonalTable.SWSH.GetFormEntry(species, form).Color : Game is GameVersion.SV ? PersonalTable.SV.GetFormEntry(species, form).Color :
                 PersonalTable.BDSP.GetFormEntry(species, form).Color);
             return (ShinyMap[(Species)species] is PersonalColor.Blue or PersonalColor.Red or PersonalColor.Pink or PersonalColor.Purple or PersonalColor.Yellow) &&
                 (color is PersonalColor.Blue or PersonalColor.Red or PersonalColor.Pink or PersonalColor.Purple or PersonalColor.Yellow);
