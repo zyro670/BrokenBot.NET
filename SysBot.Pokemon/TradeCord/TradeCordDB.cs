@@ -783,7 +783,7 @@ namespace SysBot.Pokemon
                 form = 255;
 
                 //if (settings.PokeEventType is PokeEventType.EventPoke)
-                //mg = MysteryGiftRng(settings);
+                    //mg = MysteryGiftRng(settings);
                 if ((int)settings.PokeEventType <= 17)
                 {
                     for (int i = 0; i < formIDs.Length; i++)
@@ -809,8 +809,8 @@ namespace SysBot.Pokemon
                     BaseCanBeEgg(Rng.SpeciesRNG, 0, out _, out ushort baseSpecies);
                     Rng.SpeciesRNG = baseSpecies;
                 }
-                //else if (settings.PokeEventType is PokeEventType.CottonCandy)
-                // form = formIDs[Random.Next(formIDs.Length)];
+                // else if (settings.PokeEventType is PokeEventType.CottonCandy)
+                    // form = formIDs[Random.Next(formIDs.Length)];
 
                 match = settings.PokeEventType switch
                 {

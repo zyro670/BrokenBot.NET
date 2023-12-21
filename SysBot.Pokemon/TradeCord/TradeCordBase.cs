@@ -162,7 +162,7 @@ namespace SysBot.Pokemon
 
         protected bool IsLegendaryOrMythical(ushort species) => SpeciesCategory.IsLegendary(species) || SpeciesCategory.IsSubLegendary(species) || SpeciesCategory.IsMythical(species);
 
-        protected bool IsParadox(ushort species) => (SpeciesCategory.IsParadox(species) || species == (int)WalkingWake || species == (int)IronLeaves);
+        protected bool IsParadox(ushort species) => (SpeciesCategory.IsParadox(species);
 
 
         protected A GetLookupAsClassObject<A>(ulong id, string table, string filter = "", bool tableJoin = false)
