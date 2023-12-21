@@ -783,7 +783,7 @@ namespace SysBot.Pokemon
                 form = 255;
 
                 //if (settings.PokeEventType is PokeEventType.EventPoke)
-                    //mg = MysteryGiftRng(settings);
+                //mg = MysteryGiftRng(settings);
                 if ((int)settings.PokeEventType <= 17)
                 {
                     for (int i = 0; i < formIDs.Length; i++)
@@ -810,7 +810,7 @@ namespace SysBot.Pokemon
                     Rng.SpeciesRNG = baseSpecies;
                 }
                 //else if (settings.PokeEventType is PokeEventType.CottonCandy)
-                   // form = formIDs[Random.Next(formIDs.Length)];
+                // form = formIDs[Random.Next(formIDs.Length)];
 
                 match = settings.PokeEventType switch
                 {
@@ -833,7 +833,7 @@ namespace SysBot.Pokemon
 
         private bool IsCottonCandy(ushort species, byte form)
         {
-            var color = (PersonalColor)(Game is GameVersion.SWSH ? PersonalTable.SWSH.GetFormEntry(species, form).Color : Game is GameVersion.SV ? PersonalTable.SV.GetFormEntry(species, form).Color : 
+            var color = (PersonalColor)(Game is GameVersion.SWSH ? PersonalTable.SWSH.GetFormEntry(species, form).Color : Game is GameVersion.SV ? PersonalTable.SV.GetFormEntry(species, form).Color :
                 PersonalTable.BDSP.GetFormEntry(species, form).Color);
             return (ShinyMap[(Species)species] is PersonalColor.Blue or PersonalColor.Red or PersonalColor.Pink or PersonalColor.Purple or PersonalColor.Yellow) &&
                 (color is PersonalColor.Blue or PersonalColor.Red or PersonalColor.Pink or PersonalColor.Purple or PersonalColor.Yellow);

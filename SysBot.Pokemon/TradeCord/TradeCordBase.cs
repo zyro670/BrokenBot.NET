@@ -39,7 +39,7 @@ namespace SysBot.Pokemon
         protected readonly int[] GalarFossils = { 880, 881, 882, 883 };
 
         protected static readonly string ItemsValues = "@user_id, @id, @count";
-        protected static readonly string CatchValues = "@user_id, @id, @is_shiny, @ball, @nickname, @species, @form, @is_egg, @is_favorite, @was_traded, @is_legendary, @is_event, @is_gmax";
+        protected static readonly string CatchValues = "@user_id, @id, @is_shiny, @ball, @nickname, @species, @form, @is_egg, @is_favorite, @was_traded, @is_legendary, @is_event, @is_gmax, @is_paradox";
         protected static readonly string BinaryCatchesValues = "@user_id, @id, @data";
 
         private readonly string[] TableCreateCommands =
@@ -52,13 +52,13 @@ namespace SysBot.Pokemon
             "create table if not exists daycare(user_id integer, shiny1 int default 0, id1 int default 0, species1 int default 0, form1 text default '', ball1 int default 0, shiny2 int default 0, id2 int default 0, species2 int default 0, form2 text default '', ball2 int default 0, foreign key (user_id) references users (user_id) on delete cascade)",
             "create table if not exists buddy(user_id integer, id int default 0, name text default '', ability int default 0, foreign key (user_id) references users (user_id) on delete cascade)",
             "create table if not exists items(user_id integer, id int default 0, count int default 0, foreign key (user_id) references users (user_id) on delete cascade)",
-            "create table if not exists catches(user_id integer, id int default 0, is_shiny int default 0, ball text default '', nickname text default '', species text default '', form text default '', is_egg int default 0, is_favorite int default 0, was_traded int default 0, is_legendary int default 0, is_event int default 0, is_gmax int default 0, foreign key (user_id) references users (user_id) on delete cascade)",
+            "create table if not exists catches(user_id integer, id int default 0, is_shiny int default 0, ball text default '', nickname text default '', species text default '', form text default '', is_egg int default 0, is_favorite int default 0, was_traded int default 0, is_legendary int default 0, is_event int default 0, is_gmax int default 0, is_paradox int default 0, foreign key (user_id) references users (user_id) on delete cascade)",
             "create table if not exists binary_catches(user_id integer, id int default 0, data blob default null, foreign key (user_id) references users (user_id) on delete cascade)",
         };
 
         private readonly string[] IndexCreateCommands =
         {
-            "create index if not exists catch_index on catches(user_id, id, ball, nickname, species, form, is_shiny, is_egg, is_favorite, was_traded, is_legendary, is_event, is_gmax)",
+            "create index if not exists catch_index on catches(user_id, id, ball, nickname, species, form, is_shiny, is_egg, is_favorite, was_traded, is_legendary, is_event, is_gmax, is_paradox)",
             "create index if not exists item_index on items(user_id, id)",
             "create index if not exists binary_catches_index on binary_catches(user_id, id)",
         };
@@ -161,6 +161,9 @@ namespace SysBot.Pokemon
         }
 
         protected bool IsLegendaryOrMythical(ushort species) => SpeciesCategory.IsLegendary(species) || SpeciesCategory.IsSubLegendary(species) || SpeciesCategory.IsMythical(species);
+
+        protected bool IsParadox(ushort species) => (SpeciesCategory.IsParadox(species) || species == (int)WalkingWake || species == (int)IronLeaves);
+
 
         protected A GetLookupAsClassObject<A>(ulong id, string table, string filter = "", bool tableJoin = false)
         {
@@ -285,7 +288,8 @@ namespace SysBot.Pokemon
                     Traded = (int)reader["was_traded"] != 0,
                     Legendary = (int)reader["is_legendary"] != 0,
                     Event = (int)reader["is_event"] != 0,
-                    Gmax = (int)reader["is_gmax"] != 0
+                    Gmax = (int)reader["is_gmax"] != 0,
+                    Paradox = (int)reader["is_paradox"] != 0
                 };
 
                 try
@@ -814,7 +818,7 @@ namespace SysBot.Pokemon
                     {
                         new() { Identifier = TracebackType.Trainer, Comment = "Modified handler to HT" }
                     };
-                    pk.SetHandlerandMemory(sav, enc, (ITracebackHandler) tb);
+                    pk.SetHandlerandMemory(sav, enc, (ITracebackHandler)tb);
                     if (results != default)
                     {
                         switch (results.Identifier)
@@ -852,7 +856,7 @@ namespace SysBot.Pokemon
                                         else pk.SetDefaultNickname(la);
 
                                         enc = new LegalityAnalysis(pk).EncounterMatch;
-                                        pk.SetHandlerandMemory(sav, enc, (ITracebackHandler) tb);
+                                        pk.SetHandlerandMemory(sav, enc, (ITracebackHandler)tb);
                                     }
                                     else pk.SetDefaultNickname(la);
                                 }; break;
@@ -1562,6 +1566,7 @@ namespace SysBot.Pokemon
             public bool Legendary { get; set; }
             public bool Event { get; set; }
             public bool Gmax { get; set; }
+            public bool Paradox { get; set; }
         }
 
         public class TCDaycare

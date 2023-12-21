@@ -593,7 +593,7 @@
         Seismitoad = 537,
         Froakie = 656,
         Frogadier = 657,
-        Greninja = 658,        
+        Greninja = 658,
         Tadbulb = 938,
         Bellibolt = 939,
     }
@@ -856,7 +856,7 @@
         SaltyHerbaMystica = 1905,
         SourHerbaMystica = 1906,
         BitterHerbaMystica = 1907,
-        SpicyHerbaMystica = 1908,    
+        SpicyHerbaMystica = 1908,
         HorseRadish = 1942,
         CurryPowder = 1943,
         Wasabi = 1944,
@@ -882,7 +882,7 @@
         Dragon = 15,
         Dark = 16,
         Fairy = 17,
-        Custom = 18,        
+        Custom = 18,
         NoSandwich = 19,
     }
 

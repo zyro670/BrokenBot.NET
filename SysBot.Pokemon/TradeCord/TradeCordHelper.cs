@@ -524,10 +524,10 @@ namespace SysBot.Pokemon
                 List<TCCatch> matches = new();
                 matches = filters.Count switch
                 {
-                    1 => catches.FindAll(x => !x.Traded && (isShiny ? x.Shiny : filterBall != default ? x.Ball == filterBall : x.Gmax) && (input == "All" ? x.Species != "" : input == "Legendaries" ? x.Legendary : input == "Events" ? x.Event : input == "Eggs" ? x.Egg : input == "Shinies" ? x.Shiny : speciesAndForm ? x.Species + x.Form == input : isSpecies ? x.Species == input : isForm ? x.Form == $"-{input}" : x.Nickname == nickname)),
-                    2 => catches.FindAll(x => !x.Traded && (isShiny && filterBall != default ? x.Shiny && x.Ball == filterBall : isShiny && gmax ? x.Shiny && x.Gmax : x.Ball == filterBall && x.Gmax) && (input == "All" ? x.Species != "" : input == "Legendaries" ? x.Legendary : input == "Events" ? x.Event : input == "Eggs" ? x.Egg : speciesAndForm ? x.Species + x.Form == input : isSpecies ? x.Species == input : isForm ? x.Form == $"-{input}" : x.Nickname == nickname)),
-                    3 => catches.FindAll(x => !x.Traded && x.Shiny && x.Ball == filterBall && x.Gmax && (input == "All" ? x.Species != "" : input == "Legendaries" ? x.Legendary : input == "Events" ? x.Event : input == "Eggs" ? x.Egg : speciesAndForm ? x.Species + x.Form == input : isSpecies ? x.Species == input : isForm ? x.Form == $"-{input}" : x.Nickname == nickname)),
-                    _ => catches.FindAll(x => !x.Traded && (input == "All" ? x.Species != "" : input == "Legendaries" ? x.Legendary : input == "Events" ? x.Event : input == "Eggs" ? x.Egg : input == "Shinies" ? x.Shiny : input == "Gmax" ? x.Gmax : isBall ? x.Ball == $"{enumBall}" : speciesAndForm ? x.Species + x.Form == input : isSpecies ? x.Species == input : isForm ? x.Form == $"-{input}" : x.Nickname == nickname)),
+                    1 => catches.FindAll(x => !x.Traded && (isShiny ? x.Shiny : filterBall != default ? x.Ball == filterBall : x.Gmax) && (input == "All" ? x.Species != "" : input == "Legendaries" ? x.Legendary : input == "Paradoxes" ? x.Paradox : input == "Events" ? x.Event : input == "Eggs" ? x.Egg : input == "Shinies" ? x.Shiny : speciesAndForm ? x.Species + x.Form == input : isSpecies ? x.Species == input : isForm ? x.Form == $"-{input}" : x.Nickname == nickname)),
+                    2 => catches.FindAll(x => !x.Traded && (isShiny && filterBall != default ? x.Shiny && x.Ball == filterBall : isShiny && gmax ? x.Shiny && x.Gmax : x.Ball == filterBall && x.Gmax) && (input == "All" ? x.Species != "" : input == "Legendaries" ? x.Legendary : input == "Paradoxes" ? x.Paradox : input == "Events" ? x.Event : input == "Eggs" ? x.Egg : speciesAndForm ? x.Species + x.Form == input : isSpecies ? x.Species == input : isForm ? x.Form == $"-{input}" : x.Nickname == nickname)),
+                    3 => catches.FindAll(x => !x.Traded && x.Shiny && x.Ball == filterBall && x.Gmax && (input == "All" ? x.Species != "" : input == "Legendaries" ? x.Legendary : input == "Paradoxes" ? x.Paradox : input == "Events" ? x.Event : input == "Eggs" ? x.Egg : speciesAndForm ? x.Species + x.Form == input : isSpecies ? x.Species == input : isForm ? x.Form == $"-{input}" : x.Nickname == nickname)),
+                    _ => catches.FindAll(x => !x.Traded && (input == "All" ? x.Species != "" : input == "Legendaries" ? x.Legendary : input == "Paradoxes" ? x.Paradox : input == "Events" ? x.Event : input == "Eggs" ? x.Egg : input == "Shinies" ? x.Shiny : input == "Gmax" ? x.Gmax : isBall ? x.Ball == $"{enumBall}" : speciesAndForm ? x.Species + x.Form == input : isSpecies ? x.Species == input : isForm ? x.Form == $"-{input}" : x.Nickname == nickname)),
                 };
 
                 if (matches.Count == 0)
@@ -621,11 +621,12 @@ namespace SysBot.Pokemon
 
                 bool speciesAndForm = input.Contains('-');
                 string tableJoin = "catches c inner join daycare d on c.user_id = d.user_id inner join buddy b on c.user_id = b.user_id";
-                string ballSearch = $"and c.is_favorite = 0 and c.was_traded = 0 and c.is_shiny = 0 and c.species != 'Ditto' and c.id != d.id1 and c.id != d.id2 and c.id != b.id and c.ball = '{ball}' and c.is_legendary = 0";
-                string shinySearch = "and c.is_favorite = 0 and c.was_traded = 0 and c.is_shiny = 1 and c.species != 'Ditto' and c.id != d.id1 and c.id != d.id2 and c.id != b.id and c.is_event = 0 and c.is_legendary = 0";
+                string ballSearch = $"and c.is_favorite = 0 and c.was_traded = 0 and c.is_shiny = 0 and c.species != 'Ditto' and c.id != d.id1 and c.id != d.id2 and c.id != b.id and c.ball = '{ball}' and c.is_legendary = 0 and c.is_paradox is 0";
+                string shinySearch = "and c.is_favorite = 0 and c.was_traded = 0 and c.is_shiny = 1 and c.species != 'Ditto' and c.id != d.id1 and c.id != d.id2 and c.id != b.id and c.is_event = 0 and c.is_legendary = 0 and c.is_paradox is 0";
                 string legendarySearch = "and c.is_favorite = 0 and c.was_traded = 0 and c.is_shiny = 0 and c.species != 'Ditto' and c.id != d.id1 and c.id != d.id2 and c.id != b.id and c.is_event = 0 and c.is_legendary = 1";
-                string eventSearch = "and c.is_favorite = 0 and c.was_traded = 0 and c.is_shiny = 0 and c.species != 'Ditto' and c.id != d.id1 and c.id != d.id2 and c.id != b.id and c.is_event = 1 and c.is_legendary = 0";
-                string defaultSearch = "and c.is_favorite = 0 and c.was_traded = 0 and c.is_shiny = 0 and c.species != 'Ditto' and c.id != d.id1 and c.id != d.id2 and c.id != b.id and c.is_event = 0 and c.is_legendary = 0";
+                string paradoxSearch = "and c.is_favorite = 0 and c.was_traded = 0 and c.is_shiny = 0 and c.species != 'Ditto' and c.id != d.id1 and c.id != d.id2 and c.id != b.id and c.is_event = 0 and c.is_paradox = 1";
+                string eventSearch = "and c.is_favorite = 0 and c.was_traded = 0 and c.is_shiny = 0 and c.species != 'Ditto' and c.id != d.id1 and c.id != d.id2 and c.id != b.id and c.is_event = 1 and c.is_legendary = 0 and c.is_paradox is 0";
+                string defaultSearch = "and c.is_favorite = 0 and c.was_traded = 0 and c.is_shiny = 0 and c.species != 'Ditto' and c.id != d.id1 and c.id != d.id2 and c.id != b.id and c.is_event = 0 and c.is_legendary = 0 and c.is_paradox is 0";
 
                 Dictionary<int, TCCatch> catches;
                 if (ball != Ball.None)
@@ -636,6 +637,8 @@ namespace SysBot.Pokemon
                     catches = GetLookupAsClassObject<Dictionary<int, TCCatch>>(user.UserInfo.UserID, tableJoin, legendarySearch, true);
                 else if (input == "Events")
                     catches = GetLookupAsClassObject<Dictionary<int, TCCatch>>(user.UserInfo.UserID, tableJoin, eventSearch, true);
+                else if (input == "Paradoxes")
+                    catches = GetLookupAsClassObject<Dictionary<int, TCCatch>>(user.UserInfo.UserID, tableJoin, paradoxSearch, true);
                 else if (input != "")
                 {
                     string speciesSearch = $"and {(speciesAndForm ? $"c.species||c.form = '{input}'" : $"c.species = '{input}' and c.form = ''")} and c.is_favorite = 0 and c.was_traded = 0 and c.is_shiny = 0 and c.id != d.id1 and c.id != d.id2 and c.id != b.id and c.ball != 'Cherish'";
@@ -645,7 +648,9 @@ namespace SysBot.Pokemon
 
                 if (catches.Count == 0)
                 {
-                    result.Message = input == "" ? "Cannot find any more non-shiny, non-Ditto, non-favorite, non-event, non-buddy, non-legendary Pokémon to release." : "Cannot find anything that could be released with the specified criteria.";
+                    result.Message = input == "" ?
+                        "Cannot find any more non-shiny, non-Ditto, non-favorite, non-event, non-buddy, non-legendary, non-paradox Pokémon to release."
+                        : "Cannot find anything that could be released with the specified criteria.";
                     return false;
                 }
 
@@ -675,8 +680,8 @@ namespace SysBot.Pokemon
                 var speciesID = TradeExtensions<T>.EnumParse<Species>(speciesAndForm ? input.Split('-')[0] : input);
                 bool isLegend = IsLegendaryOrMythical((ushort)speciesID);
                 string ballStr = ball != Ball.None ? $"Pokémon in {ball} Ball" : "";
-                string generalOutput = input == "Shinies" ? "shiny Pokémon" : input == "Events" ? "non-shiny event Pokémon" : input == "Legendaries" ? "non-shiny legendary Pokémon" : ball != Ball.None ? ballStr : $"non-shiny {input}";
-                string exclude = ball is Ball.Cherish || input == "Events" ? ", legendaries," : input == "Legendaries" ? ", events," : $", events,{(isLegend ? "" : " legendaries,")}";
+                string generalOutput = input == "Shinies" ? "shiny Pokémon" : input == "Events" ? "non-shiny event Pokémon" : input == "Legendaries" ? "non-shiny legendary Pokémon" : input == "Paradoxes" ? "non-shiny paradox Pokémon" : ball != Ball.None ? ballStr : $"non-shiny {input}";
+                string exclude = ball is Ball.Cherish || input == "Events" ? ", legendaries, paradoxes" : input == "Legendaries" ? ", events, paradoxes," : input == "Paradoxes" ? ", events, legendaries," : $", events,{(isLegend ? "" : " legendaries,")}{(isParadox ? "" : " paradoxes,")}";
                 result.Message = input == "" ? "Every non-shiny Pokémon was released, excluding Ditto, favorites, events, buddy, legendaries, and those in daycare." : $"Every {generalOutput} was released, excluding favorites, buddy{exclude} and those in daycare.";
                 return true;
             }
@@ -905,13 +910,13 @@ namespace SysBot.Pokemon
                 bool isLegend = IsLegendaryOrMythical(pk.Species);
 
                 var names = CatchValues.Replace(" ", "").Split(',');
-                var obj = new object[] { m_user.UserInfo.UserID, newID, match.Shiny, match.Ball, match.Nickname, match.Species, match.Form, match.Egg, false, false, isLegend, match.Event, match.Gmax };
+                var obj = new object[] { m_user.UserInfo.UserID, newID, match.Shiny, match.Ball, match.Nickname, match.Species, match.Form, match.Egg, false, false, isLegend, match.Event, match.Gmax, match.Paradox };
                 result.SQLCommands.Add(DBCommandConstructor("catches", CatchValues, "", names, obj, SQLTableContext.Insert));
 
                 names = BinaryCatchesValues.Replace(" ", "").Split(',');
                 obj = new object[] { m_user.UserInfo.UserID, newID, pk.DecryptedPartyData };
                 result.SQLCommands.Add(DBCommandConstructor("binary_catches", BinaryCatchesValues, "", names, obj, SQLTableContext.Insert));
-                m_user.Catches.Add(newID, new() { Ball = match.Ball, Egg = match.Egg, Form = match.Form, ID = newID, Shiny = match.Shiny, Species = match.Species, Nickname = match.Nickname, Favorite = false, Traded = false, Legendary = isLegend, Event = match.Event, Gmax = match.Gmax });
+                m_user.Catches.Add(newID, new() { Ball = match.Ball, Egg = match.Egg, Form = match.Form, ID = newID, Shiny = match.Shiny, Species = match.Species, Nickname = match.Nickname, Favorite = false, Traded = false, Legendary = isLegend, Event = match.Event, Gmax = match.Gmax, Paradox = match.Paradox });
 
                 names = new string[] { "@user_id", "@id" };
                 obj = new object[] { user.UserInfo.UserID, match.ID };
