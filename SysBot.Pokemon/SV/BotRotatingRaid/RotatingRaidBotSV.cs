@@ -585,20 +585,24 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
         if (index == -1)
             return;
 
-        List<long> ptr;
-        if (index < 69)
+        List<long> ptr = [0];
+        switch (FieldID)
         {
-            ptr = new(Offsets.RaidBlockPointerP)
-            {
-                [3] = 0x40 + (index + 1) * 0x20
-            };
-        }
-        else
-        {
-            ptr = new(Offsets.RaidBlockPointerK)
-            {
-                [3] = 0xCE8 + (index - 69) * 0x20
-            };
+            case 0:
+                ptr = new(Offsets.RaidBlockPointerP)
+                {
+                    [3] = 0x40 + index + 1 * 0x20
+                }; break;
+            case 1:
+                ptr = new(Offsets.RaidBlockPointerK)
+                {
+                    [3] = 0xCE8 + index - 69 * 0x20
+                }; break;
+            case 2:
+                ptr = new(Offsets.RaidBlockPointerB)
+                {
+                    [3] = 0x1968 + index * 0x20
+                }; break;
         }
 
         var seed = uint.Parse(Settings.RaidEmbedParameters[RotationCount].Seed, NumberStyles.AllowHexSpecifier);
