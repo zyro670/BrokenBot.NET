@@ -1,17 +1,16 @@
-﻿namespace SysBot.Pokemon
+﻿namespace SysBot.Pokemon;
+
+public enum PokeTradeType
 {
-    public enum PokeTradeType
-    {
-        Random,
-        Specific,
-        Seed,
-        Clone,
-        Dump,
-        Display,
-        EtumrepDump,
-        FixOT,
-        TradeCord,
-        Giveaway,
-        SupportTrade,
-    }
+    Random,
+    Specific,
+    Seed,
+    Clone,
+    Dump,
+    Display,
+    EtumrepDump,
+    FixOT,
+    TradeCord,
+    Giveaway,
+    SupportTrade,
 }

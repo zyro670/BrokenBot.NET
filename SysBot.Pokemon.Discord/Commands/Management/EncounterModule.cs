@@ -3,44 +3,43 @@ using PKHeX.Core;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace SysBot.Pokemon.Discord
+namespace SysBot.Pokemon.Discord;
+
+public class EchoModule<T> : ModuleBase<SocketCommandContext> where T : PKM, new()
 {
-    public class EchoModule<T> : ModuleBase<SocketCommandContext> where T : PKM, new()
+    [Command("toss")]
+    [Alias("yeet")]
+    [Summary("Makes all bots that are currently waiting for a go-ahead continue operation.")]
+    [RequireSudo]
+    public async Task TossAsync(string name = "")
     {
-        [Command("toss")]
-        [Alias("yeet")]
-        [Summary("Makes all bots that are currently waiting for a go-ahead continue operation.")]
-        [RequireSudo]
-        public async Task TossAsync(string name = "")
+        var bots = SysCord<T>.Runner.Bots.Select(z => z.Bot);
+        foreach (var b in bots)
         {
-            var bots = SysCord<T>.Runner.Bots.Select(z => z.Bot);
-            foreach (var b in bots)
-            {
-                if (b is not IEncounterBot x)
-                    continue;
-                if (!b.Connection.Name.Contains(name) && !b.Connection.Label.Contains(name))
-                    continue;
-                x.Acknowledge();
-            }
-
-            await ReplyAsync("Done.").ConfigureAwait(false);
+            if (b is not IEncounterBot x)
+                continue;
+            if (!b.Connection.Name.Contains(name) && !b.Connection.Label.Contains(name))
+                continue;
+            x.Acknowledge();
         }
-        [Command("continue")]
-        [Summary("Makes all bots that are currently waiting for a go-ahead continue operation.")]
-        [RequireSudo]
-        public async Task ContinueAsync(string name = "")
+
+        await ReplyAsync("Done.").ConfigureAwait(false);
+    }
+    [Command("continue")]
+    [Summary("Makes all bots that are currently waiting for a go-ahead continue operation.")]
+    [RequireSudo]
+    public async Task ContinueAsync(string name = "")
+    {
+        var bots = SysCord<T>.Runner.Bots.Select(z => z.Bot);
+        foreach (var b in bots)
         {
-            var bots = SysCord<T>.Runner.Bots.Select(z => z.Bot);
-            foreach (var b in bots)
-            {
-                if (b is not IArceusBot x)
-                    continue;
-                if (!b.Connection.Name.Contains(name) && !b.Connection.Label.Contains(name))
-                    continue;
-                x.AcknowledgeConfirmation();
-            }
-
-            await ReplyAsync("Continuing.").ConfigureAwait(false);
+            if (b is not IArceusBot x)
+                continue;
+            if (!b.Connection.Name.Contains(name) && !b.Connection.Label.Contains(name))
+                continue;
+            x.AcknowledgeConfirmation();
         }
+
+        await ReplyAsync("Continuing.").ConfigureAwait(false);
     }
 }

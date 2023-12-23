@@ -772,7 +772,7 @@ Palossand is known as the Beach Nightmare. It pulls its prey down into the sand 
 It lives in warm, shallow waters. If it encounters a foe, it will spit out its internal organs as a means to punch them.
 Rumor has it that the theft of top-secret research notes led to a new instance of this Pokémon being created in the Galar region.
 A solid bond of trust between this Pokémon and its Trainer awakened the strength hidden within Silvally. It can change its type at will.
-It lives in the ozone layer, where it becomes food for stronger Pokémon. When it tries to run away, it falls to the ground.
+It lives in the ozone layer, where it becomes food for stronger Pokémon. When it tries to run away, it falls to the ground.|It lives in the ozone layer, where it becomes food for stronger Pokémon. When it tries to run away, it falls to the ground.|It lives in the ozone layer, where it becomes food for stronger Pokémon. When it tries to run away, it falls to the ground.|It lives in the ozone layer, where it becomes food for stronger Pokémon. When it tries to run away, it falls to the ground.|It lives in the ozone layer, where it becomes food for stronger Pokémon. When it tries to run away, it falls to the ground.|It lives in the ozone layer, where it becomes food for stronger Pokémon. When it tries to run away, it falls to the ground.|It lives in the ozone layer, where it becomes food for stronger Pokémon. When it tries to run away, it falls to the ground.|It lives in the ozone layer, where it becomes food for stronger Pokémon. When it tries to run away, it falls to the ground.|It lives in the ozone layer, where it becomes food for stronger Pokémon. When it tries to run away, it falls to the ground.|It lives in the ozone layer, where it becomes food for stronger Pokémon. When it tries to run away, it falls to the ground.|It lives in the ozone layer, where it becomes food for stronger Pokémon. When it tries to run away, it falls to the ground.|It lives in the ozone layer, where it becomes food for stronger Pokémon. When it tries to run away, it falls to the ground.|It lives in the ozone layer, where it becomes food for stronger Pokémon. When it tries to run away, it falls to the ground.|It lives in the ozone layer, where it becomes food for stronger Pokémon. When it tries to run away, it falls to the ground.
 It stays asleep from the moment it’s born. When it falls into a deep sleep, it stops moving altogether.
 Explosive substances coat the shell on its back. Enemies that dare attack it will be blown away by an immense detonation.
 With the long hairs on its back, this Pokémon takes in electricity from other electric Pokémon. It stores what it absorbs in an electric sac.
@@ -1009,6 +1009,22 @@ This Pokémon resembles Cyclizar, but it is far burlier and more ferocious. Noth
 This seems to be the Iron Serpent mentioned in an old book. The Iron Serpent is said to have turned the land to ash with its lightning.
 This Pokémon resembles the elegant Suicune, but is perched on its hind legs and has a far more ferocious nature.
 This seems to resemble one of the Swords of Justice, however its true origin remains unknown.
+Dipplin is two creatures in one Pokémon. Its evolution was triggered by a special apple grown only in one place.
+Supposedly, the regrets of a tea ceremony master who died before perfecting his craft lingered in some matcha and became a Pokémon.|Poltchageist looks like a regional form of Sinistea, but it was recently discovered that the two Pokémon are entirely unrelated.
+It pretends to be tea, trying to fool people into drinking it so it can drain their life-force. Its ruse is generally unsuccessful.|It prefers cool, dark places, such as the back of a shelf or the space beneath a home's floorboards. It wanders in search of prey after sunset.
+After all its muscles were stimulated by the toxic chain around its neck, Okidogi transformed and gained a powerful physique.
+The chain is made from toxins that enhance capabilities. It stimulated Munkidori's brain and caused the Pokémon's psychic powers to bloom.
+Fezandipiti owes its beautiful looks and lovely voice to the toxic stimulants emanating from the chain wrapped around its body.
+This Pokémon's type changes based on which mask it's wearing. It confounds its enemies with nimble movements and kicks.|This form excels in both attack and defense. It ceaselessly unleashes moves like a spring gushes water.|This form is the most aggressive, bombarding enemies with the intensity of flames blazing within a hearth.|This form has excellent defenses, absorbing impacts solidly like the cornerstones that support houses.|This Pokémon's type changes based on which mask it's wearing. It confounds its enemies with nimble movements and kicks.|This form excels in both attack and defense. It ceaselessly unleashes moves like a spring gushes water.|This form is the most aggressive, bombarding enemies with the intensity of flames blazing within a hearth.|This form has excellent defenses, absorbing impacts solidly like the cornerstones that support houses.
+It gathers static electricity from its surroundings. The beams it launches when down on all fours are tremendously powerful.
+Seven syrpents live inside an apple made of syrup. The syrpent in the center is the commander.
+There are scant few reports of this creature being sighted. One short video shows it rampaging and spouting pillars of flame.
+It’s said to incinerate everything around it with lightning launched from its fur. Very little is known about this creature.
+It resembles a Pokémon described in a dubious magazine as a Terrakion that had been modified by an evil organization.
+It resembles a mysterious object introduced in a paranormal magazine as a cutting-edge weapon shaped like a Cobalion.
+Terapagos protects itself using its power to transform energy into hard crystals. This Pokémon is the source of the Terastal phenomenon.|Upon sensing danger, it prepares itself for battle by creating a sturdy shell of crystallized Terastal energy.
+It feeds others toxic mochi that draw out desires and capabilities. Those who eat the mochi fall under Pecharunt’s control, chained to its will.
+
 
 _
 
@@ -1084,9 +1100,9 @@ The Gigantamax energy coursing through its arms makes its punches hit as hard as
 
 
 
-
-
-
+Its body is a magnetic stone. Iron sand attaches firmly to the portions of its body that are particularly magnetic.
+They eat rocks and often get into a scrap over them. The impact of Graveler smashing together causes a flash of light and a booming noise.
+It’s grumpy and stubborn. If you upset it, it discharges electricity from the surface of its body and growls with a voice like thunder.
 Its small horn hides a healing power. With a few rubs from this Pokémon’s horn, any slight wound you have will be healed.
 Little can stand up to its psycho cut. Unleashed from this Pokémon’s horn, the move will punch a hole right through a thick metal sheet.
 Although this Pokémon is normally zoned out, its expression abruptly sharpens on occasion. The cause for this seems to lie in Slowpoke’s diet.
@@ -1098,7 +1114,8 @@ The Farfetch’d of the Galar region are brave warriors, and they wield thick, t
 
 
 
-
+They store their toxins inside their bodies, so unlike Grimer from other regions, they don’t smell bad even up close.
+There are over a hundred kinds of poison inside its body. Chemical reactions between different poisons are the source of its vitality.
 
 
 

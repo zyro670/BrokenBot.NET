@@ -1,12 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-	<PropertyGroup>
-		<TargetFramework>netstandard2.0</TargetFramework>
-	</PropertyGroup>
-
 	<ItemGroup>
-		<PackageReference Include="Discord.Net" Version="3.9.0" />
-		<PackageReference Include="NLog" Version="5.1.1" />
+		<PackageReference Include="Discord.Net" Version="3.13.0" />
+		<PackageReference Include="NLog" Version="5.2.7" />
 		<PackageReference Include="LibUsbDotNet" Version="2.2.29" />
 	</ItemGroup>
 

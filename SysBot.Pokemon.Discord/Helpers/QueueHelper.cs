@@ -3,129 +3,127 @@ using Discord.Commands;
 using Discord.Net;
 using Discord.WebSocket;
 using PKHeX.Core;
-using System;
 using System.Threading.Tasks;
 
-namespace SysBot.Pokemon.Discord
+namespace SysBot.Pokemon.Discord;
+
+public static class QueueHelper<T> where T : PKM, new()
 {
-    public static class QueueHelper<T> where T : PKM, new()
+    private const uint MaxTradeCode = 9999_9999;
+
+    public static async Task AddToQueueAsync(SocketCommandContext context, int code, string trainer, RequestSignificance sig, T trade, PokeRoutineType routine, PokeTradeType type, SocketUser trader, int catchID = 0)
     {
-        private const uint MaxTradeCode = 9999_9999;
-
-        public static async Task AddToQueueAsync(SocketCommandContext context, int code, string trainer, RequestSignificance sig, T trade, PokeRoutineType routine, PokeTradeType type, SocketUser trader, int catchID = 0)
+        if ((uint)code > MaxTradeCode)
         {
-            if ((uint)code > MaxTradeCode)
-            {
-                await context.Channel.SendMessageAsync("Trade code should be 00000000-99999999!").ConfigureAwait(false);
-                return;
-            }
-
-            IUserMessage test;
-            try
-            {
-                var disclaimer = $"Be aware that any Pokémon traded to a game where they are not originally found in will not be able to be transferred to HOME. This includes event versions of Pokémon from previous generations that are available in the game.";
-                var helpermsg = "I've added you to the queue! I'll message you here when your trade is starting.";
-                string helper = type == PokeTradeType.TradeCord ? $"{helpermsg}\n{disclaimer}" : helpermsg;
-                test = await trader.SendMessageAsync(helper).ConfigureAwait(false);
-            }
-            catch (HttpException ex)
-            {
-                await context.Channel.SendMessageAsync($"{ex.HttpCode}: {ex.Reason}!").ConfigureAwait(false);
-                var noAccessMsg = context.User == trader ? "You must enable private messages in order to be queued!" : "The mentioned user must enable private messages in order for them to be queued!";
-                await context.Channel.SendMessageAsync(noAccessMsg).ConfigureAwait(false);
-                return;
-            }
-
-            // Try adding
-            var result = AddToTradeQueue(context, trade, code, trainer, sig, routine, type, trader, out var msg, catchID);
-
-            // Notify in channel
-            await context.Channel.SendMessageAsync(msg).ConfigureAwait(false);
-            // Notify in PM to mirror what is said in the channel.
-            await trader.SendMessageAsync($"{msg}\nYour trade code will be **{code:0000 0000}**.").ConfigureAwait(false);
-
-            try
-            {
-                // Clean Up
-                if (result)
-                {
-                    // Delete the user's join message for privacy
-                    if (!context.IsPrivate)
-                        await context.Message.DeleteAsync(RequestOptions.Default).ConfigureAwait(false);
-                }
-                else
-                {
-                    // Delete our "I'm adding you!", and send the same message that we sent to the general channel.
-                    await test.DeleteAsync().ConfigureAwait(false);
-                }
-            }
-            catch (HttpException ex)
-            {
-                string message;
-                // Check if the exception was raised due to missing "Manage Messages" permissions. Ping the bot host if so.
-                var permissions = context.Guild.CurrentUser.GetPermissions(context.Channel as IGuildChannel);
-                if (!permissions.ManageMessages)
-                {
-                    var app = await context.Client.GetApplicationInfoAsync().ConfigureAwait(false);
-                    var owner = app.Owner.Id;
-                    message = $"<@{owner}> You must grant me \"Manage Messages\" permissions!";
-                }
-                else
-                {
-                    // Send a generic error message if we're not missing "Manage Messages" permissions.
-                    message = $"{ex.HttpCode}: {ex.Reason}!";
-                }
-                await context.Channel.SendMessageAsync(message).ConfigureAwait(false);
-            }
+            await context.Channel.SendMessageAsync("Trade code should be 00000000-99999999!").ConfigureAwait(false);
+            return;
         }
 
-        public static async Task AddToQueueAsync(SocketCommandContext context, int code, string trainer, RequestSignificance sig, T trade, PokeRoutineType routine, PokeTradeType type, int catchID = 0)
+        IUserMessage test;
+        try
         {
-            await AddToQueueAsync(context, code, trainer, sig, trade, routine, type, context.User, catchID).ConfigureAwait(false);
+            var disclaimer = $"Be aware that any Pokémon traded to a game where they are not originally found in will not be able to be transferred to HOME. This includes event versions of Pokémon from previous generations that are available in the game.";
+            var helpermsg = "I've added you to the queue! I'll message you here when your trade is starting.";
+            string helper = type == PokeTradeType.TradeCord ? $"{helpermsg}\n{disclaimer}" : helpermsg;
+            test = await trader.SendMessageAsync(helper).ConfigureAwait(false);
+        }
+        catch (HttpException ex)
+        {
+            await context.Channel.SendMessageAsync($"{ex.HttpCode}: {ex.Reason}!").ConfigureAwait(false);
+            var noAccessMsg = context.User == trader ? "You must enable private messages in order to be queued!" : "The mentioned user must enable private messages in order for them to be queued!";
+            await context.Channel.SendMessageAsync(noAccessMsg).ConfigureAwait(false);
+            return;
         }
 
-        private static bool AddToTradeQueue(SocketCommandContext context, T pk, int code, string trainerName, RequestSignificance sig, PokeRoutineType type, PokeTradeType t, SocketUser trader, out string msg, int catchID = 0)
+        // Try adding
+        var result = AddToTradeQueue(context, trade, code, trainer, sig, routine, type, trader, out var msg, catchID);
+
+        // Notify in channel
+        await context.Channel.SendMessageAsync(msg).ConfigureAwait(false);
+        // Notify in PM to mirror what is said in the channel.
+        await trader.SendMessageAsync($"{msg}\nYour trade code will be **{code:0000 0000}**.").ConfigureAwait(false);
+
+        try
         {
-            var user = trader;
-            var userID = user.Id;
-            var name = user.Username;
-
-            var trainer = new PokeTradeTrainerInfo(trainerName, userID);
-            var notifier = new DiscordTradeNotifier<T>(pk, trainer, code, user, context);
-            var detail = new PokeTradeDetail<T>(pk, trainer, notifier, t, code, sig == RequestSignificance.Favored);
-            var trade = new TradeEntry<T>(detail, userID, type, name);
-
-            var hub = SysCord<T>.Runner.Hub;
-            var Info = hub.Queues.Info;
-            var added = Info.AddToTradeQueue(trade, userID, sig == RequestSignificance.Owner);
-
-            if (added == QueueResultAdd.AlreadyInQueue)
+            // Clean Up
+            if (result)
             {
-                msg = "Sorry, you are already in the queue.";
-                return false;
+                // Delete the user's join message for privacy
+                if (!context.IsPrivate)
+                    await context.Message.DeleteAsync(RequestOptions.Default).ConfigureAwait(false);
             }
-
-            if (detail.Type == PokeTradeType.TradeCord)
-                TradeCordHelper<T>.TradeCordTrades.Add(trader.Id, catchID);
-
-            var position = Info.CheckPosition(userID, type);
-
-            var ticketID = "";
-            if (TradeStartModule<T>.IsStartChannel(context.Channel.Id))
-                ticketID = $", unique ID: {detail.ID}";
-
-            var pokeName = "";
-            if ((t == PokeTradeType.Specific || t == PokeTradeType.TradeCord || t == PokeTradeType.SupportTrade || t == PokeTradeType.Giveaway) && pk.Species != 0)
-                pokeName = $" Receiving: {(t == PokeTradeType.SupportTrade && pk.Species != (int)Species.Ditto && pk.HeldItem != 0 ? $"{(Species)pk.Species} ({ShowdownParsing.GetShowdownText(pk).Split('@','\n')[1].Trim()})" : $"{(Species)pk.Species}")}.";
-            msg = $"{user.Mention} - Added to the {type} queue{ticketID}. Current Position: {position.Position}.{pokeName}";
-
-            var botct = Info.Hub.Bots.Count;
-            if (position.Position > botct)
+            else
             {
-                var eta = Info.Hub.Config.Queues.EstimateDelay(position.Position, botct);
-                msg += $" Estimated: {eta:F1} minutes.";
+                // Delete our "I'm adding you!", and send the same message that we sent to the general channel.
+                await test.DeleteAsync().ConfigureAwait(false);
             }
-            return true;
         }
+        catch (HttpException ex)
+        {
+            string message;
+            // Check if the exception was raised due to missing "Manage Messages" permissions. Ping the bot host if so.
+            var permissions = context.Guild.CurrentUser.GetPermissions(context.Channel as IGuildChannel);
+            if (!permissions.ManageMessages)
+            {
+                var app = await context.Client.GetApplicationInfoAsync().ConfigureAwait(false);
+                var owner = app.Owner.Id;
+                message = $"<@{owner}> You must grant me \"Manage Messages\" permissions!";
+            }
+            else
+            {
+                // Send a generic error message if we're not missing "Manage Messages" permissions.
+                message = $"{ex.HttpCode}: {ex.Reason}!";
+            }
+            await context.Channel.SendMessageAsync(message).ConfigureAwait(false);
+        }
+    }
+
+    public static async Task AddToQueueAsync(SocketCommandContext context, int code, string trainer, RequestSignificance sig, T trade, PokeRoutineType routine, PokeTradeType type, int catchID = 0)
+    {
+        await AddToQueueAsync(context, code, trainer, sig, trade, routine, type, context.User, catchID).ConfigureAwait(false);
+    }
+
+    private static bool AddToTradeQueue(SocketCommandContext context, T pk, int code, string trainerName, RequestSignificance sig, PokeRoutineType type, PokeTradeType t, SocketUser trader, out string msg, int catchID = 0)
+    {
+        var user = trader;
+        var userID = user.Id;
+        var name = user.Username;
+
+        var trainer = new PokeTradeTrainerInfo(trainerName, userID);
+        var notifier = new DiscordTradeNotifier<T>(pk, trainer, code, user, context);
+        var detail = new PokeTradeDetail<T>(pk, trainer, notifier, t, code, sig == RequestSignificance.Favored);
+        var trade = new TradeEntry<T>(detail, userID, type, name);
+
+        var hub = SysCord<T>.Runner.Hub;
+        var Info = hub.Queues.Info;
+        var added = Info.AddToTradeQueue(trade, userID, sig == RequestSignificance.Owner);
+
+        if (added == QueueResultAdd.AlreadyInQueue)
+        {
+            msg = "Sorry, you are already in the queue.";
+            return false;
+        }
+
+        if (detail.Type == PokeTradeType.TradeCord)
+            TradeCordHelper<T>.TradeCordTrades.Add(trader.Id, catchID);
+
+        var position = Info.CheckPosition(userID, type);
+
+        var ticketID = "";
+        if (TradeStartModule<T>.IsStartChannel(context.Channel.Id))
+            ticketID = $", unique ID: {detail.ID}";
+
+        var pokeName = "";
+        if ((t == PokeTradeType.Specific || t == PokeTradeType.TradeCord || t == PokeTradeType.SupportTrade || t == PokeTradeType.Giveaway) && pk.Species != 0)
+            pokeName = $" Receiving: {(t == PokeTradeType.SupportTrade && pk.Species != (int)Species.Ditto && pk.HeldItem != 0 ? $"{(Species)pk.Species} ({ShowdownParsing.GetShowdownText(pk).Split('@','\n')[1].Trim()})" : $"{(Species)pk.Species}")}.";
+        msg = $"{user.Mention} - Added to the {type} queue{ticketID}. Current Position: {position.Position}.{pokeName}";
+
+        var botct = Info.Hub.Bots.Count;
+        if (position.Position > botct)
+        {
+            var eta = Info.Hub.Config.Queues.EstimateDelay(position.Position, botct);
+            msg += $" Estimated: {eta:F1} minutes.";
+        }
+        return true;
     }
 }
