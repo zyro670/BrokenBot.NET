@@ -669,18 +669,10 @@ public class OverworldBotSV : PokeRoutineExecutor9SV, IEncounterBot
                     satisfied = true;
                 break;
             case MarkSetting.PersonalityAndUpORScalar:
-                if (hasAMark && specialmark <= RibbonIndex.MarkMisty || hasAMark && specialmark is RibbonIndex.MarkUncommon)
-                {
-                    satmsg = $"Undesired {specialmark} found.."; satisfied = false; break;
-                }
-                if (!hasAMark && pk.Scale is not 0 or 255)
-                {
-                    satmsg = $"Undesired Scale: {pk.Scale} found.."; satisfied = false; break;
-                }
                 if (hasAMark && specialmark > RibbonIndex.MarkMisty || pk.Scale is 0 or 255)
-                {
-                    satisfied = true; break;
-                }
+                    satisfied = true;
+                else
+                    satisfied = false;
                 break;
             case MarkSetting.PersonalityAndUpANDScalar:
                 if (hasAMark && specialmark > RibbonIndex.MarkMisty && pk.Scale is 0 or 255)
