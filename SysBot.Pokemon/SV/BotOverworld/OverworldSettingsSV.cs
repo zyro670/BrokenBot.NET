@@ -19,7 +19,7 @@ public class OverworldSettingsSV : IBotStateSettings, ICountSettings
     public string SpeciesToHunt { get; set; } = string.Empty;
 
     [Category(Overworld), Description("Select which type of mark group to hunt for.")]
-    public MarkSetting MarkSelection { get; set; } = MarkSetting.Any;
+    public MarkSetting MarkSelection { get; set; } = MarkSetting.AnyMark;
 
     [Category(Overworld), Description("Select which location you are scanning.")]
     public Location LocationSelection { get; set; } = Location.NonAreaZero;
@@ -193,7 +193,7 @@ public class OverworldSettingsSV : IBotStateSettings, ICountSettings
 
     public enum MarkSetting
     {
-        Any = 0,
+        AnyMark = 0,
         PersonalityAndUpANDScalar = 1,
         PersonalityAndUpORScalar = 2,
         PersonalityAndUp = 3,
@@ -202,5 +202,6 @@ public class OverworldSettingsSV : IBotStateSettings, ICountSettings
         TimeAndUpANDScalar = 6,
         TimeAndUp = 7,
         Scalar = 8,
+        DisableMarkCheck = 9,
     }
 }

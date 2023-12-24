@@ -618,7 +618,8 @@ public class OverworldBotSV : PokeRoutineExecutor9SV, IEncounterBot
         string satmsg = string.Empty;
         switch (markmode)
         {
-            case MarkSetting.Any: if (hasAMark) satisfied = true; break;
+            case MarkSetting.AnyMark: if (hasAMark) satisfied = true; break;
+            case MarkSetting.DisableMarkCheck: satisfied = true; break;
             case MarkSetting.Scalar:
                 if (pk.Scale is not 0 or 255)
                 {
