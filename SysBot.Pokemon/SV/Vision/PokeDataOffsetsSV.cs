@@ -34,7 +34,6 @@ public class PokeDataOffsetsSV
     public IReadOnlyList<long> CanPlayerMovePointer             { get; } = new long[] { 0x4734F78, 0x70, 0x48, 0x0, 0x0, 0x08, 0x70 };
     public IReadOnlyList<long> BlockKeyPointer                  { get; } = new long[] { 0x47350D8, 0xD8, 0x0, 0x0, 0x30, 0x0 };
     public IReadOnlyList<long> ItemBlock                        { get; } = new long[] { 0x47350D8, 0x1C0, 0xC8, 0x40 };
-    public IReadOnlyList<long> RaidPartnerLocked                { get; } = new long[] { 0x45E0468, 0x740, 0x08, 0x08, 0xA8, 0x30, 0x1CB0 };
     public uint TeraLobbyIsConnected                            { get; } = 0x043DF430;
     public uint LoadedIntoDesiredState                          { get; } = 0x047D2020;
     public uint EggData                                         { get; } = 0x04742118;

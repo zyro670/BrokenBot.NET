@@ -289,52 +289,72 @@ public class OverworldBotSV : PokeRoutineExecutor9SV, IEncounterBot
         await InitializeSessionOffsets(token).ConfigureAwait(false);
     }
 
-    private async Task Preparize(CancellationToken token)
+    private async Task<bool> NavigateToPicnic(CancellationToken token)
     {
-        Log("Navigating to picnic..");
-        await Click(X, 3_000, token).ConfigureAwait(false);
-        await Click(DRIGHT, 0_800, token).ConfigureAwait(false);
         if (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
         {
-            Log("Scrolling through menus...");
-            await SetStick(LEFT, 0, -32000, 1_000, token).ConfigureAwait(false);
-            await SetStick(LEFT, 0, 0, 0, token).ConfigureAwait(false);
-            await Task.Delay(0_100, token).ConfigureAwait(false);
-            Log("Tap tap tap...");
-            for (int i = 0; i < 3; i++)
-                await Click(DDOWN, 0_800, token).ConfigureAwait(false);
-            Log("Attempting to enter picnic!");
-            await Click(A, 9_500, token).ConfigureAwait(false);
-
-
-            if (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
+            var tries = 0;
+            Log("Not in picnic! Wrong menu? Attempting recovery.");
+            if (await IsInBattle(Offsets.IsInBattle, token).ConfigureAwait(false))
             {
-                Log("Not in picnic! Wrong menu? Attempting recovery.");
-                if (await IsInBattle(Offsets.IsInBattle, token).ConfigureAwait(false))
+                await CloseGame(Hub.Config, token).ConfigureAwait(false);
+                await StartGame(Hub.Config, token).ConfigureAwait(false);
+                await InitializeSessionOffsets(token).ConfigureAwait(false);
+                return false;
+            }
+            await Click(B, 4_500, token).ConfigureAwait(false); // Not in picnic, press B to reset
+            while (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
+            {
+                Log("Scrolling through menus...");
+                await SetStick(LEFT, 0, -32000, 1_000, token).ConfigureAwait(false);
+                await SetStick(LEFT, 0, 0, 0, token).ConfigureAwait(false);
+                await Task.Delay(0_100, token).ConfigureAwait(false);
+                Log("Tap tap tap...");
+                for (int i = 0; i < 3; i++)
+                    await Click(DDOWN, 0_800, token).ConfigureAwait(false);
+                Log("Attempting to enter picnic!");
+                await Click(A, 9_500, token).ConfigureAwait(false);
+                tries++;
+                if (tries == 5)
                 {
                     await CloseGame(Hub.Config, token).ConfigureAwait(false);
                     await StartGame(Hub.Config, token).ConfigureAwait(false);
                     await InitializeSessionOffsets(token).ConfigureAwait(false);
-                }
-                await Click(B, 4_500, token).ConfigureAwait(false); // Not in picnic, press B to reset
-                while (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
-                {
-                    Log("Scrolling through menus...");
-                    await SetStick(LEFT, 0, -32000, 1_000, token).ConfigureAwait(false);
-                    await SetStick(LEFT, 0, 0, 0, token).ConfigureAwait(false);
-                    await Task.Delay(0_100, token).ConfigureAwait(false);
-                    Log("Tap tap tap...");
-                    for (int i = 0; i < 3; i++)
-                        await Click(DDOWN, 0_800, token).ConfigureAwait(false);
-                    Log("Attempting to enter picnic!");
-                    await Click(A, 9_500, token).ConfigureAwait(false);
+                    return false;
                 }
             }
         }
-        Log("Time for a bonus!");
-        await MakeSandwich(token).ConfigureAwait(false);
-        sandwichCounter++;
-        Log("Continuing the hunt..");
+        return true;
+    }
+
+    private async Task Preparize(CancellationToken token)
+    {
+        while (!token.IsCancellationRequested)
+        {
+            Log("Navigating to picnic..");
+            await Click(X, 3_000, token).ConfigureAwait(false);
+            await Click(DRIGHT, 0_800, token).ConfigureAwait(false);
+            if (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
+            {
+                Log("Scrolling through menus...");
+                await SetStick(LEFT, 0, -32000, 1_000, token).ConfigureAwait(false);
+                await SetStick(LEFT, 0, 0, 0, token).ConfigureAwait(false);
+                await Task.Delay(0_100, token).ConfigureAwait(false);
+                Log("Tap tap tap...");
+                for (int i = 0; i < 3; i++)
+                    await Click(DDOWN, 0_800, token).ConfigureAwait(false);
+                Log("Attempting to enter picnic!");
+                await Click(A, 9_500, token).ConfigureAwait(false);
+                bool inPicnic = await NavigateToPicnic(token).ConfigureAwait(false);
+                if (!inPicnic)
+                    continue;
+            }
+            Log("Time for a bonus!");
+            await MakeSandwich(token).ConfigureAwait(false);
+            sandwichCounter++;
+            Log("Continuing the hunt..");
+            return;
+        }
     }
 
     private async Task ScanOverworld(CancellationToken token)

@@ -217,7 +217,7 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
         var dayRoll = 0;
         RotationCount = 0;
         var raidsHosted = 0;
-        ulong ofs = 0;
+        ulong ofs;
         while (!token.IsCancellationRequested)
         {
             // Initialize offsets at the start of the routine and cache them.
@@ -242,7 +242,7 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
             if (!string.IsNullOrEmpty(Settings.GlobalBanListURL))
                 await GrabGlobalBanlist(token).ConfigureAwait(false);
 
-
+            ofs = await SwitchConnection.PointerAll(Offsets.RaidBlockPointerP, token).ConfigureAwait(false);
             var currentSeed = BitConverter.ToUInt64(await SwitchConnection.ReadBytesAbsoluteAsync(ofs, 8, token).ConfigureAwait(false), 0);
             if (TodaySeed != currentSeed || LobbyError >= 3)
             {
@@ -297,6 +297,7 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
                             continue;
 
                         Log("Den Found, continuing routine!");
+                        ofs = await SwitchConnection.PointerAll(Offsets.RaidBlockPointerP, token).ConfigureAwait(false);
                         TodaySeed = BitConverter.ToUInt64(await SwitchConnection.ReadBytesAbsoluteAsync(ofs, 8, token).ConfigureAwait(false), 0);
                         LobbyError = 0;
                         denFound = true;
@@ -397,10 +398,32 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
             Log("Failed to fetch the global ban list. Ensure you have the correct URL.");
     }
 
+    private async Task LocateSeedIndex(CancellationToken token)
+    {
+        var data = await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointer, RaidBlockSize, token).ConfigureAwait(false);
+        var raids = 69;
+        switch (FieldID)
+        {
+            case 0: break;
+            case 1: raids = 26; break;
+            case 2: raids = 24; break;
+        }
+        for (int i = 0; i < raids; i++)
+        {
+            var seed = BitConverter.ToUInt32(data.AsSpan(raids is 69 ? 0x20 : 0 + (i * 0x20), 4).ToArray());
+            if (seed == 0)
+            {
+                SeedIndexToReplace = i;
+                Log($"Index located at {i}");
+                return;
+            }
+        }
+    }
+
     private async Task CompleteRaid(List<(ulong, TradeMyStatus)> trainers, CancellationToken token)
     {
         bool ready = false;
-        List<(ulong, TradeMyStatus)> lobbyTrainersFinal = new();
+        List<(ulong, TradeMyStatus)> lobbyTrainersFinal = [];
         if (await IsConnectedToLobby(token).ConfigureAwait(false))
         {
             int b = 0;
@@ -452,7 +475,8 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
                 var names = lobbyTrainersFinal.Select(x => x.Item2.OT).ToList();
                 bool hatTrick = lobbyTrainersFinal.Count == 3 && names.Distinct().Count() == 1;
 
-                await Task.Delay(15_000, token).ConfigureAwait(false);
+                for (int i = 0; i < 3; i++)
+                    await Click(B, 5_000, token).ConfigureAwait(false);
                 await EnqueueEmbed(names, "", hatTrick, false, false, true, token).ConfigureAwait(false);
             }
 
@@ -526,6 +550,7 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
         while (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
             await Click(A, 1_000, token).ConfigureAwait(false);
 
+        await LocateSeedIndex(token).ConfigureAwait(false);
         await Task.Delay(0_500, token).ConfigureAwait(false);
         await CloseGame(Hub.Config, token).ConfigureAwait(false);
         if (ready)
@@ -591,12 +616,12 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
             case 0:
                 ptr = new(Offsets.RaidBlockPointerP)
                 {
-                    [3] = 0x40 + index + 1 * 0x20
+                    [3] = 0x60 + index * 0x20
                 }; break;
             case 1:
                 ptr = new(Offsets.RaidBlockPointerK)
                 {
-                    [3] = 0xCE8 + index - 69 * 0x20
+                    [3] = 0xCE8 + index * 0x20
                 }; break;
             case 2:
                 ptr = new(Offsets.RaidBlockPointerB)
@@ -628,17 +653,17 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
             case 0:
                 ptr = new(Offsets.RaidBlockPointerP)
                 {
-                    [3] = 0x40 + index + 1 * 0x20
+                    [3] = 0x60 + index * 0x20 - 0x10
                 }; break;
             case 1:
                 ptr = new(Offsets.RaidBlockPointerK)
                 {
-                    [3] = 0xCE8 + index - 69 * 0x20
+                    [3] = 0xCE8 + index * 0x20 - 0x10
                 }; break;
             case 2:
                 ptr = new(Offsets.RaidBlockPointerB)
                 {
-                    [3] = 0x1968 + index * 0x20
+                    [3] = 0x1968 + index * 0x20 - 0x10
                 }; break;
         }
         var data = await SwitchConnection.PointerPeek(2, ptr, token).ConfigureAwait(false);
@@ -1260,7 +1285,6 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
                 break;
             }
         }
-
         await Task.Delay(5_000 + timing.ExtraTimeLoadOverworld, token).ConfigureAwait(false);
         Log("Back in the overworld!");
         LostRaid = 0;
