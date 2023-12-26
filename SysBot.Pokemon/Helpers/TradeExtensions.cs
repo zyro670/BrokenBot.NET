@@ -478,7 +478,7 @@ public class TradeExtensions<T> where T : PKM, new()
         baseLink[3] = pkm.Form < 10 ? $"00{form}" : $"0{form}";
         baseLink[4] = pkm.PersonalInfo.OnlyFemale ? "fo" : pkm.PersonalInfo.OnlyMale ? "mo" : pkm.PersonalInfo.Genderless ? "uk" : fd ? "fd" : md ? "md" : "mf";
         baseLink[5] = canGmax ? "g" : "n";
-        baseLink[6] = "0000000" + (pkm.Species == (int)Species.Alcremie && !canGmax ? pkm.Data[0xE4] : 0);
+        baseLink[6] = "0000000" + (pkm.Species == (int)Species.Alcremie && !canGmax ? pkm.Data[0xD0] : 0);
         baseLink[8] = pkm.IsShiny ? "r.png" : "n.png";
         return string.Join("_", baseLink);
     }

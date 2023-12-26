@@ -280,10 +280,18 @@ public class OverworldBotSV : PokeRoutineExecutor9SV, IEncounterBot
         await Task.Delay(1_500, token).ConfigureAwait(false);
         if (opensettings)
         {
+            Log("Applying rollover correction.");
             if (Settings.RolloverFilters.RolloverPrevention == RolloverPrevention.TimeSkip)
+            {
+                Log("Using timeskip method...");
                 await TimeSkipBwd(token).ConfigureAwait(false);
+                await Task.Delay(1_500, token).ConfigureAwait(false);
+            }
             else
+            {
+                Log("Using traditional method...");
                 await RolloverCorrectionSV(time, token).ConfigureAwait(false);
+            }
         }
         await StartGame(Hub.Config, token).ConfigureAwait(false);
         await InitializeSessionOffsets(token).ConfigureAwait(false);
@@ -669,13 +677,13 @@ public class OverworldBotSV : PokeRoutineExecutor9SV, IEncounterBot
                     satisfied = true;
                 break;
             case MarkSetting.PersonalityAndUpORScalar:
-                if (hasAMark && specialmark > RibbonIndex.MarkMisty || pk.Scale is 0 or 255)
+                if (hasAMark && specialmark > RibbonIndex.MarkMisty && specialmark is not RibbonIndex.MarkUncommon || pk.Scale is 0 or 255)
                     satisfied = true;
                 else
                     satisfied = false;
                 break;
             case MarkSetting.PersonalityAndUpANDScalar:
-                if (hasAMark && specialmark > RibbonIndex.MarkMisty && pk.Scale is 0 or 255)
+                if (hasAMark && specialmark > RibbonIndex.MarkMisty && pk.Scale is 0 or 255 && specialmark is not RibbonIndex.MarkUncommon)
                     satisfied = true;
                 else
                     satisfied = false;
@@ -1052,7 +1060,7 @@ public class OverworldBotSV : PokeRoutineExecutor9SV, IEncounterBot
         uint coordz = uint.Parse(CaveZ, NumberStyles.AllowHexSpecifier);
         byte[] Z1 = BitConverter.GetBytes(coordz);
 
-        X1 = X1.Concat(Y1).Concat(Z1).ToArray();
+        X1 = [.. X1, .. Y1, .. Z1];
         float y = BitConverter.ToSingle(X1, 4);
         y += 20;
         WriteSingleLittleEndian(X1.AsSpan()[4..], y);
@@ -1073,7 +1081,7 @@ public class OverworldBotSV : PokeRoutineExecutor9SV, IEncounterBot
         uint coordz = uint.Parse(SpotZ, NumberStyles.AllowHexSpecifier);
         byte[] Z1 = BitConverter.GetBytes(coordz);
 
-        X1 = X1.Concat(Y1).Concat(Z1).ToArray();
+        X1 = [.. X1, .. Y1, .. Z1];
         float Y = BitConverter.ToSingle(X1, 4);
         Y += 25;
         WriteSingleLittleEndian(X1.AsSpan()[4..], Y);

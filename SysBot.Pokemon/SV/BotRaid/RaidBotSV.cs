@@ -860,8 +860,8 @@ namespace SysBot.Pokemon
                 for (int i = 0; i < 23; i++)
                 {
                     await TimeSkipBwd(token).ConfigureAwait(false);
-                    await Task.Delay(0_100, token).ConfigureAwait(false);
                 }
+                await Task.Delay(1_500, token).ConfigureAwait(false);
                 return;
             }
 
