@@ -1177,7 +1177,7 @@ public class OverworldBotSV : PokeRoutineExecutor9SV, IEncounterBot
         await Click(PLUS, 1_500, token).ConfigureAwait(false);
 
         float Y = BitConverter.ToSingle(cp!, 4);
-        Y += 40;
+        Y += 20;
         WriteSingleLittleEndian(cp.AsSpan()[4..], Y);
 
         for (int i = 0; i < 8; i++)

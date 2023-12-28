@@ -221,12 +221,12 @@ namespace SysBot.Pokemon
                 case 0:
                     ptr = new(Offsets.RaidBlockPointerP)
                     {
-                        [3] = 0x40 + index + 1 * 0x20
+                        [3] = 0x60 + index * 0x20
                     }; break;
                 case 1:
                     ptr = new(Offsets.RaidBlockPointerK)
                     {
-                        [3] = 0xCE8 + index - 69 * 0x20
+                        [3] = 0xCE8 + index * 0x20
                     }; break;
                 case 2:
                     ptr = new(Offsets.RaidBlockPointerB)
