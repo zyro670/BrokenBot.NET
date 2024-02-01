@@ -762,7 +762,7 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
         if (criteria.Count < 2)
             return false;
 
-        balls = new[] { pkm1.Ball, pkm2.Ball };
+        balls = [pkm1.Ball, pkm2.Ball];
         return true;
     }
 
@@ -771,7 +771,6 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
     private bool SameEvoTree(PKM pkm1, PKM pkm2)
     {
         var evos = EncounterOrigin.GetOriginChain(pkm1, 8);
-        //var evos = tree.Reverse.GetPreEvolutions(pkm1.Species, pkm1.Form).Select(e => new EvoCriteria { Species = e.Species, Form = e.Form }).ToArray();
         var encs = EncounterGenerator.GetGenerator(Game).GetPossible(pkm1, evos, Game, EncounterTypeGroup.Egg).ToArray();
         var base1 = encs.Length > 0 ? encs[^1].Species : -1;
 
@@ -785,7 +784,7 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
     private static List<EvoCriteria> EggEvoCriteria(T pk1, T pk2)
     {
         List<T> list = new() { pk1, pk2 };
-        List<EvoCriteria> criteriaList = new();
+        List<EvoCriteria> criteriaList = [];
         for (int i = 0; i < list.Count; i++)
         {
             byte form = list[i].Species switch
@@ -815,7 +814,7 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
 
     protected List<string> GetMissingDexEntries(List<ushort> dex)
     {
-        List<string> missing = new();
+        List<string> missing = [];
         var keys = Dex.Keys.ToArray();
         for (int s = 0; s < keys.Length; s++)
         {
@@ -883,6 +882,7 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
                 PokeEventType.LegendOfKoi => Rng.SpeciesRNG is (ushort)Species.Magikarp,
                 PokeEventType.Paradox => Enum.IsDefined(typeof(Paradox), Rng.SpeciesRNG),
                 PokeEventType.FroggyFrenzy => Enum.IsDefined(typeof(FroggyFrenzy), Rng.SpeciesRNG),
+                PokeEventType.Anonymyths => Enum.IsDefined(typeof(Anonymyths), Rng.SpeciesRNG),
                 PokeEventType.EventPoke => mg != default,
                 _ => type == eventType,
             };

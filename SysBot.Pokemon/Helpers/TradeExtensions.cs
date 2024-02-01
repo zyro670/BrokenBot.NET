@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.Metrics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -16,9 +17,9 @@ public class TradeExtensions<T> where T : PKM, new()
     private static readonly object _syncLog = new();
     public static bool CoordinatesSet = false;
     public static ulong CoordinatesOffset = 0;
-    public static byte[] XCoords = { 0 };
-    public static byte[] YCoords = { 0 };
-    public static byte[] ZCoords = { 0 };
+    public static byte[] XCoords = [0];
+    public static byte[] YCoords = [0];
+    public static byte[] ZCoords = [0];
     public static readonly string[] Characteristics =
     {
         "Takes plenty of siestas",
@@ -29,18 +30,27 @@ public class TradeExtensions<T> where T : PKM, new()
         "Somewhat vain",
     };
 
-    public static readonly int[] Amped = { 3, 4, 2, 8, 9, 19, 22, 11, 13, 14, 0, 6, 24 };
-    public static readonly int[] LowKey = { 1, 5, 7, 10, 12, 15, 16, 17, 18, 20, 21, 23 };
-    public static readonly ushort[] ShinyLock = {  (ushort)Species.Victini, (ushort)Species.Hoopa, (ushort)Species.Keldeo, (ushort)Species.Meloetta, (ushort)Species.Volcanion, (ushort)Species.Cosmog, (ushort)Species.Cosmoem, (ushort)Species.Magearna, (ushort)Species.Marshadow, (ushort)Species.Eternatus,
+    public static readonly int[] Amped = [3, 4, 2, 8, 9, 19, 22, 11, 13, 14, 0, 6, 24];
+    public static readonly int[] LowKey = [1, 5, 7, 10, 12, 15, 16, 17, 18, 20, 21, 23];
+    public static readonly ushort[] ShinyLock = [  (ushort)Species.Victini, (ushort)Species.Hoopa, (ushort)Species.Keldeo, (ushort)Species.Meloetta, (ushort)Species.Volcanion, (ushort)Species.Cosmog, (ushort)Species.Cosmoem, (ushort)Species.Magearna, (ushort)Species.Marshadow, (ushort)Species.Eternatus,
     (ushort)Species.Kubfu, (ushort)Species.Urshifu, (ushort)Species.Zarude, (ushort)Species.Glastrier, (ushort)Species.Spectrier, (ushort)Species.Calyrex, (ushort)Species.Enamorus, (ushort)Species.WalkingWake, (ushort)Species.IronLeaves,
-    (ushort)Species.ChienPao, (ushort)Species.WoChien, (ushort)Species.TingLu, (ushort)Species.ChiYu, (ushort)Species.Koraidon, (ushort)Species.Miraidon, (ushort)Species.Ogerpon, (ushort)Species.Fezandipiti, (ushort)Species.Okidogi, (ushort)Species.Munkidori, (ushort)Species.Terapagos, (ushort)Species.RagingBolt, (ushort)Species.GougingFire};
-    public static readonly ushort[] MegaPrimals = { (ushort)Species.Venusaur, (ushort)Species.Charizard, (ushort)Species.Blastoise, (ushort)Species.Beedrill, (ushort)Species.Pidgeot, (ushort)Species.Alakazam,
+    (ushort)Species.ChienPao, (ushort)Species.WoChien, (ushort)Species.TingLu, (ushort)Species.ChiYu, (ushort)Species.Koraidon, (ushort)Species.Miraidon, (ushort)Species.Ogerpon, (ushort)Species.Fezandipiti, (ushort)Species.Okidogi, (ushort)Species.Munkidori, (ushort)Species.Terapagos, (ushort)Species.RagingBolt, (ushort)Species.GougingFire];
+    public static readonly ushort[] MegaPrimals = [ (ushort)Species.Venusaur, (ushort)Species.Charizard, (ushort)Species.Blastoise, (ushort)Species.Beedrill, (ushort)Species.Pidgeot, (ushort)Species.Alakazam,
     (ushort)Species.Slowbro, (ushort)Species.Gengar, (ushort)Species.Kangaskhan, (ushort)Species.Pinsir, (ushort)Species.Gyarados, (ushort)Species.Aerodactyl, (ushort)Species.Mewtwo, (ushort)Species.Ampharos,
     (ushort)Species.Steelix, (ushort)Species.Scizor, (ushort)Species.Heracross, (ushort)Species.Houndoom, (ushort)Species.Tyranitar, (ushort)Species.Sceptile, (ushort)Species.Blaziken, (ushort)Species.Swampert,
     (ushort)Species.Gardevoir, (ushort)Species.Sableye, (ushort)Species.Mawile, (ushort)Species.Aggron, (ushort)Species.Medicham, (ushort)Species.Manectric, (ushort)Species.Sharpedo, (ushort)Species.Camerupt,
     (ushort)Species.Altaria, (ushort)Species.Banette, (ushort)Species.Absol, (ushort)Species.Glalie, (ushort)Species.Salamence, (ushort)Species.Metagross, (ushort)Species.Latias, (ushort)Species.Latios,
     (ushort)Species.Rayquaza, (ushort)Species.Lopunny, (ushort)Species.Garchomp, (ushort)Species.Lucario, (ushort)Species.Abomasnow, (ushort)Species.Gallade, (ushort)Species.Audino, (ushort)Species.Diancie,
-    (ushort)Species.Kyogre, (ushort)Species.Groudon};
+    (ushort)Species.Kyogre, (ushort)Species.Groudon];
+    public static readonly ushort[] Anonymyths = [(ushort)Species.Magikarp, (ushort)Species.Gyarados,(ushort)Species.Oddish,(ushort)Species.Gloom, (ushort)Species.Vileplume,(ushort)Species.Psyduck, (ushort)Species.Golduck, 
+        (ushort)Species.Poliwag, (ushort)Species.Poliwhirl, (ushort)Species.Poliwrath,(ushort)Species.Gastly,  (ushort)Species.Haunter, (ushort)Species.Gengar, (ushort)Species.Totodile, (ushort)Species.Croconaw,
+        (ushort)Species.Feraligatr, (ushort)Species.Ralts,(ushort)Species.Kirlia,(ushort)Species.Gardevoir, (ushort)Species.Cranidos, (ushort)Species.Rampardos, (ushort)Species.Mudkip,(ushort)Species.Marshtomp, 
+        (ushort)Species.Swampert,(ushort)Species.Timburr, (ushort)Species.Gurdurr, (ushort)Species.Conkeldurr, (ushort)Species.Tropius, (ushort)Species.Litwick, (ushort)Species.Lampent, (ushort)Species.Chandelure,
+        (ushort)Species.Fennekin, (ushort)Species.Braixen, (ushort)Species.Delphox, (ushort)Species.Scorbunny, (ushort)Species.Raboot, (ushort)Species.Cinderace, (ushort)Species.Salandit, (ushort)Species.Salazzle, 
+        (ushort)Species.Sinistea, (ushort)Species.Poltchageist, (ushort)Species.Sinistcha, (ushort)Species.Poltchageist, (ushort)Species.IronThorns, (ushort)Species.Capsakid, (ushort)Species.Scovillain,(ushort)Species.Tadbulb, 
+        (ushort)Species.Bellibolt, (ushort)Species.Fidough, (ushort)Species.Dachsbun, (ushort)Species.Cyclizar, (ushort)Species.Sprigatito,(ushort)Species.Floragato,(ushort)Species.Meowscarada,(ushort)Species.Fuecoco,(ushort)Species.Crocalor,(ushort)Species.Skeledirge,
+        (ushort)Species.Quaxly, (ushort)Species.Quaxwell, (ushort)Species.Quaquaval, (ushort)Species.Pawmi, (ushort)Species.Pawmo, (ushort)Species.Pawmo, (ushort)Species.Larvitar, (ushort)Species.Pupitar, (ushort)Species.Tyranitar, (ushort)Species.Smeargle,
+        (ushort)Species.Eevee,(ushort)Species.Flareon,(ushort)Species.Vaporeon,(ushort)Species.Jolteon,(ushort)Species.Umbreon, (ushort)Species.Espeon,(ushort)Species.Glaceon,(ushort)Species.Leafeon,(ushort)Species.Sylveon];
 
     public static bool ShinyLockCheck(ushort species, string form, string ball = "")
     {
@@ -179,13 +189,7 @@ public class TradeExtensions<T> where T : PKM, new()
         pk.StatNature = pk.Nature;
         pk.SetEVs(new int[] { 0, 0, 0, 0, 0, 0 });
 
-        pk.SetMarking(0, 0);
-        pk.SetMarking(1, 0);
-        pk.SetMarking(2, 0);
-        pk.SetMarking(3, 0);
-        pk.SetMarking(4, 0);
-        pk.SetMarking(5, 0);
-
+        pk.SetMarkings();
         pk.ClearRelearnMoves();
 
         if (pk is PK8 pk8)
@@ -508,6 +512,42 @@ public class TradeExtensions<T> where T : PKM, new()
 
         bool different = criteriaList.Skip(1).Any(x => x.Species != criteriaList.First().Species);
         return different;
+    }
+
+    public static string ReturnAnonymythsNickname(PKM pk)
+    {
+        string nickname = string.Empty;
+        switch (pk.Species)
+        {
+            case 43 or 44 or 45: nickname = "Nikki"; break;
+            case 55 or 54: nickname = "Silber"; break;
+            case 60 or 61 or 62: nickname = "Airwick"; break;
+            case 92 or 93 or 94: nickname = "Lisa"; break;
+            case 129 or 130: nickname = "Koi"; break;
+            case 158 or 159 or 160: nickname = "Zyro"; break;
+            case 235: nickname = "Hitoshi"; break;
+            case 258 or 259 or 260: nickname = "Swampy"; break;
+            case 280 or 281 or 282: nickname = "Kuroneko"; break;
+            case 357: nickname = "Bananakin"; break;
+            case 408 or 409: nickname = "TurboTrex"; break;
+            case 534 or 535 or 536: nickname = "Elvis"; break;
+            case 607 or 608 or 609: nickname = "Wispy"; break;
+            case 653 or 654 or 655: nickname = "Mensch"; break;
+            case 757 or 758: nickname = "Newt"; break;
+            case 813 or 814 or 815: nickname = "Bunny"; break;
+            case 854 or 855 or 1013 or 1012: nickname = "LadyTea"; break;
+            case 995 or 246 or 247 or 248: nickname = "Godzilla"; break;
+            case 951 or 952: nickname = "Edwin"; break;
+            case 938 or 939: nickname = "Froggy"; break;
+            case 926 or 927: nickname = "Ardough"; break;
+            case 967: nickname = "Ryder"; break;
+            case 906 or 907 or 908: nickname = "Nami"; break;
+            case 909 or 910 or 911: nickname = "Sangetsu"; break;
+            case 912 or 913 or 914: nickname = "Dhruv"; break;
+            case 921 or 922 or 923: nickname = "Kazu"; break;
+            case 133 or 134 or 135 or 136 or 196 or 197 or 470 or 471 or 700: nickname = "Malo"; break;
+        }
+        return nickname;
     }
 
 }

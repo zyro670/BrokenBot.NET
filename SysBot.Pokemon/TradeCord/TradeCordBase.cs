@@ -1590,14 +1590,14 @@ public abstract class TradeCordBase<T> where T : PKM, new()
 
     public class TCPerks
     {
-        public List<DexPerks> ActivePerks { get; set; } = new();
+        public List<DexPerks> ActivePerks { get; set; } = [];
         public ushort SpeciesBoost { get; set; }
     }
 
     public class TCDex
     {
         public int DexCompletionCount { get; set; }
-        public List<ushort> Entries { get; set; } = new();
+        public List<ushort> Entries { get; set; } = [];
     }
 
     // Taken from ALM.
@@ -2620,5 +2620,13 @@ public abstract class TradeCordBase<T> where T : PKM, new()
         { Munkidori, Black },
         { Fezandipiti, Black },
         { Ogerpon, Green },
+        { Archaludon, White },
+        { Hydrapple, Green },
+        { GougingFire, Brown },
+        { RagingBolt, Yellow },
+        { IronBoulder, Gray },
+        { IronCrown, Blue },
+        { Terapagos, Blue },
+        { Pecharunt, Purple },
     };
 }

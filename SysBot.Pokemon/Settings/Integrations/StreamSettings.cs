@@ -366,6 +366,27 @@ public class StreamSettings
         }
     }
 
+    public void GetRaidCodeAsset(string code)
+    {
+        if (!CreateAssets)
+            return;
+
+        try
+        {
+            if (CreateRaidOnDeck)
+            {
+                if (!string.IsNullOrEmpty(code))
+                    File.WriteAllText("raidcode.txt", "Raid Code: " + code);
+                else
+                    File.WriteAllText("raidcode.txt", "No raid code found.");
+            }
+        }
+        catch (Exception e)
+        {
+            LogUtil.LogError(e.Message, nameof(StreamSettings));
+        }
+    }
+
     private async Task GenerateRaidInfo(int i, PokeTradeHub<PK9> hub, int type, CancellationToken token)
     {
         await Task.Delay(0_050, token).ConfigureAwait(false);

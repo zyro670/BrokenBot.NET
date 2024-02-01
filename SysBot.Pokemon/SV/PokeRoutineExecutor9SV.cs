@@ -199,7 +199,9 @@ public abstract class PokeRoutineExecutor9SV : PokeRoutineExecutor<PK9>
         Log("Restarting the game!");
 
         // Switch Logo and game load screen
-        await Task.Delay(12_000 + timing.ExtraTimeLoadGame, token).ConfigureAwait(false);
+        await Click(A, 5_000, token).ConfigureAwait(false);
+        await Click(A, 5_000, token).ConfigureAwait(false);
+        await Task.Delay(2_000 + timing.ExtraTimeLoadGame, token).ConfigureAwait(false);
 
         for (int i = 0; i < 8; i++)
             await Click(A, 1_000, token).ConfigureAwait(false);

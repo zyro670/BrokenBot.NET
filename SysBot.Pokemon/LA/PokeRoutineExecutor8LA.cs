@@ -312,7 +312,7 @@ public abstract class PokeRoutineExecutor8LA : PokeRoutineExecutor<PA8>
         return (xor ^ (xor >> 16)) & 0xFFFF;
     }
 
-    public (bool shiny, uint shinyXor, uint EC, uint PID, int[] IVs, ulong ability, int gender, int nature, ulong newseed) GenerateFromSeed(ulong seed, int rolls, int guranteedivs, in int genderRatio)
+    public static (bool shiny, uint shinyXor, uint EC, uint PID, int[] IVs, ulong ability, int gender, int nature, ulong newseed) GenerateFromSeed(ulong seed, int rolls, int guranteedivs, in int genderRatio)
     {
         bool shiny = false;
         uint EC;
@@ -384,11 +384,12 @@ public abstract class PokeRoutineExecutor8LA : PokeRoutineExecutor<PA8>
 
     public async Task<PokedexSaveData> ReadPokedex(CancellationToken token)
     {
-        var data = await SwitchConnection.PointerPeek(0x1E460, Offsets.PokeDex, token).ConfigureAwait(false);
-        var dex = new PokedexSaveData(data);
-        return dex;
+        var ofs = await SwitchConnection.PointerAll(Offsets.PokeDex, token).ConfigureAwait(false);
+        var data = await SwitchConnection.ReadBytesAbsoluteAsync(ofs, 0x1E460, token).ConfigureAwait(false);
+        var PokedexSave = new PokedexSaveData(data);
+        return PokedexSave;
     }
-    public (bool, bool) CheckForPerfectComplete(bool hasCharm, PokedexSaveData dex, ushort species)
+    public static (bool, bool) CheckForPerfectComplete(bool hasCharm, PokedexSaveData dex, ushort species)
     {
         bool isComp = false;
         bool isPerfect = dex.IsPerfect(species);

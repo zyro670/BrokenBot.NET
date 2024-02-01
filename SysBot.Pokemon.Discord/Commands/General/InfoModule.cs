@@ -17,7 +17,6 @@ public class InfoModule : ModuleBase<SocketCommandContext>
 {
     private const string detail = "I am an open-source Discord bot powered by PKHeX.Core and other open-source software.";
     private const string repo = "https://github.com/kwsch/SysBot.NET";
-    private const string fork = "https://github.com/Koi-3088/ForkBot.NET";
     private const string notfork = "https://github.com/zyro670/NotForkBot.NET";
 
     [Command("info")]
@@ -34,8 +33,7 @@ public class InfoModule : ModuleBase<SocketCommandContext>
 
         builder.AddField("Info",
             $"- [Original Source Code]({repo})\n" +
-            $"- [This Fork's Source Code]({fork})\n" +
-            $"- [This Fork's Fork Source Code]({notfork})\n" +
+            $"- [This Fork's Source Code]({notfork})\n" +
             $"- {Format.Bold("Owner")}: {app.Owner} ({app.Owner.Id})\n" +
             $"- {Format.Bold("Library")}: Discord.Net ({DiscordConfig.Version})\n" +
             $"- {Format.Bold("Uptime")}: {GetUptime()}\n" +

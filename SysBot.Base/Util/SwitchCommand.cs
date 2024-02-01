@@ -363,6 +363,9 @@ public static class SwitchCommand
     public static byte[] ResetTime(bool crlf = true) 
         => Encode("resetTime", crlf);
 
+    public static byte[] ResetTimeNTP(bool crlf = true)
+    => Encode("resetTimeNTP", crlf);
+
     /// <summary>
     /// Takes and sends a raw screenshot.
     /// </summary>

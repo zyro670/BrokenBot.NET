@@ -91,4 +91,5 @@ public enum PokeEventType
     LegendOfKoi = 27,
     Paradox = 28,
     FroggyFrenzy = 29,
+    Anonymyths = 30,
 }

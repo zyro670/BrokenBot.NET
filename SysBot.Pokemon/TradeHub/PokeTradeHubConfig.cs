@@ -67,7 +67,7 @@ public sealed class PokeTradeHubConfig : BaseConfig
 
     [Category(BotEncounter)]
     [TypeConverter(typeof(ExpandableObjectConverter))]
-    public TIDResetBotSettingsSV TIDResetSV { get; set; } = new();
+    public TIDResetBotSettings TIDReset { get; set; } = new();
 
     [Category(BotEncounter)]
     [TypeConverter(typeof(ExpandableObjectConverter))]

@@ -40,7 +40,7 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
     private int StoryProgress;
     private int EventProgress;
     private int EmptyRaid = 0;
-    private int LostRaid = 0;
+    private int LostRaid;
     private byte FieldID = 0;
     public int RotationCount;
     private ulong TodaySeed;
@@ -114,6 +114,7 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
 
         Log($"Ending {nameof(RotatingRaidBotSV)} loop.");
         await HardStop().ConfigureAwait(false);
+        return;
     }
 
     private void LoadDefaultFile()
@@ -216,6 +217,9 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
         StartTime = DateTime.Now;
         var dayRoll = 0;
         RotationCount = 0;
+        RaidCount = 0;
+        WinCount = 0;
+        LossCount = 0;
         var raidsHosted = 0;
         ulong ofs;
         while (!token.IsCancellationRequested)
@@ -1080,6 +1084,7 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
 
             else
                 code = $"**{(Settings.RaidEmbedParameters[RotationCount].IsCoded && !Settings.HideRaidCode ? await GetRaidCode(token).ConfigureAwait(false) : Settings.RaidEmbedParameters[RotationCount].IsCoded && Settings.HideRaidCode ? "||Is Hidden!||" : "Free For All")}**";
+            Hub.Config.Stream.GetRaidCodeAsset(code.Replace("*", ""));
         }
 
         if (EmptyRaid == Settings.LobbyOptions.EmptyRaidLimit && Settings.LobbyOptions.LobbyMethodOptions == LobbyMethodOptions.OpenLobby)
@@ -1088,7 +1093,7 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
         if (disband) // Wait for trainer to load before disband
             await Task.Delay(5_000, token).ConfigureAwait(false);
 
-        byte[]? bytes = Array.Empty<byte>();
+        byte[]? bytes = [];
         if (Settings.TakeScreenshot && !upnext)
             bytes = await SwitchConnection.PixelPeek(token).ConfigureAwait(false) ?? Array.Empty<byte>();
 

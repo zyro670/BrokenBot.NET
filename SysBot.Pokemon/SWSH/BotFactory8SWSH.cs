@@ -30,6 +30,7 @@ public sealed class BotFactory8SWSH : BotFactory<PK8>
         PokeRoutineType.CurryBot => new CurryBotSWSH(cfg, Hub),
         PokeRoutineType.RollingRaid => new RollingRaidBotSWSH(cfg, Hub),
         PokeRoutineType.OverworldBot => new OverworldBotSWSH(cfg, Hub),
+        PokeRoutineType.TIDResetBot => new TIDResetBotSWSH(cfg, Hub),
 
         PokeRoutineType.RemoteControl => new RemoteControlBotSWSH(cfg),
         _ => throw new ArgumentException(nameof(cfg.NextRoutineType)),
@@ -60,6 +61,7 @@ public sealed class BotFactory8SWSH : BotFactory<PK8>
         PokeRoutineType.CurryBot => true,
         PokeRoutineType.RollingRaid => true,
         PokeRoutineType.OverworldBot => true,
+        PokeRoutineType.TIDResetBot => true,
 
         PokeRoutineType.RemoteControl => true,
 

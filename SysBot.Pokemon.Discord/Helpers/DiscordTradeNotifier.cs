@@ -10,24 +10,15 @@ using Discord.Commands;
 
 namespace SysBot.Pokemon.Discord;
 
-public class DiscordTradeNotifier<T> : IPokeTradeNotifier<T> where T : PKM, new()
+public class DiscordTradeNotifier<T>(T data, PokeTradeTrainerInfo info, int code, SocketUser trader, SocketCommandContext channel) : IPokeTradeNotifier<T> where T : PKM, new()
 {
-    private T Data { get; }
-    private PokeTradeTrainerInfo Info { get; }
-    private int Code { get; }
-    private SocketUser Trader { get; }
-    private SocketCommandContext Context { get; }
+    private T Data { get; } = data;
+    private PokeTradeTrainerInfo Info { get; } = info;
+    private int Code { get; } = code;
+    private SocketUser Trader { get; } = trader;
+    private SocketCommandContext Context { get; } = channel;
     public Action<PokeRoutineExecutor<T>>? OnFinish { private get; set; }
     public readonly PokeTradeHub<T> Hub = SysCord<T>.Runner.Hub;
-
-    public DiscordTradeNotifier(T data, PokeTradeTrainerInfo info, int code, SocketUser trader, SocketCommandContext channel)
-    {
-        Data = data;
-        Info = info;
-        Code = code;
-        Trader = trader;
-        Context = channel;
-    }
 
     public void TradeInitialize(PokeRoutineExecutor<T> routine, PokeTradeDetail<T> info)
     {
@@ -108,6 +99,7 @@ public class DiscordTradeNotifier<T> : IPokeTradeNotifier<T> where T : PKM, new(
                     case PokeTradeType.SupportTrade or PokeTradeType.Giveaway: msg += $"gift!"; break;
                     case PokeTradeType.FixOT: msg += $"fixed OT!"; break;
                     case PokeTradeType.TradeCord: msg += $"prize!"; break;
+                    case PokeTradeType.Seed: msg += $"seed check!"; break;
                 }
                 string TIDFormatted = emb.Generation >= 7 ? $"{emb.TrainerTID7:000000}" : $"{emb.TID16:00000}";
                 var footer = new EmbedFooterBuilder { Text = $"Trainer Info: {emb.OT_Name}/{TIDFormatted}" };

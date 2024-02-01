@@ -16,7 +16,7 @@ public class TIDResetBotSV : PokeRoutineExecutor9SV, IEncounterBot
     private readonly IDumper DumpSetting;
     private readonly int[] DesiredMinIVs;
     private readonly int[] DesiredMaxIVs;
-    private readonly TIDResetBotSettingsSV Settings;
+    private readonly TIDResetBotSettings Settings;
     public ICountSettings Counts => Settings;
     public readonly IReadOnlyList<string> UnwantedMarks;
     private SAV9SV TrainerSav = new();
@@ -24,7 +24,7 @@ public class TIDResetBotSV : PokeRoutineExecutor9SV, IEncounterBot
     public TIDResetBotSV(PokeBotState cfg, PokeTradeHub<PK9> hub) : base(cfg)
     {
         Hub = hub;
-        Settings = Hub.Config.TIDResetSV;
+        Settings = Hub.Config.TIDReset;
         DumpSetting = Hub.Config.Folder;
         StopConditionSettings.InitializeTargetIVs(Hub.Config, out DesiredMinIVs, out DesiredMaxIVs);
         StopConditionSettings.ReadUnwantedMarks(Hub.Config.StopConditions, out UnwantedMarks);
@@ -32,7 +32,7 @@ public class TIDResetBotSV : PokeRoutineExecutor9SV, IEncounterBot
 
     public override async Task MainLoop(CancellationToken token)
     {
-        await InitializeHardware(Hub.Config.TIDResetSV, token).ConfigureAwait(false);
+        await InitializeHardware(Hub.Config.TIDReset, token).ConfigureAwait(false);
         Log("Starting main TIDResetBotSV loop.");
         Config.IterateNextRoutine();
 
@@ -47,6 +47,7 @@ public class TIDResetBotSV : PokeRoutineExecutor9SV, IEncounterBot
 
         Log($"Ending {nameof(TIDResetBotSV)} loop.");
         await HardStop().ConfigureAwait(false);
+        return;
     }
 
     private bool IsWaiting;
@@ -65,7 +66,7 @@ public class TIDResetBotSV : PokeRoutineExecutor9SV, IEncounterBot
         {
             var (TrainerSav, res) = await GetFakeTrainerSAVSV(token).ConfigureAwait(false);
             Log(res);
-            string[] tidList = Hub.Config.TIDResetSV.DesiredTIDs.Trim().Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            string[] tidList = Hub.Config.TIDReset.DesiredTIDs.Trim().Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
             bool desired = tidList.Contains($"{TrainerSav.TrainerTID7}");
             if (desired)
             {

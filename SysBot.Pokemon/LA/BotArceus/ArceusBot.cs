@@ -65,7 +65,7 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
     public override async Task MainLoop(CancellationToken token)
     {
         Log("Identifying trainer data of the host console.");
-        await IdentifyTrainer(token).ConfigureAwait(false);
+        var trainersav = await IdentifyTrainer(token).ConfigureAwait(false);
         await InitializeHardware(Settings, token).ConfigureAwait(false);
         try
         {
@@ -1811,7 +1811,7 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
                 var rng = new Xoroshiro128Plus(generator_seed);
                 rng.Next();
 
-                var genderratio = Settings.SpecialConditions.TypeOfLegend is LegendsOnMap.Heatran ? 127 : 0;
+                var genderratio = Settings.SpecialConditions.TypeOfLegend is LegendsOnMap.Heatran ? 127 : -1;
                 var gen = GenerateFromSeed(rng.Next(), 1, 3, genderratio);
                 pk.Species = (ushort)species;
                 pk.EncryptionConstant = gen.EC;

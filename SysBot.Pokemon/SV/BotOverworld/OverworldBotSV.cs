@@ -31,13 +31,12 @@ public class OverworldBotSV : PokeRoutineExecutor9SV, IEncounterBot
     private int sandwichCounter;
     private int MinimumIngredientCount;
     private static ulong BaseBlockKeyPointer = 0;
-    private ulong PlayerOnMountOffset;
     private ulong PlayerCanMoveOffset;
     private bool GameWasReset = false;
     private SAV9SV TrainerSav = new();
-    private List<byte[]?> coordList = new();
-    private List<int> Condiments = new();
-    private List<int> Fillings = new();
+    private List<byte[]?> coordList = [];
+    private List<int> Condiments = [];
+    private List<int> Fillings = [];
     private int[] Ingredients = new int[4];
     private int[] Sequence = new int[4];
     private bool[] DPADUp = new bool[4];
@@ -84,6 +83,7 @@ public class OverworldBotSV : PokeRoutineExecutor9SV, IEncounterBot
 
         Log($"Ending {nameof(OverworldBotSV)} loop.");
         await HardStop().ConfigureAwait(false);
+        return;
     }
 
     private bool IsWaiting;
@@ -267,7 +267,6 @@ public class OverworldBotSV : PokeRoutineExecutor9SV, IEncounterBot
     {
         BaseBlockKeyPointer = await SwitchConnection.PointerAll(Offsets.BlockKeyPointer, token).ConfigureAwait(false);
         OverworldOffset = await SwitchConnection.PointerAll(Offsets.OverworldPointer, token).ConfigureAwait(false);
-        PlayerOnMountOffset = await SwitchConnection.PointerAll(Offsets.PlayerOnMountPointer, token).ConfigureAwait(false);
         PlayerCanMoveOffset = await SwitchConnection.PointerAll(Offsets.CanPlayerMovePointer, token).ConfigureAwait(false);
         RaidBlockP = await SwitchConnection.PointerAll(Offsets.RaidBlockPointerP, token).ConfigureAwait(false);
         Log("Caching offsets complete!");
@@ -466,6 +465,7 @@ public class OverworldBotSV : PokeRoutineExecutor9SV, IEncounterBot
                 if (GameWasReset)
                     break;
 
+                await Task.Delay(0 + Settings.TimeToWaitBetweenSpawns, token).ConfigureAwait(false);
                 await SVSaveGameOverworld(token).ConfigureAwait(false);
                 var block = await ReadBlock(BaseBlockKeyPointer, Blocks.Overworld, status is 0, token).ConfigureAwait(false);
                 if (status is 0)
@@ -476,7 +476,7 @@ public class OverworldBotSV : PokeRoutineExecutor9SV, IEncounterBot
                     var c = block.AsSpan(0 + (i * 0x1D4) + 0x158, 0xC).ToArray();
                     var pk = new PK9(data);
                     if ((Species)pk.Species == Species.None)
-                        break;
+                        continue;
                     scanCount++;
                     if (pk.Scale is 0)
                         pk.SetRibbonIndex(RibbonIndex.MarkMini);
@@ -903,12 +903,6 @@ public class OverworldBotSV : PokeRoutineExecutor9SV, IEncounterBot
     private async Task<bool> PlayerCannotMove(CancellationToken token)
     {
         var Data = await SwitchConnection.ReadBytesAbsoluteAsync(PlayerCanMoveOffset, 1, token).ConfigureAwait(false);
-        return Data[0] == 0x00; // 0 nope else yes
-    }
-
-    private async Task<bool> PlayerNotOnMount(CancellationToken token)
-    {
-        var Data = await SwitchConnection.ReadBytesAbsoluteAsync(PlayerOnMountOffset, 1, token).ConfigureAwait(false);
         return Data[0] == 0x00; // 0 nope else yes
     }
 

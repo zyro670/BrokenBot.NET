@@ -90,10 +90,9 @@ public static class ReusableActions
         {
             if (StopConditionSettings.HasMark(pk9, out RibbonIndex encmark))
                 mark = $"\nPokémon has the **{encmark.ToString().Replace("Mark", "")} Mark**!";
-
         }
 
-        var extra = new string[] { $"\nOT: {pkm.OT_Name}", $"\nTID: {pkm.GetDisplayTID()}", $"\nSID: {pkm.GetDisplaySID()}", $"{(pkm.IsEgg ? "\nIsEgg: Yes" : "")}", $"{mark.Trim()}" };
+        var extra = new string[] { $"\nOT: {pkm.OT_Name}", $"\nTID: {pkm.GetDisplayTID()}", $"\nSID: {pkm.GetDisplaySID()}", $"{(pkm.IsEgg ? "\nIsEgg: Yes" : "")}", $"\n{mark.Trim()}" };
         newShowdown.InsertRange(1, extra);
         return Format.Code(string.Join("", newShowdown).Trim());
     }

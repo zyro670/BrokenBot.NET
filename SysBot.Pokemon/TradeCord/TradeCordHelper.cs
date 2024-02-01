@@ -328,6 +328,13 @@ public class TradeCordHelper<T> : TradeCordDatabase<T> where T : PKM, new()
                 if (result.Poke.Species is >= (ushort)Species.Sprigatito and <= (ushort)Species.Quaquaval && result.Poke.Ball == (int)Ball.Premier)
                     result.Poke.Ball = (int)Ball.Poke;
 
+                if (Settings.PokeEventType is PokeEventType.Anonymyths)
+                {
+                    if (TradeExtensions<PK9>.Anonymyths.Contains(result.Poke.Species))
+                        result.Poke.Nickname = TradeExtensions<PK9>.ReturnAnonymythsNickname(result.Poke);
+                }
+
+
                 if (!new LegalityAnalysis(result.Poke).Valid)
                     result.Poke = LegalityFixFailure(result.Poke);
 

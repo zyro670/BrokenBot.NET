@@ -39,6 +39,9 @@ public class OverworldSettingsSV : IBotStateSettings, ICountSettings
     [Category(Overworld), Description("Movement Filters"), DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
     public MovementFiltersCategory MovementFilters { get; set; } = new();
 
+    [Category(Overworld), Description("Minimum amount of milliseconds to wait before scanning for spawns.")]
+    public int TimeToWaitBetweenSpawns { get; set; } = 1000;
+
     [Category(Overworld), Description("When enabled, the bot will attempt to collide to your match. As collision is not 100% in SV unlike other games, results may vary. Restart your game if you are somewhere weird.")]
     public bool CollideToMatch { get; set; } = false;
 

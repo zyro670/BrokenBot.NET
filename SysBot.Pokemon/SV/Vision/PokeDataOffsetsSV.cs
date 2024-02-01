@@ -7,7 +7,7 @@ namespace SysBot.Pokemon;
 /// </summary>
 public class PokeDataOffsetsSV
 {
-    public const string SVGameVersion = "3.0.0";
+    public const string SVGameVersion = "3.0.1";
     public const string ScarletID = "0100A3D008C5C000";
     public const string VioletID = "01008F6008C5E000";
     public IReadOnlyList<long> BoxStartPokemonPointer           { get; } = new long[] { 0x47350d8, 0xD8, 0x8, 0xB8, 0x30, 0x9D0, 0x0 };
@@ -30,7 +30,6 @@ public class PokeDataOffsetsSV
     public IReadOnlyList<long> RaidBlockPointerK                { get; } = new long[] { 0x47350D8, 0x1C0, 0x88, 0xCD8 };
     public IReadOnlyList<long> RaidBlockPointerB                { get; } = new long[] { 0x47350D8, 0x1C0, 0x88, 0x1958 };
     public IReadOnlyList<long> RideCollisionPointer             { get; } = new long[] { 0x4734F78, 0x70, 0x48, 0x0, 0x08, 0x80 };
-    public IReadOnlyList<long> PlayerOnMountPointer             { get; } = new long[] { 0x4734F78, 0x70, 0x48, 0x0, 0x0, 0x08, 0x70 };
     public IReadOnlyList<long> CanPlayerMovePointer             { get; } = new long[] { 0x4734F78, 0x70, 0x48, 0x0, 0x0, 0x08, 0x70 };
     public IReadOnlyList<long> BlockKeyPointer                  { get; } = new long[] { 0x47350D8, 0xD8, 0x0, 0x0, 0x30, 0x0 };
     public IReadOnlyList<long> ItemBlock                        { get; } = new long[] { 0x47350D8, 0x1C0, 0xC8, 0x40 };

@@ -29,7 +29,7 @@ public class EggBotSV : PokeRoutineExecutor9SV, IEncounterBot
     private int sandwichcount = 0;
     private PK9 prevPK = new();
     private static readonly PK9 Blank = new();
-    private readonly byte[] BlankVal = { 0x01 };
+    private readonly byte[] BlankVal = [0x01];
     private ulong OverworldOffset;
 
     public override async Task MainLoop(CancellationToken token)
@@ -53,6 +53,7 @@ public class EggBotSV : PokeRoutineExecutor9SV, IEncounterBot
 
         Log($"Ending {nameof(EggBotSV)} loop.");
         await HardStop().ConfigureAwait(false);
+        return;
     }
 
     public override async Task HardStop()
