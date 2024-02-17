@@ -624,36 +624,25 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
             botStartDate = currentTime;
         }
 
-        int daysToRollBack = (botStartDate.Value.Date - currentTime.Date).Days;
-        int hoursToAdjustBack = currentTime.Hour;
+        int hoursToAdjustBack = currentTime.Hour + (Math.Abs((botStartDate.Value.Date - currentTime.Date).Days) * 24);
 
-        if (daysToRollBack != 0 || hoursToAdjustBack != 0)
+        if (hoursToAdjustBack != 0)
         {
+            Log($"Time on Switch does not match the start date, rolling back {hoursToAdjustBack} hours.");
             await CloseGame(Hub.Config, token).ConfigureAwait(false);
-
-            if (daysToRollBack != 0)
-            {
-                for (int day = 0; day < daysToRollBack; day++)
-                {
-                    for (int hour = 0; hour < 24; hour++)
-                    {
-                        await TimeSkipBwd(token).ConfigureAwait(false);
-                    }
-                }
-            }
 
             if (hoursToAdjustBack > 0)
             {
                 for (int i = 0; i < hoursToAdjustBack; i++)
                 {
                     await TimeSkipBwd(token).ConfigureAwait(false);
+                    await Task.Delay(0_050, token).ConfigureAwait(false);
                 }
             }
-
+            await Task.Delay(0_500, token).ConfigureAwait(false);
             await StartGame(Hub.Config, token).ConfigureAwait(false);
+            Log($"Time on Switch set to {currentTime.Date:d} {currentTime.Hour:00}:{currentTime.Minute:00}");
         }
-
-        Log($"Time on Switch set to {currentTime.Hour:00}:{currentTime.Minute:00}");
     }
 
     public async Task HourlyCheckAndAdjust(CancellationToken token)
