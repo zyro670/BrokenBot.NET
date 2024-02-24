@@ -59,6 +59,7 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
     private List<BanList> GlobalBanList = [];
     private SAV9SV HostSAV = new();
     private DateTime StartTime = DateTime.Now;
+    private static DateTime? botStartDate = null;
     private RaidContainer? container;
 
     public override async Task MainLoop(CancellationToken token)
@@ -222,6 +223,9 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
         LossCount = 0;
         var raidsHosted = 0;
         ulong ofs;
+        if (Settings.RolloverFilters.PreventRollover)
+            await ResetAndSetSwitchTime(token).ConfigureAwait(false);
+
         while (!token.IsCancellationRequested)
         {
             // Initialize offsets at the start of the routine and cache them.
@@ -607,6 +611,51 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
         List<long> ptr = new(Offsets.RaidBlockPointerP);
         ptr[3] += 0x8;
         await SwitchConnection.PointerPoke(todayoverride, ptr, token).ConfigureAwait(false);
+    }
+
+    public async Task ResetAndSetSwitchTime(CancellationToken token)
+    {
+        long unixTime = await SwitchConnection.GetUnixTime(token).ConfigureAwait(false);
+        DateTime epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        DateTime currentTime = epoch.AddSeconds(unixTime);
+
+        if (botStartDate == null)
+        {
+            botStartDate = currentTime;
+        }
+
+        int hoursToAdjustBack = currentTime.Hour + (Math.Abs((botStartDate.Value.Date - currentTime.Date).Days) * 24);
+
+        if (hoursToAdjustBack != 0)
+        {
+            Log($"Time on Switch does not match the start date, rolling back {hoursToAdjustBack} hours.");
+            await CloseGame(Hub.Config, token).ConfigureAwait(false);
+
+            if (hoursToAdjustBack > 0)
+            {
+                for (int i = 0; i < hoursToAdjustBack; i++)
+                {
+                    await TimeSkipBwd(token).ConfigureAwait(false);
+                    await Task.Delay(0_050, token).ConfigureAwait(false);
+                }
+            }
+            await Task.Delay(0_500, token).ConfigureAwait(false);
+            await StartGame(Hub.Config, token).ConfigureAwait(false);
+            Log($"Time on Switch set to {currentTime.Date:d} {currentTime.Hour:00}:{currentTime.Minute:00}");
+        }
+    }
+
+    public async Task HourlyCheckAndAdjust(CancellationToken token)
+    {
+        long currentUnixTime = await SwitchConnection.GetUnixTime(token).ConfigureAwait(false);
+        DateTime epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        DateTime currentTime = epoch.AddSeconds(currentUnixTime);
+
+        if (currentTime.Hour >= 1)
+        {
+            Log("An hour has passed, that's a no-no! Go back!");
+            await TimeSkipBwd(token).ConfigureAwait(false);
+        }
     }
 
     private async Task OverrideSeedIndex(int index, CancellationToken token)
@@ -1251,6 +1300,9 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
     public async Task StartGameRaid(PokeTradeHubConfig config, CancellationToken token)
     {
         var timing = config.Timings;
+        if (Settings.RolloverFilters.PreventRollover)
+            await HourlyCheckAndAdjust(token).ConfigureAwait(false);
+
         await Click(A, 1_000 + timing.ExtraTimeLoadProfile, token).ConfigureAwait(false);
         if (timing.AvoidSystemUpdate)
         {
