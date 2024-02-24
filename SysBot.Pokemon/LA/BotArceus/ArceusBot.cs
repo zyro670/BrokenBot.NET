@@ -1454,8 +1454,8 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
             poke.Item1.SetIVs(pkIVList);
             (pkIVList[5], pkIVList[3], pkIVList[4]) = (pkIVList[3], pkIVList[4], pkIVList[5]);
             poke.Item1.IVs = pkIVList;
-            poke.Item1.Nature = (int)gen.Item8;
-            poke.Item1.Gender = gen.gender;
+            poke.Item1.Nature = (Nature)gen.Item8;
+            poke.Item1.Gender = (byte)gen.gender;
 
             if (gen.shiny)
                 CommonEdits.SetShiny(poke.Item1, Shiny.Always);
@@ -1488,8 +1488,8 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
             poke.Item1.IVs = pkIVList;
             poke.Item1.EncryptionConstant = gen.EC;
             poke.Item1.PID = gen.PID;
-            poke.Item1.Nature = (int)gen.Item8;
-            poke.Item1.Gender = gen.gender;
+            poke.Item1.Nature = (Nature)(int)gen.Item8;
+            poke.Item1.Gender = (byte)gen.gender;
 
             if (gen.shiny)
                 CommonEdits.SetShiny(poke.Item1, Shiny.Always);
@@ -1523,8 +1523,8 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
                 poke.Item1.IVs = pkIVList;
                 poke.Item1.EncryptionConstant = gen.EC;
                 poke.Item1.PID = gen.PID;
-                poke.Item1.Nature = (int)gen.Item8;
-                poke.Item1.Gender = gen.gender;
+                poke.Item1.Nature = (Nature)gen.Item8;
+                poke.Item1.Gender = (byte)gen.gender;
 
                 if (gen.shiny)
                     CommonEdits.SetShiny(poke.Item1, Shiny.Always);
@@ -1557,8 +1557,8 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
                 poke.Item1.SetIVs(pkIVList);
                 (pkIVList[5], pkIVList[3], pkIVList[4]) = (pkIVList[3], pkIVList[4], pkIVList[5]);
                 poke.Item1.IVs = pkIVList;
-                poke.Item1.Nature = (int)gen.Item8;
-                poke.Item1.Gender = gen.gender;
+                poke.Item1.Nature = (Nature)gen.Item8;
+                poke.Item1.Gender = (byte)gen.gender;
 
                 if (gen.shiny)
                     CommonEdits.SetShiny(poke.Item1, Shiny.Always);
@@ -1599,8 +1599,8 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
             pk.SetIVs(pkIVList);
             (pkIVList[5], pkIVList[3], pkIVList[4]) = (pkIVList[3], pkIVList[4], pkIVList[5]);
             pk.IVs = pkIVList;
-            pk.Nature = gen.Item8;
-            pk.Gender = gen.gender;
+            pk.Nature = (Nature)gen.Item8;
+            pk.Gender = (byte)gen.gender;
             pk.IsAlpha = alpha;
 
             if (gen.shiny)
@@ -1639,9 +1639,9 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
             pk.SetIVs(pkIVList);
             (pkIVList[5], pkIVList[3], pkIVList[4]) = (pkIVList[3], pkIVList[4], pkIVList[5]);
             pk.IVs = pkIVList;
-            pk.Nature = (int)gen.Item8;
+            pk.Nature = (Nature)gen.Item8;
             pk.IsAlpha = alpha;
-            pk.Gender = gen.gender;
+            pk.Gender = (byte)gen.gender;
 
             if (gen.shiny)
                 CheckEmbed(pk, "", "", CancellationToken.None).ConfigureAwait(false);
@@ -1701,8 +1701,8 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
         pk.SetIVs(pkIVList);
         (pkIVList[5], pkIVList[3], pkIVList[4]) = (pkIVList[3], pkIVList[4], pkIVList[5]);
         pk.IVs = pkIVList;
-        pk.Nature = (int)gen.Item8;
-        pk.Gender = gen.gender;
+        pk.Nature = (Nature)gen.Item8;
+        pk.Gender = (byte)gen.gender;
 
         if (gen.shiny)
         {
@@ -1745,7 +1745,7 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
             pk.IV_SPA = gen.IVs[3];
             pk.IV_SPD = gen.IVs[4];
             pk.IV_SPE = gen.IVs[5];
-            pk.Nature = (int)gen.nature;
+            pk.Nature = (Nature)gen.nature;
             if (StopConditionSettings.EncounterFound(pk, DesiredMinIVs, DesiredMaxIVs, Hub.Config.StopConditions, null))
             {
                 Settings.AlphaScanConditions.StopOnMatch = true;
@@ -1822,8 +1822,8 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
                 pk.IV_SPA = gen.IVs[3];
                 pk.IV_SPD = gen.IVs[4];
                 pk.IV_SPE = gen.IVs[5];
-                pk.Nature = gen.nature;
-                pk.Gender = gen.gender;
+                pk.Nature = (Nature)gen.nature;
+                pk.Gender = (byte)gen.gender;
 
                 if (StopConditionSettings.EncounterFound(pk, DesiredMinIVs, DesiredMaxIVs, Hub.Config.StopConditions, null))
                 {

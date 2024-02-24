@@ -1465,7 +1465,7 @@ public sealed class OverworldBotSWSH : PokeRoutineExecutor8SWSH, IEncounterBot
             PK8 pk = new PK8
             {
                 Species = (ushort)species,
-                Gender = (data[10] == 1) ? 0 : 1,
+                Gender = (byte)((data[10] == 1) ? 0 : 1),
             };
             if (data[22] != 255)
                 pk.SetRibbonIndex((RibbonIndex)data[22]);
@@ -1550,24 +1550,24 @@ public sealed class OverworldBotSWSH : PokeRoutineExecutor8SWSH, IEncounterBot
 
         if (shinytype == 1)
         {
-            PK8 pk = new PK8
+            PK8 pk = new()
             {
                 Species = (ushort)(int)species,
                 Form = data[2],
                 CurrentLevel = data[4],
-                Met_Level = data[4],
-                Gender = (data[10] == 1) ? 0 : 1,
+                MetLevel = data[4],
+                Gender = (byte)((data[10] == 1) ? 0 : 1),
                 Language = 2,
-                OT_Name = TrainerData.OT,
+                OriginalTrainerName = TrainerData.OT,
                 TID16 = TrainerData.TID16,
                 SID16 = TrainerData.SID16,
                 TrainerTID7 = TrainerData.TrainerTID7,
                 TrainerSID7 = TrainerData.TrainerSID7,
-                OT_Gender = TrainerData.Gender,
-                HT_Name = TrainerData.OT,
-                HT_Gender = TrainerData.Gender,
+                OriginalTrainerGender = TrainerData.Gender,
+                HandlingTrainerName = TrainerData.OT,
+                HandlingTrainerGender = TrainerData.Gender,
             };
-            pk.SetNature(data[8]);
+            pk.SetNature((Nature)data[8]);
             pk.SetAbility(data[12] - 1);
             if (data[22] != 255)
                 pk.SetRibbonIndex((RibbonIndex)data[22]);
@@ -1579,9 +1579,9 @@ public sealed class OverworldBotSWSH : PokeRoutineExecutor8SWSH, IEncounterBot
             pk.IsNicknamed = false;
 
             if (Version == GameVersion.SW)
-                pk.Version = 44;
+                pk.Version = (GameVersion)44;
             if (Version == GameVersion.SH)
-                pk.Version = 45;
+                pk.Version = (GameVersion)45;
 
             Move Move1 = (Move)BitConverter.ToUInt16(data.AsSpan(48, 2).ToArray(), 0);
             if (Move1 != 0)

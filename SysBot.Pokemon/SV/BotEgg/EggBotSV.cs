@@ -400,19 +400,19 @@ public class EggBotSV : PokeRoutineExecutor9SV, IEncounterBot
     {
         pk.IsEgg = true;
         pk.Nickname = "Egg";
-        pk.Met_Location = 0;
-        pk.Egg_Location = 30023;
+        pk.MetLocation = 0;
+        pk.EggLocation = 30023;
         pk.MetDate = DateOnly.Parse("2023/02/17");
         pk.EggMetDate = pk.MetDate;
-        pk.OT_Name = "ZYZYZYZY";
+        pk.OriginalTrainerName = "ZYZYZYZY";
         pk.HeldItem = 0;
         pk.CurrentLevel = 1;
         pk.EXP = 0;
-        pk.Met_Level = 1;
+        pk.MetLevel = 1;
         pk.CurrentHandler = 0;
-        pk.OT_Friendship = 1;
-        pk.HT_Name = "";
-        pk.HT_Friendship = 0;
+        pk.OriginalTrainerFriendship = 1;
+        pk.HandlingTrainerName = "";
+        pk.HandlingTrainerFriendship = 0;
         pk.ClearMemories();
         pk.StatNature = pk.Nature;
         pk.SetEVs(new int[] { 0, 0, 0, 0, 0, 0 });

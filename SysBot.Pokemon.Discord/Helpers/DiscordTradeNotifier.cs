@@ -87,7 +87,7 @@ public class DiscordTradeNotifier<T>(T data, PokeTradeTrainerInfo info, int code
                 if (index > 0)
                     markEntryText = MarkTitle[index];
 
-                var specitem = emb.HeldItem != 0 ? $"{SpeciesName.GetSpeciesNameGeneration(emb.Species, 2, emb.Generation <= 8 ? 8 : 9)}{TradeExtensions<T>.FormOutput(emb.Species, emb.Form, out _) + " (" + ShowdownParsing.GetShowdownText(emb).Split('@', '\n')[1].Trim() + ")"}" : $"{SpeciesName.GetSpeciesNameGeneration(emb.Species, 2, emb.Generation <= 8 ? 8 : 9) + TradeExtensions<T>.FormOutput(emb.Species, emb.Form, out _)}{markEntryText}";
+                var specitem = emb.HeldItem != 0 ? $"{SpeciesName.GetSpeciesNameGeneration(emb.Species, 2, (byte)(emb.Generation <= 8 ? 8 : 9))}{TradeExtensions<T>.FormOutput(emb.Species, emb.Form, out _) + " (" + ShowdownParsing.GetShowdownText(emb).Split('@', '\n')[1].Trim() + ")"}" : $"{SpeciesName.GetSpeciesNameGeneration(emb.Species, 2, (byte)(emb.Generation <= 8 ? 8 : 9)) + TradeExtensions<T>.FormOutput(emb.Species, emb.Form, out _)}{markEntryText}";
 
                 var msg = "Displaying your ";
                 var mode = info.Type;
@@ -102,7 +102,7 @@ public class DiscordTradeNotifier<T>(T data, PokeTradeTrainerInfo info, int code
                     case PokeTradeType.Seed: msg += $"seed check!"; break;
                 }
                 string TIDFormatted = emb.Generation >= 7 ? $"{emb.TrainerTID7:000000}" : $"{emb.TID16:00000}";
-                var footer = new EmbedFooterBuilder { Text = $"Trainer Info: {emb.OT_Name}/{TIDFormatted}" };
+                var footer = new EmbedFooterBuilder { Text = $"Trainer Info: {emb.OriginalTrainerName}/{TIDFormatted}" };
                 var author = new EmbedAuthorBuilder { Name = $"{Context.User.Username}'s Pokémon" };
                 if (!Hub.Config.TradeCord.UseLargerPokeBalls)
                     ballImg = "";

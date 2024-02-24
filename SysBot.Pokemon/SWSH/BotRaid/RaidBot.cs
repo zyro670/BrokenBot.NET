@@ -141,7 +141,7 @@ public class RaidBotSWSH : PokeRoutineExecutor8SWSH, ICountBot
         {
             if (!Settings.DenIsWatchtower)
             {
-                int level = boss.Met_Level;
+                int level = boss.MetLevel;
                 string message = level switch
                 {
                     17 => $"1 ★",
@@ -155,7 +155,7 @@ public class RaidBotSWSH : PokeRoutineExecutor8SWSH, ICountBot
             }
             if (Settings.DenIsWatchtower)
             {
-                int level = boss.Met_Level;
+                int level = boss.MetLevel;
                 string message = level switch
                 {
                     15 => $"1 ★",

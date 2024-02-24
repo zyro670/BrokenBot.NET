@@ -579,20 +579,20 @@ public class OverworldBotSV : PokeRoutineExecutor9SV, IEncounterBot
             var prevXOR = pk.ShinyXor;
             pk.TID16 = TrainerSav.TID16;
             pk.SID16 = TrainerSav.SID16;
-            pk.OT_Name = TrainerSav.OT;
-            pk.OT_Gender = TrainerSav.Gender;
-            pk.Obedience_Level = (byte)pk.Met_Level;
+            pk.OriginalTrainerName = TrainerSav.OT;
+            pk.OriginalTrainerGender = TrainerSav.Gender;
+            pk.Obedience_Level = (byte)pk.MetLevel;
             pk.FatefulEncounter = false;
             pk.Language = TrainerSav.Language;
             pk.EncryptionConstant = prevEC;
-            pk.Version = (int)TrainerSav.Version;
+            pk.Version = TrainerSav.Version;
             pk.MetDate = DateOnly.FromDateTime(DateTime.Now);
             pk.PID = (uint)((pk.TID16 ^ pk.SID16 ^ (prevPID & 0xFFFF) ^ prevXOR) << 16) | (prevPID & 0xFFFF); // Ty Manu098vm!!
             var enc = EncounterSuggestion.GetSuggestedMetInfo(pk);
             if (enc != null)
             {
                 int location = enc.Location;
-                pk.Met_Location = location;
+                pk.MetLocation = (ushort)location;
             }
             pk.LegalizePokemon();
             DumpPokemon(DumpSetting.DumpFolder, "overworld", pk);

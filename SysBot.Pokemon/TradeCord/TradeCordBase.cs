@@ -767,7 +767,7 @@ public abstract class TradeCordBase<T> where T : PKM, new()
     {
         baseSpecies = 0;
         baseForm = 0;
-        var name = SpeciesName.GetSpeciesNameGeneration(species, 2, Game == GameVersion.SV ? 9 : 8);
+        var name = SpeciesName.GetSpeciesNameGeneration(species, 2, (byte)(Game == GameVersion.SV ? 9 : 8));
         var formStr = TradeExtensions<T>.FormOutput(species, form, out _);
         if (name.Contains("Nidoran"))
             name = name.Remove(name.Length - 1);
@@ -810,7 +810,7 @@ public abstract class TradeCordBase<T> where T : PKM, new()
             var la = new LegalityAnalysis(pk);
             if (!la.Valid)
             {
-                var sav = new SimpleTrainerInfo() { OT = pk.OT_Name, Gender = pk.OT_Gender, Generation = pk.Generation, Language = pk.Language, SID16 = pk.SID16, TID16 = pk.TID16 };
+                var sav = new SimpleTrainerInfo() { OT = pk.OriginalTrainerName, Gender = pk.OriginalTrainerGender, Generation = pk.Generation, Language = pk.Language, SID16 = pk.SID16, TID16 = pk.TID16 };
                 var results = la.Results.FirstOrDefault(x => !x.Valid && x.Identifier != CheckIdentifier.Memory);
                 var enc = new LegalityAnalysis(pk).EncounterMatch;
                 if (results != default)
@@ -819,19 +819,19 @@ public abstract class TradeCordBase<T> where T : PKM, new()
                     {
                         case CheckIdentifier.Evolution:
                             {
-                                if (pk.Species is (ushort)Lickilicky && pk.Met_Location is not 162 && pk.Met_Location is not 244 && !pk.RelearnMoves.ToList().Contains(205))
+                                if (pk.Species is (ushort)Lickilicky && pk.MetLocation is not 162 && pk.MetLocation is not 244 && !pk.RelearnMoves.ToList().Contains(205))
                                     TradeCordBase<T>.SetMoveOrRelearnByIndex(pk, 205, true);
                             }; break;
                         case CheckIdentifier.Encounter:
                             {
-                                if (pk.Met_Location is 162)
+                                if (pk.MetLocation is 162)
                                 {
                                     pk.SetAbilityIndex(0);
-                                    while (!new LegalityAnalysis(pk).Valid && pk.Met_Level < 60)
+                                    while (!new LegalityAnalysis(pk).Valid && pk.MetLevel < 60)
                                     {
-                                        pk.Met_Level += 1;
-                                        if (pk.CurrentLevel < pk.Met_Level)
-                                            pk.CurrentLevel = pk.Met_Level + 1;
+                                        pk.MetLevel += 1;
+                                        if (pk.CurrentLevel < pk.MetLevel)
+                                            pk.CurrentLevel = (byte)(pk.MetLevel + 1);
                                     }
                                 }
                             }; break;
@@ -1014,21 +1014,23 @@ public abstract class TradeCordBase<T> where T : PKM, new()
                                         balls.Remove(Ball.Master);
                                         balls.Remove(Ball.Cherish);
                                     }
-                                    pk.Ball = (int)balls[Random.Next(balls.Count)];
+                                    pk.Ball = (byte)(int)balls[Random.Next(balls.Count)];
                                 }; break;
                             case CheckIdentifier.Memory: pk.SetSuggestedMemories(); pk.SetSuggestedContestStats(la.EncounterMatch); break;
                             case CheckIdentifier.Encounter when results.FirstOrDefault(x => x.Identifier is CheckIdentifier.Ball || x.Identifier is CheckIdentifier.Memory) == default:
                                 {
-                                    List<string> extra = new();
-                                    extra.AddRange(new string[]
-                                    {
-                                        $"Ball: {(Ball)pk.Ball}",
-                                        $"OT: {pk.OT_Name}",
-                                        $"OTGender: {(Gender)pk.OT_Gender}",
-                                        $"TID: {pk.TID16}",
-                                        $"SID: {pk.SID16}",
-                                        $"Language: {(LanguageID)pk.Language}",
-                                    });
+                                    List<string> extra =
+                                    [
+                                        .. new string[]
+                                        {
+                                            $"Ball: {(Ball)pk.Ball}",
+                                            $"OT: {pk.OriginalTrainerName}",
+                                            $"OTGender: {(Gender)pk.OriginalTrainerGender}",
+                                            $"TID: {pk.TID16}",
+                                            $"SID: {pk.SID16}",
+                                            $"Language: {(LanguageID)pk.Language}",
+                                        },
+                                    ];
 
                                     var showdown = ShowdownParsing.GetShowdownText(pk).Replace("\r", "").Split('\n').ToList();
                                     showdown.InsertRange(1, extra);
@@ -1067,8 +1069,8 @@ public abstract class TradeCordBase<T> where T : PKM, new()
                 var obj = new object[] { pk.DecryptedPartyData, user_id, catch_id };
                 cmds.Add(new() { CommandText = "update binary_catches set data = ? where user_id = ? and id = ?", Names = names, Values = obj });
 
-                names = new string[] { "@is_shiny", "@ball", "@nickname", "@form", "@is_egg", "@is_event", "@user_id", "@id" };
-                obj = new object[] { pk.IsShiny, $"{(Ball)pk.Ball}", pk.Nickname, form, pk.IsEgg, pk.FatefulEncounter, user_id, catch_id };
+                names = ["@is_shiny", "@ball", "@nickname", "@form", "@is_egg", "@is_event", "@user_id", "@id"];
+                obj = [pk.IsShiny, $"{(Ball)pk.Ball}", pk.Nickname, form, pk.IsEgg, pk.FatefulEncounter, user_id, catch_id];
                 cmds.Add(new() { CommandText = "update catches set is_shiny = ?, ball = ?, nickname = ?, form = ?, is_egg = ?, is_event = ? where user_id = ? and id = ?", Names = names, Values = obj });
                 updated++;
             }
@@ -1116,21 +1118,23 @@ public abstract class TradeCordBase<T> where T : PKM, new()
                                     balls.Remove(Ball.Master);
                                     balls.Remove(Ball.Cherish);
                                 }
-                                pk.Ball = (int)balls[Random.Next(balls.Count)];
+                                pk.Ball = (byte)(int)balls[Random.Next(balls.Count)];
                             }; break;
                         case CheckIdentifier.Memory: pk.SetSuggestedMemories(); pk.SetSuggestedContestStats(la.EncounterMatch); break;
                         case CheckIdentifier.Encounter when results.FirstOrDefault(x => x.Identifier is CheckIdentifier.Ball || x.Identifier is CheckIdentifier.Memory) == default:
                             {
-                                List<string> extra = new();
-                                extra.AddRange(new string[]
-                                {
-                                        $"Ball: {(Ball)pk.Ball}",
-                                        $"OT: {pk.OT_Name}",
-                                        $"OTGender: {(Gender)pk.OT_Gender}",
-                                        $"TID: {pk.TID16}",
-                                        $"SID: {pk.SID16}",
-                                        $"Language: {(LanguageID)pk.Language}",
-                                });
+                                List<string> extra =
+                                [
+                                    .. new string[]
+                                    {
+                                            $"Ball: {(Ball)pk.Ball}",
+                                            $"OT: {pk.OriginalTrainerName}",
+                                            $"OTGender: {(Gender)pk.OriginalTrainerGender}",
+                                            $"TID: {pk.TID16}",
+                                            $"SID: {pk.SID16}",
+                                            $"Language: {(LanguageID)pk.Language}",
+                                    },
+                                ];
 
                                 var showdown = ShowdownParsing.GetShowdownText(pk).Replace("\r", "").Split('\n').ToList();
                                 showdown.InsertRange(1, extra);
@@ -1151,7 +1155,7 @@ public abstract class TradeCordBase<T> where T : PKM, new()
     {
         Base.EchoUtil.Echo("Beginning to scan for and fix legality errors. This may take a while.");
         int updated = 0;
-        List<SQLCommand> cmds = new();
+        List<SQLCommand> cmds = [];
         var cmd = Connection.CreateCommand();
 
         cmd.CommandText = "select * from binary_catches";
@@ -1181,21 +1185,23 @@ public abstract class TradeCordBase<T> where T : PKM, new()
                                         balls.Remove(Ball.Master);
                                         balls.Remove(Ball.Cherish);
                                     }
-                                    pk.Ball = (int)balls[Random.Next(balls.Count)];
+                                    pk.Ball = (byte)(int)balls[Random.Next(balls.Count)];
                                 }; break;
                             case CheckIdentifier.Memory: pk.SetSuggestedMemories(); pk.SetSuggestedContestStats(la.EncounterMatch); break;
                             case CheckIdentifier.Encounter when results.FirstOrDefault(x => x.Identifier is CheckIdentifier.Ball || x.Identifier is CheckIdentifier.Memory) == default:
                                 {
-                                    List<string> extra = new();
-                                    extra.AddRange(new string[]
-                                    {
-                                        $"Ball: {(Ball)pk.Ball}",
-                                        $"OT: {pk.OT_Name}",
-                                        $"OTGender: {(Gender)pk.OT_Gender}",
-                                        $"TID: {pk.TID16}",
-                                        $"SID: {pk.SID16}",
-                                        $"Language: {(LanguageID)pk.Language}",
-                                    });
+                                    List<string> extra =
+                                    [
+                                        .. new string[]
+                                        {
+                                            $"Ball: {(Ball)pk.Ball}",
+                                            $"OT: {pk.OriginalTrainerName}",
+                                            $"OTGender: {(Gender)pk.OriginalTrainerGender}",
+                                            $"TID: {pk.TID16}",
+                                            $"SID: {pk.SID16}",
+                                            $"Language: {(LanguageID)pk.Language}",
+                                        },
+                                    ];
 
                                     var showdown = ShowdownParsing.GetShowdownText(pk).Replace("\r", "").Split('\n').ToList();
                                     showdown.InsertRange(1, extra);
@@ -1234,8 +1240,8 @@ public abstract class TradeCordBase<T> where T : PKM, new()
                 var obj = new object[] { pk.DecryptedPartyData, user_id, catch_id };
                 cmds.Add(new() { CommandText = "update binary_catches set data = ? where user_id = ? and id = ?", Names = names, Values = obj });
 
-                names = new string[] { "@is_shiny", "@ball", "@nickname", "@form", "@is_egg", "@is_event", "@user_id", "@id" };
-                obj = new object[] { pk.IsShiny, $"{(Ball)pk.Ball}", pk.Nickname, form, pk.IsEgg, pk.FatefulEncounter, user_id, catch_id };
+                names = ["@is_shiny", "@ball", "@nickname", "@form", "@is_egg", "@is_event", "@user_id", "@id"];
+                obj = [pk.IsShiny, $"{(Ball)pk.Ball}", pk.Nickname, form, pk.IsEgg, pk.FatefulEncounter, user_id, catch_id];
                 cmds.Add(new() { CommandText = "update catches set is_shiny = ?, ball = ?, nickname = ?, form = ?, is_egg = ?, is_event = ? where user_id = ? and id = ?", Names = names, Values = obj });
                 updated++;
             }
@@ -1266,7 +1272,7 @@ public abstract class TradeCordBase<T> where T : PKM, new()
     {
         Base.EchoUtil.Echo("Beginning to scan for improper Gmax flags. This may take a while.");
         int updated = 0;
-        List<SQLCommand> cmds = new();
+        List<SQLCommand> cmds = [];
         var cmd = Connection.CreateCommand();
         var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
 
@@ -1361,7 +1367,7 @@ public abstract class TradeCordBase<T> where T : PKM, new()
                     _ => "",
                 };
 
-                var set = new ShowdownSet($"{SpeciesName.GetSpeciesNameGeneration(i, 2, Game is GameVersion.SV ? 9 : 8)}{TradeExtensions<T>.FormOutput(i, f, out _)}{gender}");
+                var set = new ShowdownSet($"{SpeciesName.GetSpeciesNameGeneration(i, 2, (byte)(Game is GameVersion.SV ? 9 : 8))}{TradeExtensions<T>.FormOutput(i, f, out _)}{gender}");
                 var templateS = AutoLegalityWrapper.GetTemplate(set);
                 var blank = sav.GetLegal(templateS, out string result);
                 if (result != "Regenerated")

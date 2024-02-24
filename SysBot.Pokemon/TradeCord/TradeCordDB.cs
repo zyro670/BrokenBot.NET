@@ -23,8 +23,8 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
         var nature = pkm.Nature;
         pkm.Nature = pkm.Species switch
         {
-            (ushort)Species.Toxtricity => pkm.Form > 0 ? TradeExtensions<PK8>.LowKey[Random.Next(TradeExtensions<PK8>.LowKey.Length)] : TradeExtensions<PK8>.Amped[Random.Next(TradeExtensions<PK8>.Amped.Length)],
-            _ => Random.Next(25),
+            (ushort)Species.Toxtricity => pkm.Form > 0 ? (Nature)TradeExtensions<PK8>.LowKey[Random.Next(TradeExtensions<PK8>.LowKey.Length)] : (Nature)TradeExtensions<PK8>.Amped[Random.Next(TradeExtensions<PK8>.Amped.Length)],
+            _ => (Nature)Random.Next(25),
         };
 
         var la = new LegalityAnalysis(pkm);
@@ -156,7 +156,7 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
 
         if (enc is not EncounterStatic8b && !pkm.FatefulEncounter)
         {
-            pkm.Nature = Random.Next(25);
+            pkm.Nature = (Nature)Random.Next(25);
             pkm.StatNature = pkm.Nature;
             if (enc is EncounterSlot8b slot8)
                 pkm.SetAbilityIndex(slot8.Ability is AbilityPermission.Any12H && slot8.CanUseRadar && !slot8.EggEncounter ? Random.Next(3) : slot8.Ability is AbilityPermission.Any12 ? Random.Next(2) : slot8.Ability is AbilityPermission.OnlyFirst ? 0 : slot8.Ability is AbilityPermission.OnlySecond ? 1 : 2);
@@ -203,7 +203,7 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
 
         if (enc is not EncounterStatic9 && !pkm.FatefulEncounter)
         {
-            pkm.Nature = Random.Next(25);
+            pkm.Nature = (Nature)Random.Next(25);
             pkm.StatNature = pkm.Nature;
             if (enc is EncounterSlot9 slot9)
                 pkm.SetAbilityIndex(slot9.Ability is AbilityPermission.Any12H && !slot9.EggEncounter ? Random.Next(3) : slot9.Ability is AbilityPermission.Any12 ? Random.Next(2) : slot9.Ability is AbilityPermission.OnlyFirst ? 0 : slot9.Ability is AbilityPermission.OnlySecond ? 1 : 2);
@@ -260,7 +260,7 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
         }
         else formName = TradeExtensions<T>.FormOutput(speciesID, formID, out _);
 
-        var speciesName = SpeciesName.GetSpeciesNameGeneration(speciesID, 2, generation);
+        var speciesName = SpeciesName.GetSpeciesNameGeneration(speciesID, 2, (byte)generation);
         if (speciesName.Contains("Nidoran"))
             speciesName = speciesName.Remove(speciesName.Length - 1);
 
@@ -271,7 +271,7 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
             _ => formName,
         };
 
-        if (speciesID is (ushort)Species.Rotom || FormInfo.IsBattleOnlyForm(speciesID, formID, generation) || !Breeding.CanHatchAsEgg(speciesID, formID, (EntityContext)generation))
+        if (speciesID is (ushort)Species.Rotom || FormInfo.IsBattleOnlyForm(speciesID, formID, (byte)generation) || !Breeding.CanHatchAsEgg(speciesID, formID, (EntityContext)generation))
             formName = "";
 
         var set = new ShowdownSet($"Egg({speciesName}{formName}){shinyRng}\n{trainerInfo}");
@@ -280,14 +280,14 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
         var pk = (T)sav.GetLegal(template, out string result);
 
         var ballRngDC = Random.Next(1, 3);
-        pk.Ball = ballRngDC is 1 ? balls[0] : balls[1];
+        pk.Ball = (byte)(ballRngDC is 1 ? balls[0] : balls[1]);
         if (!pk.ValidBall())
             pk.Ball = BallApplicator.ApplyBallLegalRandom(pk);
 
         TradeExtensions<T>.EggTrade(pk, template);
         pk.SetAbilityIndex(Random.Next(Game is GameVersion.SWSH ? 3 : 2));
 
-        pk.Nature = Random.Next(25);
+        pk.Nature = (Nature)Random.Next(25);
         pk.StatNature = pk.Nature;
         pk.SetRandomIVs(Random.Next(2, 7));
         return pk;
@@ -438,7 +438,7 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
             case EvolutionType.TradeShelmetKarrablast:
                 {
                     var clone = pk.Clone();
-                    clone.OT_Name = "Nishikigoi";
+                    clone.OriginalTrainerName = "Nishikigoi";
                     var trainer = new PokeTrainerDetails(clone);
                     var encShelm = new LegalityAnalysis(pk).EncounterMatch;
                 }; break;
@@ -504,15 +504,15 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
         bool applyMoves = false;
         bool edgeEvos = (pk.Species is (ushort)Species.Koffing && result.EvolvedForm is 0) || ((pk.Species is (ushort)Species.Exeggcute || pk.Species is (ushort)Species.Pikachu || pk.Species is (ushort)Species.Cubone) && result.EvolvedForm > 0);
         var enc = new LegalityAnalysis(pk).EncounterMatch;
-        var sav = new SimpleTrainerInfo() { OT = pk.OT_Name, Gender = pk.OT_Gender, Generation = pk.Version, Language = pk.Language, SID16 = pk.SID16, TID16 = pk.TID16, Context = Game is GameVersion.BDSP ? EntityContext.Gen8b : EntityContext.Gen8 };
+        var sav = new SimpleTrainerInfo() { OT = pk.OriginalTrainerName, Gender = pk.OriginalTrainerGender, Generation = (byte)pk.Version, Language = pk.Language, SID16 = pk.SID16, TID16 = pk.TID16, Context = Game is GameVersion.BDSP ? EntityContext.Gen8b : EntityContext.Gen8 };
 
         if (typeof(T) == typeof(PK8) && pk.Generation is 8 && edgeEvos)
         {
             applyMoves = true;
-            int version = pk.Version;
-            pk.Version = (int)GameVersion.UM;
-            pk.Met_Location = 78; // Paniola Ranch
-            pk.Met_Level = 1;
+            int version = (int)pk.Version;
+            pk.Version = GameVersion.UM;
+            pk.MetLocation = 78; // Paniola Ranch
+            pk.MetLevel = 1;
             pk.SetEggMetData(GameVersion.UM, (GameVersion)version);
             enc = new LegalityAnalysis(pk).EncounterMatch;
             if (pk is PK8 pk8)
@@ -561,7 +561,7 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
 
     private static void EdgeCaseRelearnMoves(T pk, LegalityAnalysis la)
     {
-        if (typeof(T) == typeof(PK8) && (pk.Met_Location is 162 or 244))
+        if (typeof(T) == typeof(PK8) && (pk.MetLocation is 162 or 244))
             return;
 
         Span<ushort> relearn = stackalloc ushort[4];
@@ -603,9 +603,9 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
             (ushort)Species.Eevee when item > 0 => evoList.Find(x => x.Item == (TCItems)item),
             (ushort)Species.Eevee when pk.CurrentFriendship >= 250 => evoList.Find(x => x.EvoType is EvolutionType.LevelUpAffection50MoveType),
             (ushort)Species.Eevee when item <= 0 => evoList.Find(x => x.DayTime == tod),
-            (ushort)Species.Toxel => TradeExtensions<T>.LowKey.Contains(pk.Nature) ? evoList.Find(x => x.EvolvedForm is 1) : evoList.Find(x => x.EvolvedForm is 0),
+            (ushort)Species.Toxel => TradeExtensions<T>.LowKey.Contains((int)pk.Nature) ? evoList.Find(x => x.EvolvedForm is 1) : evoList.Find(x => x.EvolvedForm is 0),
             (ushort)Species.Milcery when alcremieForm >= 0 => evoList.Find(x => x.EvolvedForm == alcremieForm),
-            (ushort)Species.Cosmoem => pk.Version is 45 ? evoList.Find(x => x.EvolvesInto is (ushort)Species.Lunala) : evoList.Find(x => x.EvolvesInto is (ushort)Species.Solgaleo),
+            (ushort)Species.Cosmoem => pk.Version is (GameVersion)45 ? evoList.Find(x => x.EvolvesInto is (ushort)Species.Lunala) : evoList.Find(x => x.EvolvesInto is (ushort)Species.Solgaleo),
             (ushort)Species.Nincada => evoList.Find(x => x.EvolvesInto is (ushort)Species.Ninjask),
             (ushort)Species.Espurr => evoList.Find(x => x.EvolvedForm == (pk.Gender is (int)Gender.Male ? 0 : 1)),
             (ushort)Species.Combee => evoList.Find(x => x.EvolvesInto == (pk.Gender is (int)Gender.Male ? -1 : (ushort)Species.Vespiquen)),

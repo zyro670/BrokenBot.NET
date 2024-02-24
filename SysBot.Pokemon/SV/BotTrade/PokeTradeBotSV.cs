@@ -792,8 +792,8 @@ public class PokeTradeBotSV : PokeRoutineExecutor9SV, ICountBot
             var msg = Hub.Config.Trade.DumpTradeLegalityCheck ? verbose : $"File {ctr}";
 
             // Extra information about trainer data for people requesting with their own trainer data.
-            var ot = pk.OT_Name;
-            var ot_gender = pk.OT_Gender == 0 ? "Male" : "Female";
+            var ot = pk.OriginalTrainerName;
+            var ot_gender = pk.OriginalTrainerGender == 0 ? "Male" : "Female";
             var tid = pk.GetDisplayTID().ToString(pk.GetTrainerIDFormat().GetTrainerIDFormatStringTID());
             var sid = pk.GetDisplaySID().ToString(pk.GetTrainerIDFormat().GetTrainerIDFormatStringSID());
             msg += $"\n**Trainer Data**\n```OT: {ot}\nOTGender: {ot_gender}\nTID: {tid}\nSID: {sid}```";
@@ -864,7 +864,7 @@ public class PokeTradeBotSV : PokeRoutineExecutor9SV, ICountBot
             string scale = $"\nScale: {PokeSizeDetailedUtil.GetSizeRating(pk.Scale)} ({pk.Scale})";
             string TIDFormatted = pk.Generation >= 7 ? $"{pk.TrainerTID7:000000}" : $"{pk.TID16:00000}";
             detail.SendNotification(this, $"Displaying: {(pk.ShinyXor == 0 ? "■ - " : pk.ShinyXor <= 16 ? "★ - " : "")}{SpeciesName.GetSpeciesNameGeneration(pk.Species, 2, 9) + TradeExtensions<PK9>.FormOutput(pk.Species, pk.Form, out _)}{gender}\n{pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}\n" +
-                $"Ability: {(Ability)pk.Ability} | {(Nature)pk.Nature} Nature | Ball: {(Ball)pk.Ball}{scale}\nTrainer Info: {pk.OT_Name}/{TIDFormatted}\n" +
+                $"Ability: {(Ability)pk.Ability} | {(Nature)pk.Nature} Nature | Ball: {(Ball)pk.Ball}{scale}\nTrainer Info: {pk.OriginalTrainerName}/{TIDFormatted}\n" +
                 $"{(StopConditionSettings.HasMark(pk, out RibbonIndex mark) ? $"**Pokémon Mark: {mark.ToString().Replace("Mark", "")}{Environment.NewLine}**" : "")}Scale: {size}\n{msg}");
             //Log($"Displaying {SpeciesName.GetSpeciesNameGeneration(pk.Species, 2, 9) + TradeExtensions<PK9>.FormOutput(pk.Species, pk.Form, out _)}{gender}\n{pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}\n{(Nature)pk.Nature} - {(Ball)pk.Ball} - {pk.OT_Name}/{TIDFormatted}");
             ctr++;
@@ -997,8 +997,8 @@ public class PokeTradeBotSV : PokeRoutineExecutor9SV, ICountBot
         if (clone.FatefulEncounter)
         {
             clone.SetDefaultNickname(laInit);
-            var info = new SimpleTrainerInfo { Gender = clone.OT_Gender, Language = clone.Language, OT = name, TID16 = clone.TID16, SID16 = clone.SID16, Generation = 9 };
-            var mg = EncounterEvent.GetAllEvents().Where(x => x.Species == clone.Species && x.Form == clone.Form && x.IsShiny == clone.IsShiny && x.OT_Name == clone.OT_Name).ToList();
+            var info = new SimpleTrainerInfo { Gender = clone.OriginalTrainerGender, Language = clone.Language, OT = name, TID16 = clone.TID16, SID16 = clone.SID16, Generation = 9 };
+            var mg = EncounterEvent.GetAllEvents().Where(x => x.Species == clone.Species && x.Form == clone.Form && x.IsShiny == clone.IsShiny && x.OriginalTrainerName == clone.OriginalTrainerName).ToList();
             if (mg.Count > 0)
                 clone = TradeExtensions<PK9>.CherishHandler(mg.First(), info);
             else clone = (PK9)sav.GetLegal(AutoLegalityWrapper.GetTemplate(new ShowdownSet(string.Join("\n", set))), out _);
@@ -1022,7 +1022,7 @@ public class PokeTradeBotSV : PokeRoutineExecutor9SV, ICountBot
         await Task.Delay(2_000, token).ConfigureAwait(false);
 
         var pk2 = await ReadUntilPresent(TradePartnerOfferedOffset, 15_000, 0_200, BoxFormatSlotSize, token).ConfigureAwait(false);
-        bool changed = pk2 is null || pk2.Species != offered.Species || offered.OT_Name != pk2.OT_Name;
+        bool changed = pk2 is null || pk2.Species != offered.Species || offered.OriginalTrainerName != pk2.OriginalTrainerName;
         if (changed)
         {
             // They get one more chance.
@@ -1032,7 +1032,7 @@ public class PokeTradeBotSV : PokeRoutineExecutor9SV, ICountBot
             while (changed)
             {
                 pk2 = await ReadUntilPresent(TradePartnerOfferedOffset, 2_000, 0_500, BoxFormatSlotSize, token).ConfigureAwait(false);
-                changed = pk2 == null || clone.Species != pk2.Species || offered.OT_Name != pk2.OT_Name;
+                changed = pk2 == null || clone.Species != pk2.Species || offered.OriginalTrainerName != pk2.OriginalTrainerName;
                 await Task.Delay(1_000, token).ConfigureAwait(false);
                 timer -= 1_000;
 

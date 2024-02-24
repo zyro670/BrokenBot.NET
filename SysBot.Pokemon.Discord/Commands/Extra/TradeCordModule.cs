@@ -546,8 +546,8 @@ public class TradeCordModule<T> : ModuleBase<SocketCommandContext> where T : PKM
             return;
         }
 
-        var ot = pkm.OT_Name;
-        var gender = $"{(Gender)pkm.OT_Gender}";
+        var ot = pkm.OriginalTrainerName;
+        var gender = $"{(Gender)pkm.OriginalTrainerGender}";
         var tid = $"{pkm.TID16}";
         var sid = $"{pkm.SID16}";
         var lang = $"{(LanguageID)pkm.Language}";

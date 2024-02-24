@@ -314,7 +314,7 @@ public class TradeCordHelper<T> : TradeCordDatabase<T> where T : PKM, new()
                     {
                         _ = Enum.TryParse(user.TrainerInfo.OTGender, out Gender gender);
                         _ = Enum.TryParse(user.TrainerInfo.Language, out LanguageID language);
-                        info = new SimpleTrainerInfo { Gender = (int)gender, Language = (int)language, OT = user.TrainerInfo.OTName, TID16 = user.TrainerInfo.TID16, SID16 = user.TrainerInfo.SID16, Context = Game is GameVersion.BDSP ? EntityContext.Gen8b : Game is GameVersion.SV ? EntityContext.Gen9 : EntityContext.Gen8, Generation = format };
+                        info = new SimpleTrainerInfo { Gender = (byte)(int)gender, Language = (int)language, OT = user.TrainerInfo.OTName, TID16 = user.TrainerInfo.TID16, SID16 = user.TrainerInfo.SID16, Context = Game is GameVersion.BDSP ? EntityContext.Gen8b : Game is GameVersion.SV ? EntityContext.Gen9 : EntityContext.Gen8, Generation = (byte)format };
                         result.Poke = TradeExtensions<T>.CherishHandler(mgRng!, info);
                     }
                 }
@@ -2215,10 +2215,10 @@ public class TradeCordHelper<T> : TradeCordDatabase<T> where T : PKM, new()
                 var enc = result.Poke;
                 var sootheBell = pk.HeldItem is 218 && pk.CurrentFriendship + 2 <= 255 ? 2 : 0;
                 var shiny = enc.IsShiny && pk.CurrentFriendship + 5 + sootheBell <= 255 ? 5 : 0;
-                pk.CurrentFriendship += sootheBell + shiny;
+                pk.CurrentFriendship = (byte)(sootheBell + shiny);
 
                 int levelOld = pk.CurrentLevel;
-                var xpMin = Experience.GetEXP(pk.CurrentLevel + 1, pk.PersonalInfo.EXPGrowth);
+                var xpMin = Experience.GetEXP((byte)(pk.CurrentLevel + 1), pk.PersonalInfo.EXPGrowth);
                 var calc = enc.PersonalInfo.BaseEXP * enc.CurrentLevel / 5.0 * Math.Pow((2.0 * enc.CurrentLevel + 10.0) / (enc.CurrentLevel + pk.CurrentLevel + 10.0), 2.5);
                 var bonus = enc.IsShiny ? 1.1 : 1.0;
                 var xpGet = (uint)Math.Round(calc * bonus, 0, MidpointRounding.AwayFromZero);
@@ -2226,7 +2226,7 @@ public class TradeCordHelper<T> : TradeCordDatabase<T> where T : PKM, new()
                     xpGet = 175;
 
                 pk.EXP += xpGet;
-                while (pk.EXP >= Experience.GetEXP(pk.CurrentLevel + 1, pk.PersonalInfo.EXPGrowth) && pk.CurrentLevel < 100)
+                while (pk.EXP >= Experience.GetEXP((byte)(pk.CurrentLevel + 1), pk.PersonalInfo.EXPGrowth) && pk.CurrentLevel < 100)
                     pk.CurrentLevel++;
 
                 if (pk.CurrentLevel is 100)
