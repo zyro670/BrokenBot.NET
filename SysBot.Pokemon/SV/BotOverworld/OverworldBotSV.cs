@@ -107,7 +107,7 @@ public class OverworldBotSV : PokeRoutineExecutor9SV, IEncounterBot
         Log("Checking our bag for ingredients...");
         var itemptr = await SwitchConnection.PointerAll(Offsets.ItemBlock, token).ConfigureAwait(false);
         var items = await SwitchConnection.ReadBytesAbsoluteAsync(itemptr, TrainerSav.Items.Data.Length, token).ConfigureAwait(false);
-        items.CopyTo(TrainerSav.Items.Data, 0);
+        items.CopyTo(TrainerSav.Items.Data.ToArray(), 0);
 
         var pouches = TrainerSav.Inventory;
         var ingredients = pouches[7];

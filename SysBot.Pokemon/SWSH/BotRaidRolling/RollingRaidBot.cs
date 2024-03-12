@@ -704,7 +704,7 @@ public class RollingRaidBotSWSH : PokeRoutineExecutor8SWSH, ICountBot
 
         await Task.Delay(2_000, token).ConfigureAwait(false);
         var denData = await Connection.ReadBytesAsync(denOfs, 0x18, token).ConfigureAwait(false);
-        RaidInfo.Den = new RaidSpawnDetail(denData, 0);
+        RaidInfo.Den = new RaidSpawnDetail(denData);
         if (!RaidInfo.Den.WattsHarvested)
         {
             softLock = false;
@@ -718,7 +718,7 @@ public class RollingRaidBotSWSH : PokeRoutineExecutor8SWSH, ICountBot
 
             await InitializeSessionOffsets(token).ConfigureAwait(false);
             denData = await Connection.ReadBytesAsync(denOfs, 0x18, token).ConfigureAwait(false);
-            RaidInfo.Den = new RaidSpawnDetail(denData, 0);
+            RaidInfo.Den = new RaidSpawnDetail(denData);
             if (RaidInfo.Den.WattsHarvested)
             {
                 await SaveGame(OverworldOffset, token).ConfigureAwait(false);
@@ -772,7 +772,7 @@ public class RollingRaidBotSWSH : PokeRoutineExecutor8SWSH, ICountBot
     private async Task<bool> CheckDen(CancellationToken token)
     {
         var denData = await Connection.ReadBytesAsync(denOfs, 0x18, token).ConfigureAwait(false);
-        RaidInfo.Den = new RaidSpawnDetail(denData, 0);
+        RaidInfo.Den = new RaidSpawnDetail(denData);
 
         if (!RaidInfo.Den.WattsHarvested)
             await ClearWatts(token).ConfigureAwait(false);
@@ -834,7 +834,7 @@ public class RollingRaidBotSWSH : PokeRoutineExecutor8SWSH, ICountBot
         RaidInfo.DenID = denID;
 
         var denData = await Connection.ReadBytesAsync(denOfs, 0x18, token).ConfigureAwait(false);
-        RaidInfo.Den = new RaidSpawnDetail(denData, 0);
+        RaidInfo.Den = new RaidSpawnDetail(denData);
         if (!test && !RaidInfo.Den.WattsHarvested)
         {
             Log("For correct operation, start the bot with Watts cleared. If Watts are cleared and you see this message, make sure you've entered the correct den ID. Stopping routine...");

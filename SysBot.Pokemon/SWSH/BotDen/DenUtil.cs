@@ -26,7 +26,7 @@ public class DenUtil
         private NestHoleDistributionEncounter8Table raidDistributionEncounterTable;
 
         public SAV8SWSH TrainerInfo { get => trainerInfo ?? new(); set => trainerInfo = value; }
-        public RaidSpawnDetail Den { get => den ?? new(Array.Empty<byte>(), 0); set => den = value; }
+        public RaidSpawnDetail Den { get => den ?? new(Array.Empty<byte>()); set => den = value; }
         public EncounterNest8 RaidEncounter { get => raidEnc; set => raidEnc = value; }
         public EncounterNest8Table RaidEncounterTable { get => raidEncounterTable; set => raidEncounterTable = value; }
         public NestHoleDistributionEncounter8 RaidDistributionEncounter { get => distEnc; set => distEnc = value; }
@@ -79,7 +79,7 @@ public class DenUtil
 
     public static RaidData GetRaid(RaidData raidInfo, byte[] denData, byte[] eventData)
     {
-        raidInfo.Den = new RaidSpawnDetail(denData, 0)
+        raidInfo.Den = new RaidSpawnDetail(denData)
         {
             RandRoll = (byte)raidInfo.Settings.Randroll,
             Stars = (byte)raidInfo.Settings.Star

@@ -85,7 +85,7 @@ public class TIDResetBotSV : PokeRoutineExecutor9SV, IEncounterBot
         var sav = new SAV9SV();
         var info = sav.MyStatus;
         var read = await SwitchConnection.PointerPeek(info.Data.Length, Offsets.MyStatusPointer, token).ConfigureAwait(false);
-        read.CopyTo(info.Data, 0);
+        read.CopyTo(info.Data.ToArray(), 0);
         return (sav, $"TID: {sav.TrainerTID7}");
     }
 
