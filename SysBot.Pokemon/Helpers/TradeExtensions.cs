@@ -380,7 +380,7 @@ namespace SysBot.Pokemon
         {
             var pkMet = (T)pkm.Clone();
             if (pkMet.Version is not (int)GameVersion.GO)
-                pkMet.MetDate = DateOnly.Parse("2020/10/20");
+                pkMet.MetDate = DateOnly.FromDateTime(DateTime.Now);
 
             var analysis = new LegalityAnalysis(pkMet);
             var pkTrash = (T)pkMet.Clone();
