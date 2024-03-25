@@ -712,12 +712,12 @@ namespace SysBot.Pokemon
 
         private bool SameEvoTree(PKM pkm1, PKM pkm2)
         {
-            var evos = EncounterOrigin.GetOriginChain(pkm1, 8);
+            var evos = EncounterOrigin.GetOriginChain(pkm1, 9);
             //var evos = tree.Reverse.GetPreEvolutions(pkm1.Species, pkm1.Form).Select(e => new EvoCriteria { Species = e.Species, Form = e.Form }).ToArray();
             var encs = EncounterGenerator.GetGenerator(Game).GetPossible(pkm1, evos, Game, EncounterTypeGroup.Egg).ToArray();
             var base1 = encs.Length > 0 ? encs[^1].Species : -1;
 
-            evos = EncounterOrigin.GetOriginChain(pkm2, 8);
+            evos = EncounterOrigin.GetOriginChain(pkm2, 9);
             encs = EncounterGenerator.GetGenerator(Game).GetPossible(pkm2, evos, Game, EncounterTypeGroup.Egg).ToArray();
             var base2 = encs.Length > 0 ? encs[^1].Species : -2;
 
@@ -732,11 +732,11 @@ namespace SysBot.Pokemon
             {
                 byte form = list[i].Species switch
                 {
-                    (ushort)Species.Obstagoon or (ushort)Species.Cursola or (ushort)Species.Runerigus or (ushort)Species.Sirfetchd => 1,
-                    (ushort)Species.Perrserker => 2,
+                    (ushort)Species.Obstagoon or (ushort)Species.Cursola or (ushort)Species.Runerigus or (ushort)Species.Sirfetchd or (ushort)Species.Sneasler or (ushort)Species.Overqwil => 1,
+                    (ushort)Species.Perrserker or (ushort)Species.Basculegion => 2,
                     (ushort)Species.Lycanroc or (ushort)Species.Slowbro or (ushort)Species.Darmanitan when list[i].Form is 2 => 1,
                     (ushort)Species.Lycanroc when list[i].Form is 1 => 0,
-                    (ushort)Species.Sinistea or (ushort)Species.Polteageist or (ushort)Species.Rotom or (ushort)Species.Pikachu or (ushort)Species.Raichu or (ushort)Species.Marowak or (ushort)Species.Exeggutor or (ushort)Species.Weezing or (ushort)Species.Alcremie => 0,
+                    (ushort)Species.Sinistea or (ushort)Species.Polteageist or (ushort)Species.Poltchageist or (ushort)Species.Sinistcha or (ushort)Species.Rotom or (ushort)Species.Pikachu or (ushort)Species.Raichu or (ushort)Species.Marowak or (ushort)Species.Exeggutor or (ushort)Species.Weezing or (ushort)Species.Alcremie or (ushort)Species.Lilligant or (ushort)Species.Sliggoo or (ushort)Species.Goodra or (ushort)Species.Braviary or (ushort)Species.Avalugg or (ushort)Species.Typhlosion or (ushort)Species.Samurott or (ushort)Species.Decidueye => 0,
                     (ushort)Species.MrMime => list[i].Form == 1 ? (byte)0 : list[i].Form,
                     _ => list[i].Form,
                 };
