@@ -751,13 +751,16 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
 
         Random rng = new();
 
-        if (pkm1.Species is 132)
+        bool bothDittos = (pkm1.Species is 132) && (pkm2.Species is 132);
+
+        if (bothDittos)
+        {
             while (!Breeding.CanHatchAsEgg(pkm1.Species))
             {
                 pkm1.Species = (ushort)rng.Next(1021);
             }
-        if (pkm2.Species is 132)
             pkm2.Species = pkm1.Species;
+        }
         criteria = EggEvoCriteria(pkm1, pkm2);
         if (criteria.Count < 2)
             return false;
@@ -770,11 +773,11 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
 
     private bool SameEvoTree(PKM pkm1, PKM pkm2)
     {
-        var evos = EncounterOrigin.GetOriginChain(pkm1, 8);
+        var evos = EncounterOrigin.GetOriginChain(pkm1, 9);
         var encs = EncounterGenerator.GetGenerator(Game).GetPossible(pkm1, evos, Game, EncounterTypeGroup.Egg).ToArray();
         var base1 = encs.Length > 0 ? encs[^1].Species : -1;
 
-        evos = EncounterOrigin.GetOriginChain(pkm2, 8);
+        evos = EncounterOrigin.GetOriginChain(pkm2, 9);
         encs = EncounterGenerator.GetGenerator(Game).GetPossible(pkm2, evos, Game, EncounterTypeGroup.Egg).ToArray();
         var base2 = encs.Length > 0 ? encs[^1].Species : -2;
 
