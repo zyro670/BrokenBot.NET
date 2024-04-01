@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Linq;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using PKHeX.Core;
 using PKHeX.Core.AutoMod;
+
 using static PKHeX.Core.AutoMod.Aesthetics;
-using System.Collections.Frozen;
 
 namespace SysBot.Pokemon;
 
@@ -661,7 +662,7 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
     protected Species ParseSpeciesFromSanitizedLabel(string label)
     {
         var speciesWithDash = ((IReadOnlyList<string>)[
-                    "Nidoran-M",
+            "Nidoran-M",
             "Nidoran-F",
             "Porygon-Z",
             "Jangmo-o",
@@ -673,8 +674,9 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
             "Chi-Yu"
         ]).ToFrozenSet<string>;
         var speciesWithSpace = ((IReadOnlyList<string>)[
-                    "Mr. Mime",
+            "Mr. Mime",
             "Mime Jr.",
+            "Type: Null",
             "Tapu Koko",
             "Tapu Lele",
             "Tapu Bulu",
