@@ -42,12 +42,12 @@ public class TradeExtensions<T> where T : PKM, new()
     (ushort)Species.Altaria, (ushort)Species.Banette, (ushort)Species.Absol, (ushort)Species.Glalie, (ushort)Species.Salamence, (ushort)Species.Metagross, (ushort)Species.Latias, (ushort)Species.Latios,
     (ushort)Species.Rayquaza, (ushort)Species.Lopunny, (ushort)Species.Garchomp, (ushort)Species.Lucario, (ushort)Species.Abomasnow, (ushort)Species.Gallade, (ushort)Species.Audino, (ushort)Species.Diancie,
     (ushort)Species.Kyogre, (ushort)Species.Groudon];
-    public static readonly ushort[] Anonymyths = [(ushort)Species.Magikarp, (ushort)Species.Gyarados,(ushort)Species.Oddish,(ushort)Species.Gloom, (ushort)Species.Vileplume,(ushort)Species.Psyduck, (ushort)Species.Golduck, 
+    public static readonly ushort[] Anonymyths = [(ushort)Species.Magikarp, (ushort)Species.Gyarados,(ushort)Species.Oddish,(ushort)Species.Gloom, (ushort)Species.Vileplume,(ushort)Species.Psyduck, (ushort)Species.Golduck,
         (ushort)Species.Poliwag, (ushort)Species.Poliwhirl, (ushort)Species.Poliwrath,(ushort)Species.Gastly,  (ushort)Species.Haunter, (ushort)Species.Gengar, (ushort)Species.Totodile, (ushort)Species.Croconaw,
-        (ushort)Species.Feraligatr, (ushort)Species.Ralts,(ushort)Species.Kirlia,(ushort)Species.Gardevoir, (ushort)Species.Cranidos, (ushort)Species.Rampardos, (ushort)Species.Mudkip,(ushort)Species.Marshtomp, 
+        (ushort)Species.Feraligatr, (ushort)Species.Ralts,(ushort)Species.Kirlia,(ushort)Species.Gardevoir, (ushort)Species.Cranidos, (ushort)Species.Rampardos, (ushort)Species.Mudkip,(ushort)Species.Marshtomp,
         (ushort)Species.Swampert,(ushort)Species.Timburr, (ushort)Species.Gurdurr, (ushort)Species.Conkeldurr, (ushort)Species.Tropius, (ushort)Species.Litwick, (ushort)Species.Lampent, (ushort)Species.Chandelure,
-        (ushort)Species.Fennekin, (ushort)Species.Braixen, (ushort)Species.Delphox, (ushort)Species.Scorbunny, (ushort)Species.Raboot, (ushort)Species.Cinderace, (ushort)Species.Salandit, (ushort)Species.Salazzle, 
-        (ushort)Species.Sinistea, (ushort)Species.Poltchageist, (ushort)Species.Sinistcha, (ushort)Species.Poltchageist, (ushort)Species.IronThorns, (ushort)Species.Capsakid, (ushort)Species.Scovillain,(ushort)Species.Tadbulb, 
+        (ushort)Species.Fennekin, (ushort)Species.Braixen, (ushort)Species.Delphox, (ushort)Species.Scorbunny, (ushort)Species.Raboot, (ushort)Species.Cinderace, (ushort)Species.Salandit, (ushort)Species.Salazzle,
+        (ushort)Species.Sinistea, (ushort)Species.Poltchageist, (ushort)Species.Sinistcha, (ushort)Species.Poltchageist, (ushort)Species.IronThorns, (ushort)Species.Capsakid, (ushort)Species.Scovillain,(ushort)Species.Tadbulb,
         (ushort)Species.Bellibolt, (ushort)Species.Fidough, (ushort)Species.Dachsbun, (ushort)Species.Cyclizar, (ushort)Species.Sprigatito,(ushort)Species.Floragato,(ushort)Species.Meowscarada,(ushort)Species.Fuecoco,(ushort)Species.Crocalor,(ushort)Species.Skeledirge,
         (ushort)Species.Quaxly, (ushort)Species.Quaxwell, (ushort)Species.Quaquaval, (ushort)Species.Pawmi, (ushort)Species.Pawmo, (ushort)Species.Pawmo, (ushort)Species.Larvitar, (ushort)Species.Pupitar, (ushort)Species.Tyranitar, (ushort)Species.Smeargle,
         (ushort)Species.Eevee,(ushort)Species.Flareon,(ushort)Species.Vaporeon,(ushort)Species.Jolteon,(ushort)Species.Umbreon, (ushort)Species.Espeon,(ushort)Species.Glaceon,(ushort)Species.Leafeon,(ushort)Species.Sylveon];
@@ -374,7 +374,7 @@ public class TradeExtensions<T> where T : PKM, new()
     {
         var pkMet = (T)pkm.Clone();
         if (pkMet.Version is not GameVersion.GO)
-            pkMet.MetDate = DateOnly.Parse("2020/10/20");
+            pkMet.MetDate = DateOnly.FromDateTime(DateTime.Now);
 
         var analysis = new LegalityAnalysis(pkMet);
         var pkTrash = (T)pkMet.Clone();
