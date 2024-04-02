@@ -794,7 +794,7 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
             (ushort)Species.Lilligant, (ushort)Species.Braviary, (ushort)Species.Avalugg,
             (ushort)Species.Sliggoo, (ushort)Species.Goodra,
             (ushort)Species.Typhlosion, (ushort)Species.Samurott, (ushort)Species.Decidueye,
-            (ushort)Species.Maushold,
+            (ushort)Species.Maushold, (ushort)Species.Dudunsparce,
         ];
 
         List<ushort> alwaysForm1 = [
