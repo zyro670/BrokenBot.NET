@@ -746,12 +746,13 @@ public class TradeCordModule<T> : ModuleBase<SocketCommandContext> where T : PKM
         var form = TradeExtensions<T>.FormOutput(result.Poke.Species, result.Poke.Form, out _).Replace("-", "");
         var lvlProgress = (Experience.GetEXPToLevelUpPercentage(result.Poke.CurrentLevel, result.Poke.EXP, result.Poke.PersonalInfo.EXPGrowth) * 100.0).ToString("N1");
         msg = $"\n**Nickname:** {result.User.Buddy.Nickname}" +
-              $"\n**Species:** {SpeciesName.GetSpeciesNameGeneration(result.Poke.Species, 2, 8)} {GameInfo.GenderSymbolUnicode[result.Poke.Gender].Replace("-", "")}" +
+              $"\n**Species:** {SpeciesName.GetSpeciesNameGeneration(result.Poke.Species, 2, 9)} {GameInfo.GenderSymbolUnicode[result.Poke.Gender].Replace("-", "")}" +
               $"\n**Form:** {(form == string.Empty ? "-" : form)}" +
               $"\n**Gigantamax:** {(canGmax ? "Yes" : "No")}" +
               $"\n**Ability:** {result.User.Buddy.Ability}" +
               $"\n**Level:** {result.Poke.CurrentLevel}" +
               $"\n**Friendship:** {result.Poke.CurrentFriendship}" +
+              $"\n**Language:** {(LanguageID)result.Poke.Language}" +
               $"\n**Held item:** {GameInfo.Strings.itemlist[result.Poke.HeldItem]}" +
               $"\n**Time of day:** {TradeCordHelper<T>.TimeOfDayString(result.User.UserInfo.TimeZoneOffset, false)}" +
               $"{(!result.Poke.IsEgg && result.Poke.CurrentLevel < 100 ? $"\n**Progress to next level:** {lvlProgress}%" : "")}";

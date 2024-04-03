@@ -92,16 +92,16 @@ public static class ReusableActions
                 mark = $"\nPokémon has the **{encmark.ToString().Replace("Mark", "")} Mark**!";
         }
 
-        var extra = new string[] { $"\nOT: {pkm.OriginalTrainerName}", $"\nTID: {pkm.GetDisplayTID()}", $"\nSID: {pkm.GetDisplaySID()}", $"{(pkm.IsEgg ? "\nIsEgg: Yes" : "")}", $"\n{mark.Trim()}" };
-        newShowdown.InsertRange(1, extra);
+        var extra = new string[] { $"\nOT: {pkm.OriginalTrainerName}", $"\nTID: {pkm.GetDisplayTID()}", $"\nSID: {pkm.GetDisplaySID()}", $"\nLanguage:{(LanguageID)pkm.Language}"; $"{(pkm.IsEgg ? "\nIsEgg: Yes" : "")}", $"\n{mark.Trim()}" };
+    newShowdown.InsertRange(1, extra);
         return Format.Code(string.Join("", newShowdown).Trim());
     }
 
-    public static List<string> GetListFromString(string str)
-    {
-        // Extract comma separated list
-        return str.Split(new[] { ",", ", ", " " }, StringSplitOptions.RemoveEmptyEntries).ToList();
-    }
+public static List<string> GetListFromString(string str)
+{
+    // Extract comma separated list
+    return str.Split(new[] { ",", ", ", " " }, StringSplitOptions.RemoveEmptyEntries).ToList();
+}
 
-    public static string StripCodeBlock(string str) => str.Replace("`\n", "").Replace("\n`", "").Replace("`", "").Trim();
+public static string StripCodeBlock(string str) => str.Replace("`\n", "").Replace("\n`", "").Replace("`", "").Trim();
 }
