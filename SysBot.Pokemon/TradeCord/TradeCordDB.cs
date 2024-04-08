@@ -784,22 +784,59 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
         return base1 == base2;
     }
 
+    private static byte BreedForm(T pkm)
+    {
+        List<ushort> alwaysForm0 = [
+            (ushort)Species.Sinistea, (ushort)Species.Polteageist,
+            (ushort)Species.Poltchageist, (ushort)Species.Sinistcha,
+            (ushort)Species.Rotom,
+            (ushort)Species.Pikachu, (ushort)Species.Raichu,
+            (ushort)Species.Marowak,
+            (ushort)Species.Exeggutor, (ushort)Species.Weezing,
+            (ushort)Species.Alcremie,
+            (ushort)Species.Lilligant, (ushort)Species.Braviary, (ushort)Species.Avalugg,
+            (ushort)Species.Sliggoo, (ushort)Species.Goodra,
+            (ushort)Species.Typhlosion, (ushort)Species.Samurott, (ushort)Species.Decidueye,
+            (ushort)Species.Maushold, (ushort)Species.Dudunsparce,
+        ];
+
+        List<ushort> alwaysForm1 = [
+            (ushort)Species.Obstagoon, (ushort)Species.Cursola,
+            (ushort)Species.Runerigus, (ushort)Species.Sirfetchd,
+            (ushort)Species.Sneasler,
+            (ushort)Species.Overqwil,
+        ];
+
+        List<ushort> alwaysForm2 = [
+            (ushort)Species.Perrserker,
+            (ushort)Species.Basculegion,
+        ];
+
+
+        if (alwaysForm0.Contains(pkm.Species)) { return (byte)0; }
+        if (alwaysForm1.Contains(pkm.Species)) { return (byte)1; }
+        if (alwaysForm2.Contains(pkm.Species)) { return (byte)2; }
+
+        var pkmForm = pkm.Form;
+
+        byte form = pkm.Species switch
+        {
+            (ushort)Species.Lycanroc or (ushort)Species.Slowbro or (ushort)Species.Darmanitan when pkmForm is 2 => 1,
+            (ushort)Species.Lycanroc when pkmForm is 1 => 0,
+            (ushort)Species.MrMime => pkmForm == 1 ? (byte)0 : pkmForm,
+            _ => pkmForm, // default: same form as parent
+        };
+
+        return form;
+    }
+
     private static List<EvoCriteria> EggEvoCriteria(T pk1, T pk2)
     {
         List<T> list = new() { pk1, pk2 };
         List<EvoCriteria> criteriaList = [];
         for (int i = 0; i < list.Count; i++)
         {
-            byte form = list[i].Species switch
-            {
-                (ushort)Species.Obstagoon or (ushort)Species.Cursola or (ushort)Species.Runerigus or (ushort)Species.Sirfetchd => 1,
-                (ushort)Species.Perrserker => 2,
-                (ushort)Species.Lycanroc or (ushort)Species.Slowbro or (ushort)Species.Darmanitan when list[i].Form is 2 => 1,
-                (ushort)Species.Lycanroc when list[i].Form is 1 => 0,
-                (ushort)Species.Sinistea or (ushort)Species.Polteageist or (ushort)Species.Rotom or (ushort)Species.Pikachu or (ushort)Species.Raichu or (ushort)Species.Marowak or (ushort)Species.Exeggutor or (ushort)Species.Weezing or (ushort)Species.Alcremie => 0,
-                (ushort)Species.MrMime => list[i].Form == 1 ? (byte)0 : list[i].Form,
-                _ => list[i].Form,
-            };
+            byte form = BreedForm(list[i]);
 
             if (list[i].Species is (ushort)Species.Rotom && list[i].Form > 0)
                 list[i].Form = 0;
