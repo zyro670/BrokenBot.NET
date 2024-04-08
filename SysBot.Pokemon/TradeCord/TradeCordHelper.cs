@@ -687,7 +687,7 @@ public class TradeCordHelper<T> : TradeCordDatabase<T> where T : PKM, new()
             bool isParadox = IsParadox((ushort)speciesID);
             string ballStr = ball != Ball.None ? $"Pokémon in {ball} Ball" : "";
             string generalOutput = input == "Shinies" ? "shiny Pokémon" : input == "Events" ? "non-shiny event Pokémon" : input == "Legendaries" ? "non-shiny legendary Pokémon" : input == "Paradoxes" ? "non-shiny paradox Pokémon" : ball != Ball.None ? ballStr : $"non-shiny {input}";
-            string exclude = ball is Ball.Cherish || input == "Events" ? ", legendaries, paradoxes" : input == "Legendaries" ? ", events, paradoxes," : input == "Paradoxes" ? ", events, legendaries," : $", events,{(isLegend ? "" : " legendaries,")}{(isParadox ? "" : " paradoxes,")}"; 
+            string exclude = ball is Ball.Cherish || input == "Events" ? ", legendaries, paradoxes" : input == "Legendaries" ? ", events, paradoxes," : input == "Paradoxes" ? ", events, legendaries," : $", events,{(isLegend ? "" : " legendaries,")}{(isParadox ? "" : " paradoxes,")}";
             result.Message = input == "" ? "Every non-shiny Pokémon was released, excluding Ditto, favorites, events, buddy, legendaries, and those in daycare." : $"Every {generalOutput} was released, excluding favorites, buddy{exclude} and those in daycare.";
             return true;
         }
@@ -918,7 +918,7 @@ public class TradeCordHelper<T> : TradeCordDatabase<T> where T : PKM, new()
             bool isLegend = IsLegendaryOrMythical(pk.Species);
 
             var names = CatchValues.Replace(" ", "").Split(',');
-            var obj = new object[] { m_user.UserInfo.UserID, newID, match.Shiny, match.Ball, match.Nickname, match.Species, match.Form, match.Egg, false, false, isLegend, match.Event, match.Gmax }; 
+            var obj = new object[] { m_user.UserInfo.UserID, newID, match.Shiny, match.Ball, match.Nickname, match.Species, match.Form, match.Egg, false, false, isLegend, match.Event, match.Gmax };
             result.SQLCommands.Add(DBCommandConstructor("catches", CatchValues, "", names, obj, SQLTableContext.Insert));
 
             names = BinaryCatchesValues.Replace(" ", "").Split(',');
@@ -1979,7 +1979,7 @@ public class TradeCordHelper<T> : TradeCordDatabase<T> where T : PKM, new()
             shiny = Shiny.AlwaysStar;
 
         var pk = EggRngRoutine(evos, balls, generation, string.Join("", trainerInfo), shiny);
-        var eggSpeciesName = SpeciesName.GetSpeciesNameGeneration(pk.Species, 2, 8);
+        var eggSpeciesName = SpeciesName.GetSpeciesNameGeneration(pk.Species, 2, 9);
         var eggForm = TradeExtensions<T>.FormOutput(pk.Species, pk.Form, out _);
         var finalEggName = eggSpeciesName + eggForm;
 
