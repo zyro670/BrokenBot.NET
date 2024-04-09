@@ -664,6 +664,7 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
         var speciesWithDash = ((IReadOnlyList<string>)[
             "Nidoran-M",
             "Nidoran-F",
+            "Ho-Oh",
             "Porygon-Z",
             "Jangmo-o",
             "Hakamo-o",
