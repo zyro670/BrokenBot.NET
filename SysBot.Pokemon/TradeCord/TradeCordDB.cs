@@ -661,8 +661,9 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
     protected Species ParseSpeciesFromSanitizedLabel(string label)
     {
         var speciesWithDash = ((IReadOnlyList<string>)[
-                    "Nidoran-M",
+            "Nidoran-M",
             "Nidoran-F",
+            "Ho-Oh",
             "Porygon-Z",
             "Jangmo-o",
             "Hakamo-o",
@@ -673,8 +674,9 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
             "Chi-Yu"
         ]).ToFrozenSet<string>;
         var speciesWithSpace = ((IReadOnlyList<string>)[
-                    "Mr. Mime",
+            "Mr. Mime",
             "Mime Jr.",
+            "Type: Null",
             "Tapu Koko",
             "Tapu Lele",
             "Tapu Bulu",
