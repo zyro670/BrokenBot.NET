@@ -803,8 +803,8 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
         List<ushort> alwaysForm1 = [
             (ushort)Species.Obstagoon, (ushort)Species.Cursola,
             (ushort)Species.Runerigus, (ushort)Species.Sirfetchd,
-            (ushort)Species.Sneasler,
-            (ushort)Species.Overqwil,
+            (ushort)Species.Sneasler,  (ushort)Species.Overqwil,
+            (ushort)Species.Clodsire,
         ];
 
         List<ushort> alwaysForm2 = [
@@ -812,10 +812,18 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
             (ushort)Species.Basculegion,
         ];
 
+        List<ushort> scatterbugFamily = [
+            (ushort)Species.Scatterbug,
+            (ushort)Species.Spewpa,
+            (ushort)Species.Vivillon,
+        ];
+
 
         if (alwaysForm0.Contains(pkm.Species)) { return (byte)0; }
         if (alwaysForm1.Contains(pkm.Species)) { return (byte)1; }
         if (alwaysForm2.Contains(pkm.Species)) { return (byte)2; }
+        // In SV, all Scatterbug eggs are Fancy form
+        if (scatterbugFamily.Contains(pkm.Species)) { return (byte)18; }
 
         var pkmForm = pkm.Form;
 
