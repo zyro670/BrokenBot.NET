@@ -805,12 +805,12 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
                 list[i].Form = 0;
 
             var tree = EvolutionTree.GetEvolutionTree(list[i].Context); // Obtain the correct evolution tree for the context
-            var preEvos = tree.Reverse.GetPreEvolutions(list[i].Species, list[i].Form).Where(x => x.Form == form).ToList(); // Obtain the reverse evolution paths
-            var filteredPreEvos = preEvos.ToList();
-            if (!filteredPreEvos.Any())
-                continue;
-            var evo = filteredPreEvos.LastOrDefault();
-            criteriaList.Add(new EvoCriteria { Species = evo.Species, Form = evo.Form });
+            var baseForm = tree.GetBaseSpeciesForm(list[i].Species, list[i].Form);
+            if (baseForm.Form != form)
+            {
+                baseForm.Form = form;
+            }
+            criteriaList.Add(new EvoCriteria { Species = baseForm.Species, Form = baseForm.Form });
         }
         return criteriaList;
     }
