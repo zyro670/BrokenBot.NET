@@ -285,7 +285,7 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
             pk.Ball = BallApplicator.ApplyBallLegalRandom(pk);
 
         TradeExtensions<T>.EggTrade(pk, template);
-        pk.SetAbilityIndex(Random.Next(Game is GameVersion.SWSH ? 3 : 2));
+        pk.SetAbilityIndex(Random.Next(Game is GameVersion.BDSP ? 2 : 3));
 
         pk.Nature = (Nature)Random.Next(25);
         pk.StatNature = pk.Nature;
