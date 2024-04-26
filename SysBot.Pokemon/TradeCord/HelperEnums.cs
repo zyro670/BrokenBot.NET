@@ -794,6 +794,11 @@ public enum TCItems
     GimmighoulCoin = 2137,
     AuspiciousArmor = 2344,
     LeadersCrest = 2345,
+
+    SyrupyApple = 2402,
+    UnremarkableTeacup = 2403,
+    MasterpieceTeacup = 2404,
+    MetalAlloy = 2482,
 }
 
 public enum AlcremieForms

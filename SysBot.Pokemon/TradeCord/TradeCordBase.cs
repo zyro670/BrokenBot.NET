@@ -1453,7 +1453,7 @@ public abstract class TradeCordBase<T> where T : PKM, new()
             (ushort)Huntail => TCItems.DeepSeaTooth,
             (ushort)Gorebyss => TCItems.DeepSeaScale,
             (ushort)Rhyperior => TCItems.Protector,
-            (ushort)Weavile => TCItems.RazorClaw,
+            (ushort)Weavile or (ushort)Sneasler => TCItems.RazorClaw,
             (ushort)Dusknoir => TCItems.ReaperCloth,
             (ushort)Aromatisse => TCItems.Sachet,
             (ushort)Porygon2 => TCItems.Upgrade,
@@ -1469,6 +1469,9 @@ public abstract class TradeCordBase<T> where T : PKM, new()
             (ushort)Ceruledge => TCItems.MaliciousArmor,
             (ushort)Gholdengo => TCItems.GimmighoulCoin,
             (ushort)Kingambit => TCItems.LeadersCrest,
+            (ushort)Dipplin => TCItems.SyrupyApple,
+            (ushort)Sinistcha => form == 0 ? TCItems.UnremarkableTeacup : TCItems.MasterpieceTeacup,
+            (ushort)Archaludon => TCItems.MetalAlloy,
 
             _ => TCItems.None,
         };
