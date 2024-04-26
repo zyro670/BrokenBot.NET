@@ -1441,6 +1441,7 @@ public abstract class TradeCordBase<T> where T : PKM, new()
             (ushort)Slowbro when form > 0 => TCItems.GalaricaCuff,
             (ushort)Slowking when form > 0 => TCItems.GalaricaWreath,
             (ushort)Slowking or (ushort)Politoed => TCItems.KingsRock,
+            (ushort)Ursuluna => TCItems.PeatBlock,
 
             // Held item
             (ushort)Kingdra => TCItems.DragonScale,

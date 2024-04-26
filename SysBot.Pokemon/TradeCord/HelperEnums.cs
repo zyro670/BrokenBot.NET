@@ -789,7 +789,10 @@ public enum TCItems
     GalaricaCuff = 1582,
     GalaricaWreath = 1592,
 
+    PeatBlock = 1692,
+
     GriseousCore = 1779,
+
     MaliciousArmor = 1861,
     GimmighoulCoin = 2137,
     AuspiciousArmor = 2344,
