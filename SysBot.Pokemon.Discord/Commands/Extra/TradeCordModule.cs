@@ -803,10 +803,7 @@ public class TradeCordModule<T> : ModuleBase<SocketCommandContext> where T : PKM
     [RequireQueueRole(nameof(DiscordManager.RolesTradeCord))]
     public async Task TradeCordEvolution([Remainder][Summary("Usable item or Alcremie form.")] string input = "")
     {
-        await ReplyAsync("To further bring the community together, evolutions has currently been turned off. ").ConfigureAwait(false);
-        return;
-
-        /*string name = $"{Context.User.Username}'s Evolution";
+        string name = $"{Context.User.Username}'s Evolution";
         if (!TradeCordParanoiaChecks(out string msg))
         {
             await Util.EmbedUtil(Context, name, msg).ConfigureAwait(false);
@@ -835,7 +832,7 @@ public class TradeCordModule<T> : ModuleBase<SocketCommandContext> where T : PKM
             Author = author,
         }.WithFooter(x => { x.Text = flavorText; x.IconUrl = "https://i.imgur.com/nXNBrlr.png"; });
 
-        await Context.Channel.SendMessageAsync(null, false, embed: embed.Build()).ConfigureAwait(false);*/
+        await Context.Channel.SendMessageAsync(null, false, embed: embed.Build()).ConfigureAwait(false);
     }
 
     [Command("TradeCordGiveItem")]
