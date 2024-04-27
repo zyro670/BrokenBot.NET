@@ -548,7 +548,7 @@ public class PokeTradeBotSV : PokeRoutineExecutor9SV, ICountBot
         return true;
     }
 
-    // If we didn't find a trainer, we're still in the portal but there can be 
+    // If we didn't find a trainer, we're still in the portal but there can be
     // different numbers of pop-ups we have to dismiss to get back to when we can trade.
     // Rather than resetting to overworld, try to reset out of portal and immediately go back in.
     private async Task<bool> RecoverToPortal(CancellationToken token)
@@ -895,6 +895,15 @@ public class PokeTradeBotSV : PokeRoutineExecutor9SV, ICountBot
         return new TradePartnerSV(trader_info);
     }
 
+    private async Task<TradeMyStatus> GetFullTradePartnerInfo(CancellationToken token)
+    {
+        // We're able to see both users' MyStatus, but one of them will be ourselves.
+        var trader_info = await GetTradePartnerMyStatus(Offsets.Trader1MyStatusPointer, token).ConfigureAwait(false);
+        if (trader_info.OT == OT && trader_info.DisplaySID == DisplaySID && trader_info.DisplayTID == DisplayTID) // This one matches ourselves.
+            trader_info = await GetTradePartnerMyStatus(Offsets.Trader2MyStatusPointer, token).ConfigureAwait(false);
+        return trader_info;
+    }
+
     protected virtual async Task<(PK9 toSend, PokeTradeResult check)> GetEntityToSend(SAV9SV sav, PokeTradeDetail<PK9> poke, PK9 offered, byte[] oldEC, PK9 toSend, PartnerDataHolder partnerID, CancellationToken token)
     {
         return poke.Type switch
@@ -972,6 +981,7 @@ public class PokeTradeBotSV : PokeRoutineExecutor9SV, ICountBot
         if (Hub.Config.Legality.ResetHOMETracker)
             clone.Tracker = 0;
 
+
         string shiny = string.Empty;
         if (!TradeExtensions<PK9>.ShinyLockCheck(offered.Species, TradeExtensions<PK9>.FormOutput(offered.Species, offered.Form, out _), $"{(Ball)offered.Ball}"))
             shiny = $"\nShiny: {(offered.ShinyXor == 0 ? "Square" : offered.IsShiny ? "Star" : "No")}";
@@ -1006,6 +1016,11 @@ public class PokeTradeBotSV : PokeRoutineExecutor9SV, ICountBot
         else clone = (PK9)sav.GetLegal(AutoLegalityWrapper.GetTemplate(new ShowdownSet(string.Join("\n", set))), out _);
 
         clone = (PK9)TradeExtensions<PK9>.TrashBytes(clone, new LegalityAnalysis(clone));
+        var tradePartner = await GetFullTradePartnerInfo(token).ConfigureAwait(false);
+        clone.ID32 = System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(tradePartner.Data.AsSpan(0));
+        clone.Language = tradePartner.Language;
+        clone.OriginalTrainerGender = (byte)tradePartner.Gender;
+        clone.ClearNickname();
         clone.ResetPartyStats();
 
         var la = new LegalityAnalysis(clone);
