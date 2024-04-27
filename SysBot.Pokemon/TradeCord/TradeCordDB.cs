@@ -581,6 +581,12 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
                 (ushort)Species.Grapploct when !pk.RelearnMoves.ToList().Contains(269) => 269, // Taunt
                 (ushort)Species.Lickilicky when !pk.RelearnMoves.ToList().Contains(205) => 205, // Rollout
                 (ushort)Species.Ambipom when !pk.RelearnMoves.ToList().Contains(458) => 458, // Double Hit
+                (ushort)Species.Wyrdeer when !pk.RelearnMoves.ToList().Contains(Move.PsyshieldBash) => (ushort)Move.PsyshieldBash,
+                (ushort)Species.Overqwil when !pk.RelearnMoves.ToList().Contains(Move.BarbBarrage) => (ushort)Move.BarbBarrage,
+                (ushort)Species.Dudunsparce when !pk.RelearnMoves.ToList().Contains(Move.HyperDrill) => (ushort)Move.HyperDrill,
+                (ushort)Species.Farigiraf when !pk.RelearnMoves.ToList().Contains(Move.TwinBeam) => (ushort)Move.TwinBeam,
+                (ushort)Species.Annihilape when !pk.RelearnMoves.ToList().Contains(Move.RageFist) => (ushort)Move.RageFist,
+                (ushort)Species.Hydrapple when !pk.RelearnMoves.ToList().Contains(Move.DragonCheer) => (ushort)Move.DragonCheer,
                 _ => 0,
             };
 
@@ -605,7 +611,7 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
             (ushort)Species.Eevee when item <= 0 => evoList.Find(x => x.DayTime == tod),
             (ushort)Species.Toxel => TradeExtensions<T>.LowKey.Contains((int)pk.Nature) ? evoList.Find(x => x.EvolvedForm is 1) : evoList.Find(x => x.EvolvedForm is 0),
             (ushort)Species.Milcery when alcremieForm >= 0 => evoList.Find(x => x.EvolvedForm == alcremieForm),
-            (ushort)Species.Cosmoem => pk.Version is (GameVersion)45 ? evoList.Find(x => x.EvolvesInto is (ushort)Species.Lunala) : evoList.Find(x => x.EvolvesInto is (ushort)Species.Solgaleo),
+            (ushort)Species.Cosmoem => (pk.Version is GameVersion.SH or GameVersion.VL) ? evoList.Find(x => x.EvolvesInto is (ushort)Species.Lunala) : evoList.Find(x => x.EvolvesInto is (ushort)Species.Solgaleo),
             (ushort)Species.Nincada => evoList.Find(x => x.EvolvesInto is (ushort)Species.Ninjask),
             (ushort)Species.Espurr => evoList.Find(x => x.EvolvedForm == (pk.Gender is (int)Gender.Male ? 0 : 1)),
             (ushort)Species.Combee => evoList.Find(x => x.EvolvesInto == (pk.Gender is (int)Gender.Male ? -1 : (ushort)Species.Vespiquen)),
@@ -616,6 +622,9 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
             (ushort)Species.Rockruff when pk.Form is 1 => evoList.Find(x => x.EvolvedForm is 2), // Dusk
             (ushort)Species.Rockruff => evoList.Find(x => x.DayTime == tod),
             (ushort)Species.Wurmple => GetWurmpleEvo(pk, evoList),
+            (ushort)Species.Basculin when pk.Form is 2 => evoList.Find(x => x.EvolvedForm == (pk.Gender is (int)Gender.Male ? 0 : 1)),
+            (ushort)Species.Tandemaus => evoList.Find(x => x.EvolvedForm == (pk.EncryptionConstant % 100 == 0) ? 0 : 1),
+            (ushort)Species.Dunsparce => evoList.Find(x => x.EvolvedForm == (pk.EncryptionConstant % 100 == 0) ? 1 : 0),
             _ => evoList.Find(x => x.BaseForm == pk.Form),
         };
         return result!;

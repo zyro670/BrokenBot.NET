@@ -1346,6 +1346,55 @@ public abstract class TradeCordBase<T> where T : PKM, new()
         return array.Where(x => x > 0).Distinct().OrderBy(x => x).Any(x => x != (i += 1)) ? i : i + 1;
     }
 
+    private bool IsLevelUpEvolutionVariant(EvolutionType evoType)
+    {
+        return evoType switch
+        {
+            EvolutionType.LevelUp or
+            EvolutionType.LevelUpATK or
+            EvolutionType.LevelUpAeqD or
+            EvolutionType.LevelUpDEF or
+            EvolutionType.LevelUpBeauty or
+            EvolutionType.LevelUpElectric or EvolutionType.LevelUpForest or
+            EvolutionType.LevelUpCold or EvolutionType.LevelUpInverted or
+            EvolutionType.LevelUpWeather or EvolutionType.LevelUpSummit or
+            EvolutionType.LevelUpWithTeammate or
+            EvolutionType.LevelUpWalkStepsWith or
+            EvolutionType.LevelUpUnionCircle or
+            EvolutionType.LevelUpInBattleEC100 or
+            EvolutionType.LevelUpInBattleECElse or
+            EvolutionType.LevelUpDefeatEquals or
+            EvolutionType.LevelUpUseMoveSpecial or
+            EvolutionType.LevelUpKnowMoveECElse or
+            EvolutionType.LevelUpKnowMoveEC100 or
+            EvolutionType.LevelUpRecoilDamageMale or
+            EvolutionType.LevelUpRecoilDamageFemale or
+            EvolutionType.UseMoveAgileStyle or
+            EvolutionType.UseMoveStrongStyle
+            // I'm not sure whether EvolutionType.Hisui should go here.
+            // I'm leaning no because it might cause ambiguity for things with
+            // Hisuian form evolutions.
+                => true,
+            _ => false
+        };
+    }
+
+    private bool IsItemEvolutionVariant(EvolutionType evoType)
+    {
+        return evoType switch
+        {
+            EvolutionType.TradeHeldItem or EvolutionType.UseItem or
+            EvolutionType.UseItemFemale or EvolutionType.UseItemMale or
+            EvolutionType.LevelUpHeldItemDay or
+            EvolutionType.LevelUpHeldItemNight or
+            EvolutionType.Spin or
+            EvolutionType.UseItemFullMoon
+                => true,
+            _ => false
+        };
+    }
+
+
     private List<EvolutionTemplate> EvolutionRequirements()
     {
         var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
@@ -1385,12 +1434,15 @@ public abstract class TradeCordBase<T> where T : PKM, new()
                         TCItems item = TCItems.None;
                         bool baseSp = c - 1 < 0;
 
-                        if (evoType is EvolutionType.LevelUpElectric or EvolutionType.LevelUpForest or EvolutionType.LevelUpCold or EvolutionType.LevelUpSummit or EvolutionType.LevelUpWeather or EvolutionType.LevelUpWithTeammate or EvolutionType.LevelUpBeauty)
+                        if (IsLevelUpEvolutionVariant(evoType))
+                        {
                             evoType = EvolutionType.LevelUp;
+                        }
 
-                        if (evoType is EvolutionType.TradeHeldItem or EvolutionType.UseItem or EvolutionType.UseItemFemale or EvolutionType.UseItemMale or EvolutionType.LevelUpHeldItemDay or EvolutionType.LevelUpHeldItemNight or EvolutionType.Spin)
+                        if (IsItemEvolutionVariant(evoType))
+                        {
                             item = GetEvoItem((ushort)(baseSp ? 0 : preEvos[c - 1].Species), f);
-
+                        }
                         var template = new EvolutionTemplate
                         {
                             Species = preEvos[c].Species,
@@ -1409,6 +1461,12 @@ public abstract class TradeCordBase<T> where T : PKM, new()
                             template.EvolvesAtLevel = 24;
                         else if (preEvos[c].Species is (ushort)Ambipom)
                             template.EvolvesAtLevel = 31;
+                        else if (preEvos[c].Species is (ushort)Gimmighoul)
+                            template.EvolvesAtLevel = 6;
+                        else if (preEvos[c].Species is (ushort)Pawmo)
+                            template.EvolvesAtLevel = 19;
+                        else if (preEvos[c].Species is (ushort)Bramblin or (ushort)Rellor)
+                            template.EvolvesAtLevel = 2;
 
                         list.Add(template);
                     }
