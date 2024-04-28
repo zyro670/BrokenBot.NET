@@ -322,11 +322,17 @@ public class TradeCordHelper<T> : TradeCordDatabase<T> where T : PKM, new()
                 if (result.Poke.Species is 0)
                     result.Poke = Game is GameVersion.BDSP ? SetProcessBDSP(speciesName, trainerInfo, eventForm) : Game is GameVersion.SV ? SetProcessSV(speciesName, trainerInfo, eventForm) : SetProcessSWSH(speciesName, trainerInfo, eventForm);
 
-                if (result.Poke.Species is ((ushort)Species.Hoopa) or ((ushort)Species.Meloetta) or ((ushort)Species.Koraidon) or ((ushort)Species.Miraidon))
+                if (result.Poke.Species is ((ushort)Species.Hoopa) or ((ushort)Species.Meloetta))
                     result.Poke.Form = 0;
 
                 if (result.Poke.Species is >= (ushort)Species.Sprigatito and <= (ushort)Species.Quaquaval && result.Poke.Ball == (int)Ball.Premier)
                     result.Poke.Ball = (int)Ball.Poke;
+
+                if ((result.Poke is PK9 pk9) && pk9.Species is (ushort)Species.Koraidon or (ushort)Species.Miraidon)
+                {
+                    pk9.Form = 0; // Battle Form
+                    pk9.FormArgument = 1u; // the one in Area Zero; not the one you ride on the whole game
+                }
 
                 if (Settings.PokeEventType is PokeEventType.Anonymyths)
                 {
@@ -687,7 +693,7 @@ public class TradeCordHelper<T> : TradeCordDatabase<T> where T : PKM, new()
             bool isParadox = IsParadox((ushort)speciesID);
             string ballStr = ball != Ball.None ? $"Pokémon in {ball} Ball" : "";
             string generalOutput = input == "Shinies" ? "shiny Pokémon" : input == "Events" ? "non-shiny event Pokémon" : input == "Legendaries" ? "non-shiny legendary Pokémon" : input == "Paradoxes" ? "non-shiny paradox Pokémon" : ball != Ball.None ? ballStr : $"non-shiny {input}";
-            string exclude = ball is Ball.Cherish || input == "Events" ? ", legendaries, paradoxes" : input == "Legendaries" ? ", events, paradoxes," : input == "Paradoxes" ? ", events, legendaries," : $", events,{(isLegend ? "" : " legendaries,")}{(isParadox ? "" : " paradoxes,")}"; 
+            string exclude = ball is Ball.Cherish || input == "Events" ? ", legendaries, paradoxes" : input == "Legendaries" ? ", events, paradoxes," : input == "Paradoxes" ? ", events, legendaries," : $", events,{(isLegend ? "" : " legendaries,")}{(isParadox ? "" : " paradoxes,")}";
             result.Message = input == "" ? "Every non-shiny Pokémon was released, excluding Ditto, favorites, events, buddy, legendaries, and those in daycare." : $"Every {generalOutput} was released, excluding favorites, buddy{exclude} and those in daycare.";
             return true;
         }
@@ -918,7 +924,7 @@ public class TradeCordHelper<T> : TradeCordDatabase<T> where T : PKM, new()
             bool isLegend = IsLegendaryOrMythical(pk.Species);
 
             var names = CatchValues.Replace(" ", "").Split(',');
-            var obj = new object[] { m_user.UserInfo.UserID, newID, match.Shiny, match.Ball, match.Nickname, match.Species, match.Form, match.Egg, false, false, isLegend, match.Event, match.Gmax }; 
+            var obj = new object[] { m_user.UserInfo.UserID, newID, match.Shiny, match.Ball, match.Nickname, match.Species, match.Form, match.Egg, false, false, isLegend, match.Event, match.Gmax };
             result.SQLCommands.Add(DBCommandConstructor("catches", CatchValues, "", names, obj, SQLTableContext.Insert));
 
             names = BinaryCatchesValues.Replace(" ", "").Split(',');
@@ -2315,7 +2321,7 @@ public class TradeCordHelper<T> : TradeCordDatabase<T> where T : PKM, new()
         int[] array = result.User.Catches.Select(x => x.Value.ID).ToArray();
         array = array.OrderBy(x => x).ToArray();
         index = Indexing(array);
-        result.User.Catches.Add(index, new() { Species = speciesName, Nickname = pk.Nickname, Ball = $"{(Ball)pk.Ball}", Egg = pk.IsEgg, Form = form, ID = index, Shiny = pk.IsShiny, Traded = false, Favorite = false, Legendary = isLegend, Event = pk.FatefulEncounter, Gmax = canGmax});
+        result.User.Catches.Add(index, new() { Species = speciesName, Nickname = pk.Nickname, Ball = $"{(Ball)pk.Ball}", Egg = pk.IsEgg, Form = form, ID = index, Shiny = pk.IsShiny, Traded = false, Favorite = false, Legendary = isLegend, Event = pk.FatefulEncounter, Gmax = canGmax });
 
         var names = CatchValues.Replace(" ", "").Replace("-", "").Split(',');
         var obj = new object[] { result.User.UserInfo.UserID, index, pk.IsShiny, $"{(Ball)pk.Ball}", pk.Nickname, speciesName, form, pk.IsEgg, false, false, isLegend, pk.FatefulEncounter, canGmax, isParadox };
