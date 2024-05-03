@@ -334,6 +334,12 @@ public class TradeCordHelper<T> : TradeCordDatabase<T> where T : PKM, new()
                 if (result.Poke.Species is >= (ushort)Species.Sprigatito and <= (ushort)Species.Quaquaval && result.Poke.Ball == (int)Ball.Premier)
                     result.Poke.Ball = (int)Ball.Poke;
 
+                if ((result.Poke is PK9 pk9) && pk9.Species is (ushort)Species.Koraidon or (ushort)Species.Miraidon)
+                {
+                    pk9.Form = 0; // Battle Form
+                    pk9.FormArgument = 1u; // the one in Area Zero; not the one you ride on the whole game
+                }
+
                 if (Settings.PokeEventType is PokeEventType.Anonymyths)
                 {
                     if (TradeExtensions<PK9>.Anonymyths.Contains(result.Poke.Species))
