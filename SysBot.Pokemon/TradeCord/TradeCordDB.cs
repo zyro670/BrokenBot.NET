@@ -119,7 +119,7 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
             }
         }
         else if (enc.Version is not GameVersion.GO && enc.Generation >= 6)
-            pkm.SetRandomIVs(enc.EggEncounter ? Random.Next(7) : 4);
+            pkm.SetRandomIVs(enc.IsEgg ? Random.Next(7) : 4);
 
         pkm = (T)TradeExtensions<T>.TrashBytes(pkm);
         pkm.CurrentFriendship = pkm.PersonalInfo.BaseFriendship;
@@ -159,7 +159,7 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
             pkm.Nature = (Nature)Random.Next(25);
             pkm.StatNature = pkm.Nature;
             if (enc is EncounterSlot8b slot8)
-                pkm.SetAbilityIndex(slot8.Ability is AbilityPermission.Any12H && slot8.CanUseRadar && !slot8.EggEncounter ? Random.Next(3) : slot8.Ability is AbilityPermission.Any12 ? Random.Next(2) : slot8.Ability is AbilityPermission.OnlyFirst ? 0 : slot8.Ability is AbilityPermission.OnlySecond ? 1 : 2);
+                pkm.SetAbilityIndex(slot8.Ability is AbilityPermission.Any12H && slot8.CanUseRadar && !slot8.IsEgg ? Random.Next(3) : slot8.Ability is AbilityPermission.Any12 ? Random.Next(2) : slot8.Ability is AbilityPermission.OnlyFirst ? 0 : slot8.Ability is AbilityPermission.OnlySecond ? 1 : 2);
             else if (!IsLegendaryOrMythical(pkm.Species))
                 pkm.SetAbilityIndex(Random.Next(2));
 
@@ -206,7 +206,7 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
             pkm.Nature = (Nature)Random.Next(25);
             pkm.StatNature = pkm.Nature;
             if (enc is EncounterSlot9 slot9)
-                pkm.SetAbilityIndex(slot9.Ability is AbilityPermission.Any12H && !slot9.EggEncounter ? Random.Next(3) : slot9.Ability is AbilityPermission.Any12 ? Random.Next(2) : slot9.Ability is AbilityPermission.OnlyFirst ? 0 : slot9.Ability is AbilityPermission.OnlySecond ? 1 : 2);
+                pkm.SetAbilityIndex(slot9.Ability is AbilityPermission.Any12H && !slot9.IsEgg ? Random.Next(3) : slot9.Ability is AbilityPermission.Any12 ? Random.Next(2) : slot9.Ability is AbilityPermission.OnlyFirst ? 0 : slot9.Ability is AbilityPermission.OnlySecond ? 1 : 2);
             else if (!IsLegendaryOrMythical(pkm.Species))
                 pkm.SetAbilityIndex(Random.Next(2));
 
@@ -285,7 +285,7 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
             pk.Ball = BallApplicator.ApplyBallLegalRandom(pk);
 
         TradeExtensions<T>.EggTrade(pk, template);
-        pk.SetAbilityIndex(Random.Next(Game is GameVersion.SWSH ? 3 : 2));
+        pk.SetAbilityIndex(Random.Next(Game is GameVersion.BDSP ? 2 : 3));
 
         pk.Nature = (Nature)Random.Next(25);
         pk.StatNature = pk.Nature;
@@ -581,6 +581,12 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
                 (ushort)Species.Grapploct when !pk.RelearnMoves.ToList().Contains(269) => 269, // Taunt
                 (ushort)Species.Lickilicky when !pk.RelearnMoves.ToList().Contains(205) => 205, // Rollout
                 (ushort)Species.Ambipom when !pk.RelearnMoves.ToList().Contains(458) => 458, // Double Hit
+                (ushort)Species.Wyrdeer when !pk.RelearnMoves.ToList().Contains((ushort)Move.PsyshieldBash) => (ushort)Move.PsyshieldBash,
+                (ushort)Species.Overqwil when !pk.RelearnMoves.ToList().Contains((ushort)Move.BarbBarrage) => (ushort)Move.BarbBarrage,
+                (ushort)Species.Dudunsparce when !pk.RelearnMoves.ToList().Contains((ushort)Move.HyperDrill) => (ushort)Move.HyperDrill,
+                (ushort)Species.Farigiraf when !pk.RelearnMoves.ToList().Contains((ushort)Move.TwinBeam) => (ushort)Move.TwinBeam,
+                (ushort)Species.Annihilape when !pk.RelearnMoves.ToList().Contains((ushort)Move.RageFist) => (ushort)Move.RageFist,
+                (ushort)Species.Hydrapple when !pk.RelearnMoves.ToList().Contains((ushort)Move.DragonCheer) => (ushort)Move.DragonCheer,
                 _ => 0,
             };
 
@@ -605,7 +611,7 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
             (ushort)Species.Eevee when item <= 0 => evoList.Find(x => x.DayTime == tod),
             (ushort)Species.Toxel => TradeExtensions<T>.LowKey.Contains((int)pk.Nature) ? evoList.Find(x => x.EvolvedForm is 1) : evoList.Find(x => x.EvolvedForm is 0),
             (ushort)Species.Milcery when alcremieForm >= 0 => evoList.Find(x => x.EvolvedForm == alcremieForm),
-            (ushort)Species.Cosmoem => pk.Version is (GameVersion)45 ? evoList.Find(x => x.EvolvesInto is (ushort)Species.Lunala) : evoList.Find(x => x.EvolvesInto is (ushort)Species.Solgaleo),
+            (ushort)Species.Cosmoem => (pk.Version is GameVersion.SH or GameVersion.VL) ? evoList.Find(x => x.EvolvesInto is (ushort)Species.Lunala) : evoList.Find(x => x.EvolvesInto is (ushort)Species.Solgaleo),
             (ushort)Species.Nincada => evoList.Find(x => x.EvolvesInto is (ushort)Species.Ninjask),
             (ushort)Species.Espurr => evoList.Find(x => x.EvolvedForm == (pk.Gender is (int)Gender.Male ? 0 : 1)),
             (ushort)Species.Combee => evoList.Find(x => x.EvolvesInto == (pk.Gender is (int)Gender.Male ? -1 : (ushort)Species.Vespiquen)),
@@ -616,6 +622,9 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
             (ushort)Species.Rockruff when pk.Form is 1 => evoList.Find(x => x.EvolvedForm is 2), // Dusk
             (ushort)Species.Rockruff => evoList.Find(x => x.DayTime == tod),
             (ushort)Species.Wurmple => GetWurmpleEvo(pk, evoList),
+            (ushort)Species.Basculin when pk.Form is 2 => evoList.Find(x => x.EvolvedForm == (pk.Gender is (int)Gender.Male ? 0 : 1)),
+            (ushort)Species.Tandemaus when pk.EncryptionConstant % 100 == 0 => evoList.Find(x => x.EvolvedForm == 0),
+            (ushort)Species.Dunsparce when pk.EncryptionConstant % 100 == 0 => evoList.Find(x => x.EvolvedForm == 1),
             _ => evoList.Find(x => x.BaseForm == pk.Form),
         };
         return result!;
@@ -661,7 +670,7 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
     protected Species ParseSpeciesFromSanitizedLabel(string label)
     {
         var speciesWithDash = ((IReadOnlyList<string>)[
-                    "Nidoran-M",
+            "Nidoran-M",
             "Nidoran-F",
             "Porygon-Z",
             "Jangmo-o",
@@ -673,7 +682,7 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
             "Chi-Yu"
         ]).ToFrozenSet<string>;
         var speciesWithSpace = ((IReadOnlyList<string>)[
-                    "Mr. Mime",
+            "Mr. Mime",
             "Mime Jr.",
             "Tapu Koko",
             "Tapu Lele",
@@ -749,15 +758,29 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
         if (!sameTree || !breedable)
             return false;
 
-        Random rng = new();
+        bool bothDittos = (pkm1.Species is 132) && (pkm2.Species is 132);
 
-        if (pkm1.Species is 132)
+        if (bothDittos)
+        {
+            Random rng = new();
             while (!Breeding.CanHatchAsEgg(pkm1.Species))
             {
                 pkm1.Species = (ushort)rng.Next(1021);
             }
-        if (pkm2.Species is 132)
             pkm2.Species = pkm1.Species;
+        }
+
+        else if (pkm1.Species is 132)
+        {
+            pkm1.Species = pkm2.Species;
+            pkm1.Form = pkm2.Form;
+        }
+        else if (pkm2.Species is 132)
+        {
+            pkm2.Species = pkm1.Species;
+            pkm2.Form = pkm1.Form;
+        }
+
         criteria = EggEvoCriteria(pkm1, pkm2);
         if (criteria.Count < 2)
             return false;
@@ -770,15 +793,81 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
 
     private bool SameEvoTree(PKM pkm1, PKM pkm2)
     {
-        var evos = EncounterOrigin.GetOriginChain(pkm1, 8);
+        var evos = EncounterOrigin.GetOriginChain(pkm1, 9);
         var encs = EncounterGenerator.GetGenerator(Game).GetPossible(pkm1, evos, Game, EncounterTypeGroup.Egg).ToArray();
         var base1 = encs.Length > 0 ? encs[^1].Species : -1;
 
-        evos = EncounterOrigin.GetOriginChain(pkm2, 8);
+        evos = EncounterOrigin.GetOriginChain(pkm2, 9);
         encs = EncounterGenerator.GetGenerator(Game).GetPossible(pkm2, evos, Game, EncounterTypeGroup.Egg).ToArray();
         var base2 = encs.Length > 0 ? encs[^1].Species : -2;
 
         return base1 == base2;
+    }
+
+    private static byte BreedForm(T pkm)
+    {
+        List<ushort> alwaysForm0 = [
+            (ushort)Species.Sinistea,
+            (ushort)Species.Polteageist,
+            (ushort)Species.Poltchageist,
+            (ushort)Species.Sinistcha,
+            (ushort)Species.Rotom,
+            (ushort)Species.Pikachu,
+            (ushort)Species.Raichu,
+            (ushort)Species.Marowak,
+            (ushort)Species.Exeggutor,
+            (ushort)Species.Weezing,
+            (ushort)Species.Alcremie,
+            (ushort)Species.Lilligant,
+            (ushort)Species.Braviary,
+            (ushort)Species.Avalugg,
+            (ushort)Species.Sliggoo,
+            (ushort)Species.Goodra,
+            (ushort)Species.Typhlosion,
+            (ushort)Species.Samurott,
+            (ushort)Species.Decidueye,
+            (ushort)Species.Maushold,
+            (ushort)Species.Dudunsparce,
+        ];
+
+        List<ushort> alwaysForm1 = [
+            (ushort)Species.Obstagoon,
+            (ushort)Species.Cursola,
+            (ushort)Species.Runerigus,
+            (ushort)Species.Sirfetchd,
+            (ushort)Species.Sneasler,
+            (ushort)Species.Overqwil,
+            (ushort)Species.Clodsire,
+        ];
+
+        List<ushort> alwaysForm2 = [
+            (ushort)Species.Perrserker,
+            (ushort)Species.Basculegion,
+        ];
+
+        List<ushort> scatterbugFamily = [
+            (ushort)Species.Scatterbug,
+            (ushort)Species.Spewpa,
+            (ushort)Species.Vivillon,
+        ];
+
+        if (alwaysForm0.Contains(pkm.Species)) { return 0; }
+        if (alwaysForm1.Contains(pkm.Species)) { return 1; }
+        if (alwaysForm2.Contains(pkm.Species)) { return 2; }
+        // In SV, all Scatterbug eggs are Fancy form
+        if (scatterbugFamily.Contains(pkm.Species)) { return 18; }
+
+        var pkmForm = pkm.Form;
+
+        byte form = pkm.Species switch
+        {
+            (ushort)Species.Lycanroc or (ushort)Species.Slowbro or (ushort)Species.Darmanitan when pkmForm is 2 => 1,
+            (ushort)Species.Lycanroc when pkmForm is 1 => 0,
+            (ushort)Species.MrMime => pkmForm == 1 ? (byte)0 : pkmForm,
+            _ => pkmForm, // default: same form as parent
+        };
+
+        return form;
     }
 
     private static List<EvoCriteria> EggEvoCriteria(T pk1, T pk2)
@@ -787,27 +876,16 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
         List<EvoCriteria> criteriaList = [];
         for (int i = 0; i < list.Count; i++)
         {
-            byte form = list[i].Species switch
-            {
-                (ushort)Species.Obstagoon or (ushort)Species.Cursola or (ushort)Species.Runerigus or (ushort)Species.Sirfetchd => 1,
-                (ushort)Species.Perrserker => 2,
-                (ushort)Species.Lycanroc or (ushort)Species.Slowbro or (ushort)Species.Darmanitan when list[i].Form is 2 => 1,
-                (ushort)Species.Lycanroc when list[i].Form is 1 => 0,
-                (ushort)Species.Sinistea or (ushort)Species.Polteageist or (ushort)Species.Rotom or (ushort)Species.Pikachu or (ushort)Species.Raichu or (ushort)Species.Marowak or (ushort)Species.Exeggutor or (ushort)Species.Weezing or (ushort)Species.Alcremie => 0,
-                (ushort)Species.MrMime => list[i].Form == 1 ? (byte)0 : list[i].Form,
-                _ => list[i].Form,
-            };
-
+            byte form = BreedForm(list[i]);
             if (list[i].Species is (ushort)Species.Rotom && list[i].Form > 0)
                 list[i].Form = 0;
 
             var tree = EvolutionTree.GetEvolutionTree(list[i].Context); // Obtain the correct evolution tree for the context
-            var preEvos = tree.Reverse.GetPreEvolutions(list[i].Species, list[i].Form).Where(x => x.Form == form).ToList(); // Obtain the reverse evolution paths
-            var filteredPreEvos = preEvos.ToList();
-            if (!filteredPreEvos.Any())
-                continue;
-            var evo = filteredPreEvos.LastOrDefault();
-            criteriaList.Add(new EvoCriteria { Species = evo.Species, Form = evo.Form });
+            var baseForm = tree.GetBaseSpeciesForm(list[i].Species, list[i].Form);
+            if (baseForm.Form != form)
+                baseForm.Form = form;
+
+            criteriaList.Add(new EvoCriteria { Species = baseForm.Species, Form = baseForm.Form });
         }
         return criteriaList;
     }

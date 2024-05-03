@@ -581,7 +581,7 @@ public class OverworldBotSV : PokeRoutineExecutor9SV, IEncounterBot
             pk.SID16 = TrainerSav.SID16;
             pk.OriginalTrainerName = TrainerSav.OT;
             pk.OriginalTrainerGender = TrainerSav.Gender;
-            pk.Obedience_Level = (byte)pk.MetLevel;
+            pk.ObedienceLevel = (byte)pk.MetLevel;
             pk.FatefulEncounter = false;
             pk.Language = TrainerSav.Language;
             pk.EncryptionConstant = prevEC;

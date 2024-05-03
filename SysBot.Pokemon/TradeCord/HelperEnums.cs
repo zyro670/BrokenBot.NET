@@ -788,12 +788,16 @@ public enum TCItems
     ChippedPot = 1254,
     GalaricaCuff = 1582,
     GalaricaWreath = 1592,
-
+    PeatBlock = 1692,
     GriseousCore = 1779,
     MaliciousArmor = 1861,
     GimmighoulCoin = 2137,
     AuspiciousArmor = 2344,
     LeadersCrest = 2345,
+    SyrupyApple = 2402,
+    UnremarkableTeacup = 2403,
+    MasterpieceTeacup = 2404,
+    MetalAlloy = 2482,
 }
 
 public enum AlcremieForms

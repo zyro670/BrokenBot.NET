@@ -34,7 +34,8 @@ public class TradeExtensions<T> where T : PKM, new()
     public static readonly int[] LowKey = [1, 5, 7, 10, 12, 15, 16, 17, 18, 20, 21, 23];
     public static readonly ushort[] ShinyLock = [  (ushort)Species.Victini, (ushort)Species.Hoopa, (ushort)Species.Keldeo, (ushort)Species.Meloetta, (ushort)Species.Volcanion, (ushort)Species.Cosmog, (ushort)Species.Cosmoem, (ushort)Species.Magearna, (ushort)Species.Marshadow, (ushort)Species.Eternatus,
     (ushort)Species.Kubfu, (ushort)Species.Urshifu, (ushort)Species.Zarude, (ushort)Species.Glastrier, (ushort)Species.Spectrier, (ushort)Species.Calyrex, (ushort)Species.Enamorus, (ushort)Species.WalkingWake, (ushort)Species.IronLeaves,
-    (ushort)Species.ChienPao, (ushort)Species.WoChien, (ushort)Species.TingLu, (ushort)Species.ChiYu, (ushort)Species.Koraidon, (ushort)Species.Miraidon, (ushort)Species.Ogerpon, (ushort)Species.Fezandipiti, (ushort)Species.Okidogi, (ushort)Species.Munkidori, (ushort)Species.Terapagos, (ushort)Species.RagingBolt, (ushort)Species.GougingFire];
+    (ushort)Species.ChienPao, (ushort)Species.WoChien, (ushort)Species.TingLu, (ushort)Species.ChiYu, (ushort)Species.Koraidon, (ushort)Species.Miraidon, (ushort)Species.Ogerpon, (ushort)Species.Fezandipiti, (ushort)Species.Okidogi, (ushort)Species.Munkidori, (ushort)Species.Terapagos, (ushort)Species.RagingBolt, (ushort)Species.GougingFire,
+        (ushort)Species.IronBoulder, (ushort)Species.IronCrown];
     public static readonly ushort[] MegaPrimals = [ (ushort)Species.Venusaur, (ushort)Species.Charizard, (ushort)Species.Blastoise, (ushort)Species.Beedrill, (ushort)Species.Pidgeot, (ushort)Species.Alakazam,
     (ushort)Species.Slowbro, (ushort)Species.Gengar, (ushort)Species.Kangaskhan, (ushort)Species.Pinsir, (ushort)Species.Gyarados, (ushort)Species.Aerodactyl, (ushort)Species.Mewtwo, (ushort)Species.Ampharos,
     (ushort)Species.Steelix, (ushort)Species.Scizor, (ushort)Species.Heracross, (ushort)Species.Houndoom, (ushort)Species.Tyranitar, (ushort)Species.Sceptile, (ushort)Species.Blaziken, (ushort)Species.Swampert,
@@ -137,7 +138,7 @@ public class TradeExtensions<T> where T : PKM, new()
 
         if (pkm is PK9 pk9)
         {
-            pk9.Obedience_Level = (byte)pk9.MetLevel;
+            pk9.ObedienceLevel = (byte)pk9.MetLevel;
             pk9.TeraTypeOriginal = MoveType.Normal;
             pk9.TeraTypeOverride = (MoveType)19;
         }
@@ -216,7 +217,7 @@ public class TradeExtensions<T> where T : PKM, new()
             pk9.HandlingTrainerMemory = 0;
             pk9.HandlingTrainerMemoryFeeling = 0;
             pk9.HandlingTrainerMemoryIntensity = 0;
-            pk9.Obedience_Level = 1;
+            pk9.ObedienceLevel = 1;
             pk9.Version = 0;
             pk9.BattleVersion = 0;
             pk9.TeraTypeOverride = (MoveType)19;
@@ -374,7 +375,12 @@ public class TradeExtensions<T> where T : PKM, new()
     {
         var pkMet = (T)pkm.Clone();
         if (pkMet.Version is not GameVersion.GO)
-            pkMet.MetDate = DateOnly.Parse("2020/10/20");
+        {
+            if (pkMet.Version is not GameVersion.SV)
+                pkMet.MetDate = DateOnly.Parse("2020/10/20");
+            else
+                pkMet.MetDate = DateOnly.Parse("2023/09/29");
+        }
 
         var analysis = new LegalityAnalysis(pkMet);
         var pkTrash = (T)pkMet.Clone();
