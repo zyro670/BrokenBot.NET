@@ -759,28 +759,16 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
             return false;
 
         bool bothDittos = (pkm1.Species is 132) && (pkm2.Species is 132);
+        Random rng = new();
 
         if (bothDittos)
         {
-            Random rng = new();
             while (!Breeding.CanHatchAsEgg(pkm1.Species))
             {
                 pkm1.Species = (ushort)rng.Next(1021);
             }
             pkm2.Species = pkm1.Species;
         }
-
-        else if (pkm1.Species is 132)
-        {
-            pkm1.Species = pkm2.Species;
-            pkm1.Form = pkm2.Form;
-        }
-        else if (pkm2.Species is 132)
-        {
-            pkm2.Species = pkm1.Species;
-            pkm2.Form = pkm1.Form;
-        }
-
         criteria = EggEvoCriteria(pkm1, pkm2);
         if (criteria.Count < 2)
             return false;
