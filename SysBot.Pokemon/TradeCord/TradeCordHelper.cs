@@ -312,9 +312,7 @@ public class TradeCordHelper<T> : TradeCordDatabase<T> where T : PKM, new()
                     var mgRng = mg == default ? MysteryGiftRng(Settings) : mg;
                     if (mgRng != default)
                     {
-                        _ = Enum.TryParse(user.TrainerInfo.OTGender, out Gender gender);
-                        _ = Enum.TryParse(user.TrainerInfo.Language, out LanguageID language);
-                        info = new SimpleTrainerInfo { Gender = (byte)(int)gender, Language = (int)language, OT = user.TrainerInfo.OTName, TID16 = user.TrainerInfo.TID16, SID16 = user.TrainerInfo.SID16, Context = Game is GameVersion.BDSP ? EntityContext.Gen8b : Game is GameVersion.SV ? EntityContext.Gen9 : EntityContext.Gen8, Generation = (byte)format };
+                        info = GetTrainerInfo(user, format);
                         result.Poke = TradeExtensions<T>.CherishHandler(mgRng!, info);
                     }
                 }
@@ -325,19 +323,25 @@ public class TradeCordHelper<T> : TradeCordDatabase<T> where T : PKM, new()
                 if (result.Poke.Species is ((ushort)Species.Hoopa) or ((ushort)Species.Meloetta))
                     result.Poke.Form = 0;
 
-                if ((result.Poke is PK9 pk9) && pk9.Species is (ushort)Species.Koraidon or (ushort)Species.Miraidon)
-                {
-                    pk9.Form = 0; // Battle Form
-                    pk9.FormArgument = 1u; // the one in Area Zero; not the one you ride on the whole game
-                }
-
                 if (result.Poke.Species is >= (ushort)Species.Sprigatito and <= (ushort)Species.Quaquaval && result.Poke.Ball == (int)Ball.Premier)
                     result.Poke.Ball = (int)Ball.Poke;
 
                 if ((result.Poke is PK9 pk9) && pk9.Species is (ushort)Species.Koraidon or (ushort)Species.Miraidon)
                 {
+                    info = GetTrainerInfo(user, format);
+                    // these EncounterStatic9's come from PKHeX.Core/Legality/Encounters/Data/Gen9/Encounters9.cs
+                    if (pk9.Species is (ushort)Species.Koraidon)
+                    {
+                        EncounterStatic9 Koraidon = new(GameVersion.SL) { Species = 1007, Shiny = Shiny.Never, Level = 72, Location = 124, Ability = AbilityPermission.OnlyFirst, Nature = Nature.Adamant, TeraType = GemType.Fighting, Size = 128, IVs = new(25, 31, 25, 31, 31, 25), Moves = new(416, 339, 878, 053) };
+                        pk9 = Koraidon.ConvertToPKM(info);
+                    }
+                    else
+                    {
+                        EncounterStatic9 Miraidon = new(GameVersion.VL) { Species = 1008, Shiny = Shiny.Never, Level = 72, Location = 124, Ability = AbilityPermission.OnlyFirst, Nature = Nature.Modest, TeraType = GemType.Electric, Size = 128, IVs = new(25, 31, 25, 31, 31, 25), Moves = new(063, 268, 879, 408) };
+                        pk9 = Miraidon.ConvertToPKM(info);
+                    }
                     pk9.Form = 0; // Battle Form
-                    pk9.FormArgument = 1u; // the one in Area Zero; not the one you ride on the whole game
+                    pk9.FormArgument = 1; // the one in Area Zero; not the one you ride on the whole game
                 }
 
                 if (Settings.PokeEventType is PokeEventType.Anonymyths)
@@ -440,6 +444,14 @@ public class TradeCordHelper<T> : TradeCordDatabase<T> where T : PKM, new()
         result.User = user;
         result.EmbedName += $"Results{(result.EggPoke.Species != 0 ? "&^&\nEggs" : "")}{(result.Item != string.Empty ? "&^&\nItems" : "")}";
         return result;
+    }
+
+    private SimpleTrainerInfo GetTrainerInfo(TCUser user, int format = 9)
+    {
+        _ = Enum.TryParse(user.TrainerInfo.OTGender, out Gender gender);
+        _ = Enum.TryParse(user.TrainerInfo.Language, out LanguageID language);
+        SimpleTrainerInfo info = new() { Gender = (byte)(int)gender, Language = (int)language, OT = user.TrainerInfo.OTName, TID16 = user.TrainerInfo.TID16, SID16 = user.TrainerInfo.SID16, Context = Game is GameVersion.BDSP ? EntityContext.Gen8b : Game is GameVersion.SV ? EntityContext.Gen9 : EntityContext.Gen8, Generation = (byte)format };
+        return info;
     }
 
     private Results TradeHandler(TCUser user, string input)
