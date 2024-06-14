@@ -105,7 +105,7 @@ public abstract class PokeRoutineExecutor8LA : PokeRoutineExecutor<PA8>
         var sav = new SAV8LA();
         var info = sav.MyStatus;
         var read = await SwitchConnection.PointerPeek(info.Data.Length, Offsets.MyStatusPointer, token).ConfigureAwait(false);
-        read.CopyTo(info.Data.ToArray(), 0);
+        read.CopyTo(info.Data);
         return sav;
     }
 

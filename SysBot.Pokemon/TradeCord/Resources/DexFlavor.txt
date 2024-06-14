@@ -1005,7 +1005,7 @@ It slowly brings its exceedingly heavy head down upon the ground, splitting the 
 The envy accumulated within curved beads that sparked multiple conflicts has clad itself in fire and become a Pokémon.
 According to an article in a dubious magazine, this Pokémon has some connection to a phenomenon that occurs in a certain region.
 It's possible that this is the object listed as Iron Valiant in a certain expedition journal.
-This Pokémon resembles Cyclizar, but it is far burlier and more ferocious. Nothing is known about its ecology or other features.
+This seems to be the Winged King mentioned in an old expedition journal. It was said to have split the land with its bare fists.
 This seems to be the Iron Serpent mentioned in an old book. The Iron Serpent is said to have turned the land to ash with its lightning.
 This Pokémon resembles the elegant Suicune, but is perched on its hind legs and has a far more ferocious nature.
 This seems to resemble one of the Swords of Justice, however its true origin remains unknown.
@@ -2034,6 +2034,21 @@ It wanders around, carrying an old coin on its back. It survives by draining the
 
 
 
+This seems to be the Winged King mentioned in an old expedition journal. It was said to have split the land with its bare fists.
+This seems to be the Iron Serpent mentioned in an old book. The Iron Serpent is said to have turned the land to ash with its lightning.
 
 
 
+
+
+
+
+
+This form excels in both attack and defense. It ceaselessly unleashes moves like a spring gushes water.|This form is the most aggressive, bombarding enemies with the intensity of flames blazing within a hearth.|This form has excellent defenses, absorbing impacts solidly like the cornerstones that support houses.
+
+
+
+
+
+
+Upon sensing danger, it prepares itself for battle by creating a sturdy shell of crystallized Terastal energy.

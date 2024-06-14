@@ -328,7 +328,7 @@ public class TradeCordHelper<T> : TradeCordDatabase<T> where T : PKM, new()
                 if ((result.Poke is PK9 pk9) && pk9.Species is (ushort)Species.Koraidon or (ushort)Species.Miraidon)
                 {
                     pk9.Form = 0; // Battle Form
-                    pk9.FormArgument = 1u; // the one in Area Zero; not the one you ride on the whole game
+                    pk9.FormArgument = 1; // the one in Area Zero; not the one you ride on the whole game
                 }
 
                 if (result.Poke.Species is >= (ushort)Species.Sprigatito and <= (ushort)Species.Quaquaval && result.Poke.Ball == (int)Ball.Premier)
