@@ -135,7 +135,7 @@ public sealed class SwitchSocketAsync : SwitchSocket, ISwitchConnectionAsync
     public async Task<string> GetGameInfo(string info, CancellationToken token)
     {
         var bytes = await ReadRaw(SwitchCommand.GetGameInfo(info), 17, token).ConfigureAwait(false);
-        return Encoding.ASCII.GetString(bytes).Trim(['\0', '\n']);
+        return Encoding.ASCII.GetString(bytes).Trim('\0', '\n');
     }
 
     public async Task<bool> IsProgramRunning(ulong pid, CancellationToken token)
@@ -285,10 +285,10 @@ public sealed class SwitchSocketAsync : SwitchSocket, ISwitchConnectionAsync
         return [.. flexBuffer];
     }
 
-    public async Task<long> GetUnixTime(CancellationToken token)
+    public async Task<long> GetCurrentTime(CancellationToken token)
     {
-        var result = await ReadBytesFromCmdAsync(SwitchCommand.GetUnixTime(), 8, token).ConfigureAwait(false);
-        Array.Reverse(result);
-        return BitConverter.ToInt64(result, 0);
+        var res = await ReadBytesFromCmdAsync(SwitchCommand.GetCurrentTime(), 8, token).ConfigureAwait(false);
+        Array.Reverse(res);
+        return BitConverter.ToInt64(res, 0);
     }
 }

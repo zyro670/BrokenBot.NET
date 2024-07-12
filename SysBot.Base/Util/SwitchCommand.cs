@@ -10,23 +10,23 @@ namespace SysBot.Base;
 /// </summary>
 public static class SwitchCommand
 {
-    private static readonly Encoding Encoder = Encoding.ASCII;
+    public static readonly Encoding Encoder = Encoding.ASCII;
 
-    private static byte[] Encode(string command, bool crlf = true)
+    public static byte[] Encode(string command, bool crlf = true)
     {
         if (crlf)
             command += "\r\n";
         return Encoder.GetBytes(command);
     }
 
-    private static string ToHex(byte[] data)
+    public static string ToHex(byte[] data)
         => string.Concat(data.Select(z => $"{z:X2}"));
-    private static string Encode(IEnumerable<long> jumps)
+    public static string Encode(IEnumerable<long> jumps)
         => string.Concat(jumps.Select(z => $" {z}"));
-    private static string Encode(IReadOnlyDictionary<ulong, int> offsetSizeDictionary)
+    public static string Encode(IReadOnlyDictionary<ulong, int> offsetSizeDictionary)
         => string.Concat(offsetSizeDictionary.Select(z => $" 0x{z.Key:X16} {z.Value}"));
 
-    private static string ToHex(ReadOnlySpan<byte> data)
+    public static string ToHex(ReadOnlySpan<byte> data)
     {
         var result = new StringBuilder(data.Length * 2);
         foreach (var b in data)
@@ -342,7 +342,8 @@ public static class SwitchCommand
     public static byte[] IsProgramRunning(ulong pid, bool crlf = true)
         => Encode($"isProgramRunning 0x{pid:x16}", crlf);
 
-    public static byte[] GetUnixTime(bool crlf = true) => Encode("getUnixTime", crlf);
+    public static byte[] GetCurrentTime(bool crlf = true) => Encode("getCurrentTime", crlf);
+    public static byte[] SetCurrentTime(bool crlf = true) => Encode("setCurrentTime ", crlf);
     public static byte[] TimeSkipBack(bool crlf = true) => Encode($"timeSkipBack", crlf);
     public static byte[] TimeSkipForward(bool crlf = true) => Encode($"timeSkipForward", crlf);
 

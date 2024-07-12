@@ -12,5 +12,5 @@ public interface IConsoleConnectionAsync : IConsoleConnection
     Task<byte[]> ReadBytesAsync(uint offset, int length, CancellationToken token);
     Task WriteBytesAsync(byte[] data, uint offset, CancellationToken token);
     Task<byte[]> PixelPeek(CancellationToken token);
-    Task<long> GetUnixTime(CancellationToken token);
+    Task<long> GetCurrentTime(CancellationToken token);
 }

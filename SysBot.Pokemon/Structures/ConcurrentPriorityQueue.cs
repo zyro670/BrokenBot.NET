@@ -216,7 +216,7 @@ public class ConcurrentPriorityQueue<TKey, TValue> : IProducerConsumerCollection
         /// <summary>Initializes a queue as a copy of another queue instance.</summary>
         /// <param name="queue">The queue to copy.</param>
         /// <remarks>Key/Value values are not deep cloned.</remarks>
-        public MinQueue(MinQueue queue) => Items = new List<KeyValuePair<TKey, TValue>>(queue.Items);
+        public MinQueue(MinQueue queue) => Items = [.. queue.Items];
 
         /// <summary>Empties the Queue.</summary>
         public void Clear() => Items.Clear();

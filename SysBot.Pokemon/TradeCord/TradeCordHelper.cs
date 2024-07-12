@@ -340,7 +340,6 @@ public class TradeCordHelper<T> : TradeCordDatabase<T> where T : PKM, new()
                         result.Poke.Nickname = TradeExtensions<PK9>.ReturnAnonymythsNickname(result.Poke);
                 }
 
-
                 if (!new LegalityAnalysis(result.Poke).Valid)
                     result.Poke = LegalityFixFailure(result.Poke);
 
@@ -514,7 +513,8 @@ public class TradeCordHelper<T> : TradeCordDatabase<T> where T : PKM, new()
             string nickname = input;
             input = ListNameSanitize(input);
             bool speciesAndForm = input.Contains('-');
-            var speciesID = TradeExtensions<T>.EnumParse<Species>(speciesAndForm ? input.Split('-')[0] : input); //var speciesID = ParseSpeciesFromSanitizedLabel(input);
+            //var speciesID = TradeExtensions<T>.EnumParse<Species>(speciesAndForm ? input.Split('-')[0] : input); //var speciesID = ParseSpeciesFromSanitizedLabel(input);
+            var speciesID = ParseSpeciesFromSanitizedLabel(input);
             bool isSpecies = (ushort)speciesID > 0;
             bool isBall = Enum.TryParse(input, true, out Ball enumBall);
             bool isShiny = filters.FirstOrDefault(x => x == "Shiny") != default;
@@ -2135,7 +2135,11 @@ public class TradeCordHelper<T> : TradeCordDatabase<T> where T : PKM, new()
 
         TradeExtensions<T>.FormOutput(Rng.SpeciesRNG, 0, out string[] forms);
         var formIDs = Dex[Rng.SpeciesRNG].ToArray();
-        var formRng = formIDs[Random.Next(formIDs.Length)];
+        byte formRng;
+        if (Rng.SpeciesRNG is (ushort)Species.Koraidon || Rng.SpeciesRNG is (ushort)Species.Miraidon)
+            formRng = 0;
+        else
+            formRng = formIDs[Random.Next(formIDs.Length)];
         var form = eventForm is 255 ? forms[formRng] : forms[eventForm];
 
         string formHack = Rng.SpeciesRNG switch

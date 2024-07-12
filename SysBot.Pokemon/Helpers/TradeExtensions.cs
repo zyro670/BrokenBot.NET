@@ -171,6 +171,10 @@ public class TradeExtensions<T> where T : PKM, new()
             _ => 60002, //PK8
         };
         pk.MetDate = DateOnly.Parse("2020/10/20");
+
+        if (pk is PK9)
+            pk.MetDate = DateOnly.Parse("2023/09/29");
+
         pk.EggMetDate = pk.MetDate;
         pk.HeldItem = 0;
         pk.CurrentLevel = 1;
@@ -223,6 +227,7 @@ public class TradeExtensions<T> where T : PKM, new()
             pk9.TeraTypeOverride = (MoveType)19;
         }
 
+        pk.HandlingTrainerTrash.Clear();
         pk = TrashBytes(pk);
         var la = new LegalityAnalysis(pk);
         var enc = la.EncounterMatch;
@@ -374,14 +379,6 @@ public class TradeExtensions<T> where T : PKM, new()
     public static PKM TrashBytes(PKM pkm, LegalityAnalysis? la = null)
     {
         var pkMet = (T)pkm.Clone();
-        if (pkMet.Version is not GameVersion.GO)
-        {
-            if (pkMet.Version is not GameVersion.SV)
-                pkMet.MetDate = DateOnly.Parse("2020/10/20");
-            else
-                pkMet.MetDate = DateOnly.Parse("2023/09/29");
-        }
-
         var analysis = new LegalityAnalysis(pkMet);
         var pkTrash = (T)pkMet.Clone();
         if (analysis.Valid)

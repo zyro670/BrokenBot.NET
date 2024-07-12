@@ -216,7 +216,7 @@ public class PokeTradeBotSWSH : PokeRoutineExecutor8SWSH, ICountBot
         {
             var pkm = Hub.Ledy.Pool.GetRandomSurprise();
             await EnsureConnectedToYComm(OverworldOffset, Hub.Config, token).ConfigureAwait(false);
-            var _ = await PerformSurpriseTrade(sav, pkm, token).ConfigureAwait(false);
+            _ = await PerformSurpriseTrade(sav, pkm, token).ConfigureAwait(false);
         }
     }
 

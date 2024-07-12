@@ -9,7 +9,7 @@ namespace SysBot.Base;
 public abstract class SwitchRoutineExecutor<T> : RoutineExecutor<T> where T : class, IConsoleBotConfig
 {
     public readonly bool UseCRLF;
-    protected readonly ISwitchConnectionAsync SwitchConnection;
+    public readonly ISwitchConnectionAsync SwitchConnection;
 
     protected SwitchRoutineExecutor(IConsoleBotManaged<IConsoleConnection, IConsoleConnectionAsync> Config) : base(Config)
     {

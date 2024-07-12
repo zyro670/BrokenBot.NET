@@ -43,6 +43,7 @@ namespace SysBot.Pokemon
         private ulong OverworldOffset;
         private ulong ConnectedOffset;
         private ulong RaidBlockPointer;
+        private long StartingUnix;
         private int RaidBlockSize = 0;
         private TeraRaidMapParent RaidMap = TeraRaidMapParent.Paldea;
         private static ulong BaseBlockKeyPointer = 0;
@@ -54,6 +55,7 @@ namespace SysBot.Pokemon
         private List<BanList> GlobalBanList = [];
         private SAV9SV HostSAV = new();
         private DateTime StartTime = DateTime.Now;
+        private DateTime StartingTime;
         private RaidContainer? container;
 
         public override async Task MainLoop(CancellationToken token)
@@ -259,10 +261,15 @@ namespace SysBot.Pokemon
             LossCount = 0;
             var raidsHosted = 0;
             Settings.RaidEmbedFilters.IsSet = false;
+            StartingUnix = await SwitchConnection.GetCurrentTime(token).ConfigureAwait(false);
+            DateTime dateTime = new(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+            StartingTime = dateTime.AddSeconds(StartingUnix).ToLocalTime();
+            Log($"Starting System time: {StartingTime}.");
             while (!token.IsCancellationRequested)
             {
                 // Initialize offsets at the start of the routine and cache them.
                 await InitializeSessionOffsets(token).ConfigureAwait(false);
+
                 if (!Settings.RaidEmbedFilters.IsSet)
                 {
                     Log($"Preparing parameter for {Settings.RaidEmbedFilters.Species}");
@@ -879,10 +886,8 @@ namespace SysBot.Pokemon
         {
             if (Settings.RolloverFilters.RolloverPrevention == RolloverPrevention.TimeSkip)
             {
-                for (int i = 0; i < 23; i++)
-                {
-                    await TimeSkipBwd(token).ConfigureAwait(false);
-                }
+                await SetDateTime((ulong)StartingUnix, token).ConfigureAwait(false);
+                Log($"System time set to {StartingTime}");
                 await Task.Delay(1_500, token).ConfigureAwait(false);
                 return;
             }

@@ -615,7 +615,7 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
 
     public async Task ResetAndSetSwitchTime(CancellationToken token)
     {
-        long unixTime = await SwitchConnection.GetUnixTime(token).ConfigureAwait(false);
+        long unixTime = await SwitchConnection.GetCurrentTime(token).ConfigureAwait(false);
         DateTime epoch = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         DateTime currentTime = epoch.AddSeconds(unixTime);
 
@@ -647,7 +647,7 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
 
     public async Task HourlyCheckAndAdjust(CancellationToken token)
     {
-        long currentUnixTime = await SwitchConnection.GetUnixTime(token).ConfigureAwait(false);
+        long currentUnixTime = await SwitchConnection.GetCurrentTime(token).ConfigureAwait(false);
         DateTime epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         DateTime currentTime = epoch.AddSeconds(currentUnixTime);
 

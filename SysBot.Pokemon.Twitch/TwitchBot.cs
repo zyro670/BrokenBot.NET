@@ -1,6 +1,5 @@
 ﻿using PKHeX.Core;
 using SysBot.Base;
-
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -279,7 +278,7 @@ public class TwitchBot<T> where T : PKM, new()
         {
             int code = Util.ToInt32(msg);
             var sig = GetUserSignificance(user);
-            var _ = AddToTradeQueue(user.Pokemon, code, e, sig, PokeRoutineType.LinkTrade, out string message);
+            _ = AddToTradeQueue(user.Pokemon, code, e, sig, PokeRoutineType.LinkTrade, out string message);
             client.SendMessage(Channel, message);
         }
         catch (Exception ex)

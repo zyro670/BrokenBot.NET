@@ -149,7 +149,7 @@ public class TradeAdditionsModule<T> : ModuleBase<SocketCommandContext> where T 
     public async Task ItemTrade([Summary("Trade Code")] int code, [Remainder] string item)
     {
         Species species = Info.Hub.Config.Trade.ItemTradeSpecies == Species.None ? Species.Diglett : Info.Hub.Config.Trade.ItemTradeSpecies;
-        var set = new ShowdownSet($"{SpeciesName.GetSpeciesNameGeneration((ushort)species, 2, 8)} @ {item.Trim()}");
+        var set = new ShowdownSet($"{SpeciesName.GetSpeciesNameGeneration((ushort)species, 2, 9)} @ {item.Trim()}");
         var template = AutoLegalityWrapper.GetTemplate(set);
         var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
         var pkm = sav.GetLegal(template, out var result);

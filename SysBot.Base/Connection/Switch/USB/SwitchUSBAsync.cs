@@ -152,11 +152,11 @@ public sealed class SwitchUSBAsync(int Port) : SwitchUSB(Port), ISwitchConnectio
         }, token);
     }
 
-    public Task<long> GetUnixTime(CancellationToken token)
+    public Task<long> GetCurrentTime(CancellationToken token)
     {
         return Task.Run(() =>
         {
-            Send(SwitchCommand.GetUnixTime(false));
+            Send(SwitchCommand.GetCurrentTime(false));
             byte[] baseBytes = ReadBulkUSB();
             return BitConverter.ToInt64(baseBytes, 0);
         }, token);

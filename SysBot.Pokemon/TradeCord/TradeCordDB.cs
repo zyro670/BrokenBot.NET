@@ -77,7 +77,7 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
         else if (pkm is PK8 pk8 && enc is IOverworldCorrelation8 ow)
         {
             var criteria = EncounterCriteria.GetCriteria(template, pk8.PersonalInfo);
-            List<int> IVs = new() { 0, 0, 0, 0, 0, 0 };
+            List<int> IVs = [0, 0, 0, 0, 0, 0];
             if (enc is EncounterStatic8 static8)
             {
                 if (static8.IsOverworldCorrelation)
@@ -93,7 +93,7 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
                         APILegality.FindWildPIDIV8(pk8, shiny, encFlawless, seed);
                         if (ow.IsOverworldCorrelationCorrect(pk8))
                             break;
-                        else IVs = new() { 0, 0, 0, 0, 0, 0 };
+                        else IVs = [0, 0, 0, 0, 0, 0];
                     }
                 }
                 else pk8.SetRandomIVs(Random.Next(static8.FlawlessIVCount, 7));
@@ -112,7 +112,7 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
                         APILegality.FindWildPIDIV8(pk8, shiny, encFlawless, seed);
                         if (ow.IsOverworldCorrelationCorrect(pk8))
                             break;
-                        else IVs = new() { 0, 0, 0, 0, 0, 0 };
+                        else IVs = [0, 0, 0, 0, 0, 0];
                     }
                 }
                 else pk8.SetRandomIVs(4);
@@ -123,6 +123,10 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
 
         pkm = (T)TradeExtensions<T>.TrashBytes(pkm);
         pkm.CurrentFriendship = pkm.PersonalInfo.BaseFriendship;
+
+        la = new LegalityAnalysis(pkm);
+        if (!la.Valid)
+            pkm.Legalize();
         return pkm;
     }
 
@@ -170,6 +174,10 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
 
         pkm = (T)TradeExtensions<T>.TrashBytes(pkm);
         pkm.CurrentFriendship = pkm.PersonalInfo.BaseFriendship;
+
+        la = new LegalityAnalysis(pkm);
+        if (!la.Valid)
+            pkm.Legalize();
         return pkm;
     }
 
@@ -217,6 +225,10 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
 
         pkm = (T)TradeExtensions<T>.TrashBytes(pkm);
         pkm.CurrentFriendship = pkm.PersonalInfo.BaseFriendship;
+
+        la = new LegalityAnalysis(pkm);
+        if (!la.Valid)
+            pkm.Legalize();
         return pkm;
     }
 
@@ -672,6 +684,7 @@ public abstract class TradeCordDatabase<T> : TradeCordBase<T> where T : PKM, new
         var speciesWithDash = ((IReadOnlyList<string>)[
             "Nidoran-M",
             "Nidoran-F",
+            "Ho-Oh",
             "Porygon-Z",
             "Jangmo-o",
             "Hakamo-o",

@@ -32,6 +32,7 @@ public class OverworldBotSV : PokeRoutineExecutor9SV, IEncounterBot
     private int MinimumIngredientCount;
     private static ulong BaseBlockKeyPointer = 0;
     private ulong PlayerCanMoveOffset;
+    private long StartingUnix;
     private bool GameWasReset = false;
     private SAV9SV TrainerSav = new();
     private List<byte[]?> coordList = [];
@@ -43,6 +44,7 @@ public class OverworldBotSV : PokeRoutineExecutor9SV, IEncounterBot
     private byte[] X1 = [];
     private byte[] Y1 = [];
     private byte[] Z1 = [];
+    private DateTime StartingTime;
 
     public OverworldBotSV(PokeBotState cfg, PokeTradeHub<PK9> hub) : base(cfg)
     {
@@ -63,6 +65,12 @@ public class OverworldBotSV : PokeRoutineExecutor9SV, IEncounterBot
         try
         {
             await InitializeSessionOffsets(token).ConfigureAwait(false);
+
+            StartingUnix = await SwitchConnection.GetCurrentTime(token).ConfigureAwait(false);
+            DateTime dateTime = new(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+            StartingTime = dateTime.AddSeconds(StartingUnix).ToLocalTime();
+            Log($"Starting System time: {StartingTime}.");
+
             if (Settings.RolloverFilters.ConfigureRolloverCorrection)
             {
                 await RolloverCorrectionSV(false, token).ConfigureAwait(false);
@@ -107,7 +115,7 @@ public class OverworldBotSV : PokeRoutineExecutor9SV, IEncounterBot
         Log("Checking our bag for ingredients...");
         var itemptr = await SwitchConnection.PointerAll(Offsets.ItemBlock, token).ConfigureAwait(false);
         var items = await SwitchConnection.ReadBytesAbsoluteAsync(itemptr, TrainerSav.Items.Data.Length, token).ConfigureAwait(false);
-        items.CopyTo(TrainerSav.Items.Data.ToArray(), 0);
+        items.CopyTo(TrainerSav.Items.Data);
 
         var pouches = TrainerSav.Inventory;
         var ingredients = pouches[7];
@@ -128,7 +136,6 @@ public class OverworldBotSV : PokeRoutineExecutor9SV, IEncounterBot
                 Fillings.Add(ingredients.Items[i].Index);
                 List.Add(ingredients.Items[i].Count);
             }
-
         }
 
         if (!Fillings.Contains((int)Settings.PicnicFilters.Item1))
@@ -283,7 +290,8 @@ public class OverworldBotSV : PokeRoutineExecutor9SV, IEncounterBot
             if (Settings.RolloverFilters.RolloverPrevention == RolloverPrevention.TimeSkip)
             {
                 Log("Using timeskip method...");
-                await TimeSkipBwd(token).ConfigureAwait(false);
+                await SetDateTime((ulong)StartingUnix, token).ConfigureAwait(false);
+                Log($"System time set to {StartingTime}");
                 await Task.Delay(1_500, token).ConfigureAwait(false);
             }
             else

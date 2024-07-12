@@ -11,6 +11,7 @@ using RaidCrawler.Core.Structures;
 using static SysBot.Pokemon.PokeDataOffsetsSV;
 using static SysBot.Base.SwitchButton;
 using static System.Buffers.Binary.BinaryPrimitives;
+using System.Text;
 
 namespace SysBot.Pokemon;
 
@@ -286,6 +287,11 @@ public abstract class PokeRoutineExecutor9SV : PokeRoutineExecutor<PK9>
     public async Task TimeSkipFwd(CancellationToken token) => await SwitchConnection.SendAsync(SwitchCommand.TimeSkipForward(true), token).ConfigureAwait(false);
     public async Task TimeSkipBwd(CancellationToken token) => await SwitchConnection.SendAsync(SwitchCommand.TimeSkipBack(true), token).ConfigureAwait(false);
     public async Task ResetTimeSV(CancellationToken token) => await SwitchConnection.SendAsync(SwitchCommand.ResetTime(true), token).ConfigureAwait(false);
+    public async Task SetDateTime(ulong date, CancellationToken token)
+    {
+        var command = Encoding.ASCII.GetBytes($"setCurrentTime {date}{(true ? "\r\n" : "")}");
+        await Connection.SendAsync(command, token).ConfigureAwait(false);
+    }
 
     public async Task SVSaveGameOverworld(CancellationToken token)
     {
