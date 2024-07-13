@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Data.SQLite;
 using SysBot.Base;
 using System.Text.RegularExpressions;
+using System.Text;
 
 
 namespace SysBot.Pokemon;
@@ -1466,6 +1467,13 @@ public class TradeCordHelper<T> : TradeCordDatabase<T> where T : PKM, new()
             var tod = TradeExtensions<T>.EnumParse<TimeOfDay>(timeStr);
             if (tod is TimeOfDay.Dawn)
                 tod = TimeOfDay.Morning;
+
+            pk.HandlingTrainerTrash.Clear();
+            pk.CurrentHandler = 1;
+            SimpleEdits.SetHTLanguage(pk, 1);
+            pk.HandlingTrainerName = "ZY";
+            pk.HandlingTrainerFriendship = 0;
+            pk.ClearMemories();
 
             if (!EvolvePK(pk, tod, out string message, out T? shedinja, alcremie, regional))
             {
