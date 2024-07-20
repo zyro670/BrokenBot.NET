@@ -126,24 +126,24 @@ public class TradeExtensions<T> where T : PKM, new()
         {
             PB8 => 400,
             PK9 => 28,
-            _ => 186, // PK8
+            _ => 154, // PK8
         };
 
         pkm.MetLevel = pkm switch
         {
             PB8 => 29,
             PK9 => 34,
-            _ => pkm.MetLevel,
+            _ => 55,
         };
 
         if (pkm is PK9 pk9)
         {
-            pk9.ObedienceLevel = (byte)pk9.MetLevel;
+            pk9.ObedienceLevel = pk9.MetLevel;
             pk9.TeraTypeOriginal = MoveType.Normal;
             pk9.TeraTypeOverride = (MoveType)19;
         }
         pkm.Ball = 21;
-        pkm.IVs = new int[] { 31, nickname.Contains(dittoStats[0]) ? 0 : 31, 31, nickname.Contains(dittoStats[1]) ? 0 : 31, nickname.Contains(dittoStats[2]) ? 0 : 31, 31 };
+        pkm.IVs = [31, nickname.Contains(dittoStats[0]) ? 0 : 31, 31, nickname.Contains(dittoStats[1]) ? 0 : 31, nickname.Contains(dittoStats[2]) ? 0 : 31, 31];
         pkm.ClearHyperTraining();
         TrashBytes(pkm, new LegalityAnalysis(pkm));
     }

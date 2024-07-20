@@ -851,7 +851,6 @@ public class PokeTradeBotSV : PokeRoutineExecutor9SV, ICountBot
             // Extra information for shiny eggs, because of people dumping to skip hatching.
             var eggstring = pk.IsEgg ? "Egg " : string.Empty;
             var gender = pk.Gender == 0 ? " - (M)" : pk.Gender == 1 ? " - (F)" : "";
-            var size = PokeSizeDetailedUtil.GetSizeRating(pk.Scale);
             msg += pk.IsShiny ? $"\n**This Pokémon {eggstring}is shiny!**" : string.Empty;
             if ((Species)pk.Species is Species.Dunsparce && pk.EncryptionConstant % 100 == 0)
                 msg += $"3 Segment Dunsparce!";
@@ -861,11 +860,11 @@ public class PokeTradeBotSV : PokeRoutineExecutor9SV, ICountBot
                 msg += $"Family of 3 Maus!";
             if ((Species)pk.Species is Species.Maushold && pk.EncryptionConstant % 100 != 0)
                 msg += $"Family of 4 Maus!";
-            string scale = $"\nScale: {PokeSizeDetailedUtil.GetSizeRating(pk.Scale)} ({pk.Scale})";
+            string scale = $"Scale: {PokeSizeDetailedUtil.GetSizeRating(pk.Scale)} ({pk.Scale})";
             string TIDFormatted = pk.Generation >= 7 ? $"{pk.TrainerTID7:000000}" : $"{pk.TID16:00000}";
             detail.SendNotification(this, $"Displaying: {(pk.ShinyXor == 0 ? "■ - " : pk.ShinyXor <= 16 ? "★ - " : "")}{SpeciesName.GetSpeciesNameGeneration(pk.Species, 2, 9) + TradeExtensions<PK9>.FormOutput(pk.Species, pk.Form, out _)}{gender}\n{pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}\n" +
-                $"Ability: {(Ability)pk.Ability} | {(Nature)pk.Nature} Nature | Ball: {(Ball)pk.Ball}{scale}\nTrainer Info: {pk.OriginalTrainerName}/{TIDFormatted}\n" +
-                $"{(StopConditionSettings.HasMark(pk, out RibbonIndex mark) ? $"**Pokémon Mark: {mark.ToString().Replace("Mark", "")}{Environment.NewLine}**" : "")}Scale: {size}\n{msg}");
+                $"Ability: {(Ability)pk.Ability} | {pk.Nature} Nature | Ball: {(Ball)pk.Ball}\nTrainer Info: {pk.OriginalTrainerName}/{TIDFormatted}\n" +
+                $"{(StopConditionSettings.HasMark(pk, out RibbonIndex mark) ? $"**Pokémon Mark: {mark.ToString().Replace("Mark", "")}**" : "")}{Environment.NewLine}{scale}\n{msg}");
             //Log($"Displaying {SpeciesName.GetSpeciesNameGeneration(pk.Species, 2, 9) + TradeExtensions<PK9>.FormOutput(pk.Species, pk.Form, out _)}{gender}\n{pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}\n{(Nature)pk.Nature} - {(Ball)pk.Ball} - {pk.OT_Name}/{TIDFormatted}");
             ctr++;
 
