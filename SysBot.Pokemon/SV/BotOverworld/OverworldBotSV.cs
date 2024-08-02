@@ -585,34 +585,6 @@ public class OverworldBotSV : PokeRoutineExecutor9SV, IEncounterBot
         var token = CancellationToken.None;
         Settings.AddCompletedScans();
 
-        if (pk.IsShiny)
-        {
-            Settings.AddShinyScans();
-            // Dump backup pk9 of encounter incase it is fleeing/despawning/somewhere unreachable. Should not be treated as legitimate encounters.
-            var prevEC = pk.EncryptionConstant;
-            var prevPID = pk.PID;
-            var prevXOR = pk.ShinyXor;
-            pk.TID16 = TrainerSav.TID16;
-            pk.SID16 = TrainerSav.SID16;
-            pk.OriginalTrainerName = TrainerSav.OT;
-            pk.OriginalTrainerGender = TrainerSav.Gender;
-            pk.ObedienceLevel = (byte)pk.MetLevel;
-            pk.FatefulEncounter = false;
-            pk.Language = TrainerSav.Language;
-            pk.EncryptionConstant = prevEC;
-            pk.Version = TrainerSav.Version;
-            pk.MetDate = DateOnly.FromDateTime(DateTime.Now);
-            pk.PID = (uint)((pk.TID16 ^ pk.SID16 ^ (prevPID & 0xFFFF) ^ prevXOR) << 16) | (prevPID & 0xFFFF); // Ty Manu098vm!!
-            var enc = EncounterSuggestion.GetSuggestedMetInfo(pk);
-            if (enc != null)
-            {
-                int location = enc.Location;
-                pk.MetLocation = (ushort)location;
-            }
-            pk.LegalizePokemon();
-            DumpPokemon(DumpSetting.DumpFolder, "overworld", pk);
-        }
-
         bool hasMark = StopConditionSettings.HasMark(pk, out RibbonIndex mark);
         string markmsg = hasMark ? $"{mark.ToString().Replace("Mark", "")}" : "";
         string markurl = string.Empty;
@@ -703,6 +675,33 @@ public class OverworldBotSV : PokeRoutineExecutor9SV, IEncounterBot
                 else
                     satisfied = false;
                 break;
+        }
+
+        if (pk.IsShiny)
+        {
+            Settings.AddShinyScans();
+            // Dump backup pk9 of encounter incase it is fleeing/despawning/somewhere unreachable. Should not be treated as legitimate encounters.
+            var prevEC = pk.EncryptionConstant;
+            var prevPID = pk.PID;
+            var prevXOR = pk.ShinyXor;
+            pk.TID16 = TrainerSav.TID16;
+            pk.SID16 = TrainerSav.SID16;
+            pk.OriginalTrainerName = TrainerSav.OT;
+            pk.OriginalTrainerGender = TrainerSav.Gender;
+            pk.ObedienceLevel = pk.MetLevel;
+            pk.FatefulEncounter = false;
+            pk.Language = TrainerSav.Language;
+            pk.EncryptionConstant = prevEC;
+            pk.Version = TrainerSav.Version;
+            pk.MetDate = DateOnly.FromDateTime(DateTime.Now);
+            pk.PID = (uint)((pk.TID16 ^ pk.SID16 ^ (prevPID & 0xFFFF) ^ prevXOR) << 16) | (prevPID & 0xFFFF); // Ty Manu098vm!!
+            var enc = EncounterSuggestion.GetSuggestedMetInfo(pk);
+            if (enc != null)
+            {
+                int location = enc.Location;
+                pk.MetLocation = (ushort)location;
+            }
+            DumpPokemon(DumpSetting.DumpFolder, "overworld", pk);
         }
 
         if (!satisfied)
