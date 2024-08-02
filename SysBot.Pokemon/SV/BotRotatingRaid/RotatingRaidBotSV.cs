@@ -239,6 +239,38 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
                 await ReadRaids(true, token).ConfigureAwait(false);
             }
 
+            if (SeedIndexToReplace == -1)
+            {
+                Log($"Den was not found by seed, attempting to find through interaction.");
+                while (!await IsConnectedOnline(ConnectedOffset, token).ConfigureAwait(false))
+                {
+                    Log("Connecting...");
+                    await RecoverToOverworld(token).ConfigureAwait(false);
+                    if (!await ConnectToOnline(Hub.Config, token).ConfigureAwait(false))
+                        continue;
+                }
+
+                await RecoverToOverworld(token).ConfigureAwait(false);
+
+                // Check if there's a lobby.
+                await GetLobbyReady(true, token).ConfigureAwait(false);
+                await Task.Delay(0_750, token).ConfigureAwait(false);
+
+                await Click(B, 3_000, token).ConfigureAwait(false);
+                await Click(A, 6_000, token).ConfigureAwait(false);
+                await Click(B, 1_000, token).ConfigureAwait(false);
+                await Click(B, 2_000, token).ConfigureAwait(false);
+
+                SeedIndexToReplace = await InteractedDens(token).ConfigureAwait(false);
+
+                if (SeedIndexToReplace != -1)
+                {
+                    await CloseGame(Hub.Config, token);
+                    await StartGameRaid(Hub.Config, token);
+                    continue;
+                }
+            }
+
             if (!Settings.RaidEmbedParameters[RotationCount].IsSet)
             {
                 Log($"Preparing parameter for {Settings.RaidEmbedParameters[RotationCount].Species}");
@@ -267,62 +299,80 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
                 if (dayRoll != 0 && SeedIndexToReplace != -1 && RaidCount != 0)
                 {
                     Log(msg + "Raid Lost initiating recovery sequence.");
-                    bool denFound = false;
-                    while (!denFound)
+                    bool denFound = true;
+
+                    while (!await IsConnectedOnline(ConnectedOffset, token).ConfigureAwait(false))
                     {
-                        if (Settings.RolloverFilters.RolloverPrevention == RolloverPrevention.TimeSkip)
-                        {
-                            Log("When this baby hits 88 Miles an hour..");
-                            await TimeSkipFwd(token).ConfigureAwait(false);
-                            await Task.Delay(1_000, token).ConfigureAwait(false);
-                            await TimeSkipBwd(token).ConfigureAwait(false);
-                        }
-                        else
-                        {
-                            await Click(B, 0_500, token).ConfigureAwait(false);
-                            await Click(HOME, 3_500, token).ConfigureAwait(false);
-                            Log("Closed out of the game!");
+                        Log("Connecting...");
+                        await RecoverToOverworld(token).ConfigureAwait(false);
+                        if (!await ConnectToOnline(Hub.Config, token).ConfigureAwait(false))
+                            continue;
+                    }
 
-                            await RolloverCorrectionSV(token).ConfigureAwait(false);
-                            await Click(A, 1_500, token).ConfigureAwait(false);
+                    await RecoverToOverworld(token).ConfigureAwait(false);
 
-                            Log("Back in the game!");
-                        }
+                    await ReadRaids(true, token).ConfigureAwait(false);
 
-                        while (!await IsConnectedOnline(ConnectedOffset, token).ConfigureAwait(false))
+                    // Check if there's a lobby.
+                    if (!await GetLobbyReady(true, token).ConfigureAwait(false))
+                        denFound = false;
+
+                    if (!denFound)
+                    {
+                        while (!denFound)
                         {
-                            Log("Connecting...");
-                            if (!await ConnectToOnline(Hub.Config, token).ConfigureAwait(false))
+                            await RecoverToOverworld(token).ConfigureAwait(false);
+
+                            if (Settings.RolloverFilters.RolloverPrevention == RolloverPrevention.TimeSkip)
+                            {
+                                Log("When this baby hits 88 Miles an hour..");
+                                await TimeSkipFwd(token).ConfigureAwait(false);
+                                await Task.Delay(1_000, token).ConfigureAwait(false);
+                                await TimeSkipBwd(token).ConfigureAwait(false);
+                                await Task.Delay(1_000, token).ConfigureAwait(false);
+                            }
+                            else
+                            {
+                                await Click(B, 0_500, token).ConfigureAwait(false);
+                                await Click(HOME, 3_500, token).ConfigureAwait(false);
+                                Log("Closed out of the game!");
+
+                                await RolloverCorrectionSV(token).ConfigureAwait(false);
+                                await Click(A, 1_500, token).ConfigureAwait(false);
+                                Log("Back in the game!");
+                            }
+
+                            // Check if there's a lobby.
+                            if (!await GetLobbyReady(true, token).ConfigureAwait(false))
                                 continue;
 
-                            await RecoverToOverworld(token).ConfigureAwait(false);
+                            await Task.Delay(0_500, token).ConfigureAwait(false);
+
+                            await Click(B, 3_000, token).ConfigureAwait(false);
+                            await Click(A, 6_000, token).ConfigureAwait(false);
+                            await Click(B, 1_000, token).ConfigureAwait(false);
+                            await Click(B, 2_000, token).ConfigureAwait(false);
+
+                            denFound = true;
+                        };
+
+                        await Task.Delay(0_050, token).ConfigureAwait(false);
+
+                        if (denFound)
+                        {
+                            LobbyError = 0;
+                            await SVSaveGameOverworld(token).ConfigureAwait(false);
+                            await Task.Delay(0_500, token).ConfigureAwait(false);
+                            await Click(B, 1_000, token).ConfigureAwait(false);
                         }
-
-                        await RecoverToOverworld(token).ConfigureAwait(false);
-
-                        // Check if there's a lobby.
-                        if (!await GetLobbyReady(true, token).ConfigureAwait(false))
-                            continue;
-
-                        Log("Den Found, continuing routine!");
-                        ofs = await SwitchConnection.PointerAll(Offsets.RaidBlockPointerP, token).ConfigureAwait(false);
-                        TodaySeed = BitConverter.ToUInt64(await SwitchConnection.ReadBytesAbsoluteAsync(ofs, 8, token).ConfigureAwait(false), 0);
-                        LobbyError = 0;
-                        denFound = true;
-                        await Click(B, 3_000, token).ConfigureAwait(false);
-                        await Click(A, 6_000, token).ConfigureAwait(false);
-                        await Click(B, 1_000, token).ConfigureAwait(false);
-                        await Click(B, 2_000, token).ConfigureAwait(false);
-                    };
-                    await Task.Delay(0_050, token).ConfigureAwait(false);
-                    if (denFound)
-                    {
-                        await SVSaveGameOverworld(token).ConfigureAwait(false);
-                        await Task.Delay(0_500, token).ConfigureAwait(false);
-                        await Click(B, 1_000, token).ConfigureAwait(false);
-                        continue;
                     }
+                    ofs = await SwitchConnection.PointerAll(Offsets.RaidBlockPointerP, token).ConfigureAwait(false);
+                    TodaySeed = BitConverter.ToUInt64(await SwitchConnection.ReadBytesAbsoluteAsync(ofs, 8, token).ConfigureAwait(false), 0);
+                    SeedIndexToReplace = await InteractedDens(token).ConfigureAwait(false);
+                    LobbyError = 0;
+                    Log("Den Found, moving on!");
                 }
+
                 Log(msg);
                 await CloseGame(Hub.Config, token).ConfigureAwait(false);
                 await RolloverCorrectionSV(token).ConfigureAwait(false);
@@ -404,6 +454,32 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
             Log($"There are {GlobalBanList.Count} entries on the global ban list.");
         else
             Log("Failed to fetch the global ban list. Ensure you have the correct URL.");
+    }
+
+    private async Task<int> InteractedDens(CancellationToken token)
+    {
+        var data = await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointer, RaidBlockSize, token).ConfigureAwait(false);
+        var raids = 69;
+
+        switch ((int)RaidMap)
+        {
+            case 1: break;
+            case 2: raids = 26; break;
+            case 3: raids = 24; break;
+        }
+
+        for (int i = 0; i < raids; i++)
+        {
+            var interacted = data[i * 0x20 + 0x1C];
+            if (interacted == 1)
+            {
+                Log($"Den at index {i} was interacted with, index set.");
+                return i;
+            }
+        }
+
+        Log($"No dens found with interactions.");
+        return -1;
     }
 
     private async Task LocateSeedIndex(CancellationToken token)
@@ -1031,7 +1107,6 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
         {
             for (int i = 0; i < 23; i++)
                 await TimeSkipBwd(token).ConfigureAwait(false);
-            await Task.Delay(1_500, token).ConfigureAwait(false);
             return;
         }
 
