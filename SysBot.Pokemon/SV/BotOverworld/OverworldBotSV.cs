@@ -58,13 +58,6 @@ public class OverworldBotSV : PokeRoutineExecutor9SV, IEncounterBot
     public override async Task MainLoop(CancellationToken token)
     {
         await InitializeHardware(Hub.Config.OverworldSV, token).ConfigureAwait(false);
-        Log("Verifying botbase version...");
-        var sbb = await SwitchConnection.GetBotbaseVersion(token).ConfigureAwait(false);
-        if (!sbb.Equals("2.353\n"))
-        {
-            Log($"Current version of sysbot-base v{sbb.ToString().TrimEnd('\r', '\n')} does not match minimum required version.\nPlease download the latest release from https://github.com/zyro670/usb-botbase/releases.");
-            return;
-        }
         Log("Identifying trainer data of the host console.");
         TrainerSav = await IdentifyTrainer(token).ConfigureAwait(false);
         Log("Starting main OverworldBotSV loop.");
@@ -453,7 +446,7 @@ public class OverworldBotSV : PokeRoutineExecutor9SV, IEncounterBot
                     }
                 }
 
-                if (await IsInBattle(Offsets.IsInBattle, token).ConfigureAwait(false))//(await PlayerCannotMove(token).ConfigureAwait(false) && Settings.LocationSelection != Location.SecretCave || await PlayerCannotMove(token).ConfigureAwait(false) && await PlayerNotOnMount(token).ConfigureAwait(false) && Settings.LocationSelection == Location.SecretCave)
+                if (await IsInBattle(Offsets.IsInBattle, token).ConfigureAwait(false))
                 {
                     Log("We can't move! Are we in battle? Resetting game to attempt recovery and positioning.");
                     await ResetOverworld(false, false, token).ConfigureAwait(false);

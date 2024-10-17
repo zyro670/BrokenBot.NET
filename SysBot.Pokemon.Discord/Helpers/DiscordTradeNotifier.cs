@@ -68,18 +68,17 @@ public class DiscordTradeNotifier<T>(T data, PokeTradeTrainerInfo info, int code
                 var pokeImg = TradeExtensions<T>.PokeImg(emb, false, false);
                 string scale = "";
 
-                if (emb is PK9 fin9)
-                    scale = $"Scale: {PokeSizeDetailedUtil.GetSizeRating(fin9.Scale)} ({fin9.Scale})";
-                if (emb is PA8 fin8a)
-                    scale = $"Scale: {PokeSizeDetailedUtil.GetSizeRating(fin8a.Scale)} ({fin8a.Scale})";
-                if (emb is PB8 fin8b)
-                    scale = $"Scale: {PokeSizeDetailedUtil.GetSizeRating(fin8b.HeightScalar)} ({fin8b.HeightScalar})";
-                if (emb is PK8 fin8)
-                    scale = $"Scale: {PokeSizeDetailedUtil.GetSizeRating(fin8.HeightScalar)} ({fin8.HeightScalar})";
+                switch (emb)
+                {
+                    case PK9 pk9: scale = $"Scale: {PokeSizeDetailedUtil.GetSizeRating(pk9.Scale)} ({pk9.Scale})"; break;
+                    case PA8 pa8: scale = $"Scale: {PokeSizeDetailedUtil.GetSizeRating(pa8.Scale)} ({pa8.Scale})"; break;
+                    case PB8 pb8: scale = $"Scale: {PokeSizeDetailedUtil.GetSizeRating(pb8.HeightScalar)} ({pb8.HeightScalar})"; break;
+                    case PK8 pk8: scale = $"Scale: {PokeSizeDetailedUtil.GetSizeRating(pk8.HeightScalar)} ({pk8.HeightScalar})"; break;
+                }
 
                 var trademessage = $"Pokémon IVs: {emb.IV_HP}/{emb.IV_ATK}/{emb.IV_DEF}/{emb.IV_SPA}/{emb.IV_SPD}/{emb.IV_SPE}\n" +
                     $"Ability: {GameInfo.GetStrings(1).Ability[emb.Ability]}\n" +
-                    $"{(Nature)emb.Nature} Nature\n{scale}" +
+                    $"{emb.Nature} Nature\n{scale}" +
                     (StopConditionSettings.HasMark((IRibbonIndex)emb, out RibbonIndex mark) ? $"\nPokémon Mark: {mark.ToString().Replace("Mark", "")}{Environment.NewLine}" : "");
 
                 string markEntryText = "";
@@ -116,6 +115,82 @@ public class DiscordTradeNotifier<T>(T data, PokeTradeTrainerInfo info, int code
                 });
                 Context.Channel.SendMessageAsync(Trader.Username + " - " + msg, embed: embed.Build()).ConfigureAwait(false);
             }              
+        }
+    }
+
+    public void TradeFinished(PokeRoutineExecutor<T> routine, PokeTradeDetail<T> info, T result, List<PKM> list)
+    {
+        if (info.Type == PokeTradeType.TradeCord)
+            TradeCordHelper<T>.HandleTradedCatches(Trader.Id, true);
+        OnFinish?.Invoke(routine);
+        var tradedToUser = Data.Species;
+        var message = tradedToUser != 0 ? $"Trade finished. Enjoy your {(Species)tradedToUser}!" : "Trade finished!";
+        Trader.SendMessageAsync(message).ConfigureAwait(false);
+        if (result.Species != 0 && Hub.Config.Discord.ReturnPKMs)
+            Trader.SendPKMAsync(result, "Here's what you traded me!").ConfigureAwait(false);
+
+        if (Hub.Config.Trade.TradeDisplay && info.Type is PokeTradeType.Display)
+        {
+            foreach (PKM p in list)
+            {
+                PKM emb = p;
+                if (emb.Species != 0)
+                {
+                    var shiny = emb.ShinyXor == 0 ? "■" : emb.ShinyXor <= 16 ? "★" : "";
+                    var set = new ShowdownSet($"{emb.Species}");
+                    var ballImg = $"https://raw.githubusercontent.com/BakaKaito/HomeImages/main/Ballimg/50x50/" + $"{(Ball)emb.Ball}ball".ToLower() + ".png";
+                    var gender = emb.Gender == 0 ? " - (M)" : emb.Gender == 1 ? " - (F)" : "";
+                    var pokeImg = TradeExtensions<T>.PokeImg(emb, false, false);
+                    string scale = "";
+
+                    switch (emb)
+                    {
+                        case PK9 pk9: scale = $"Scale: {PokeSizeDetailedUtil.GetSizeRating(pk9.Scale)} ({pk9.Scale})"; break;
+                        case PA8 pa8: scale = $"Scale: {PokeSizeDetailedUtil.GetSizeRating(pa8.Scale)} ({pa8.Scale})"; break;
+                        case PB8 pb8: scale = $"Scale: {PokeSizeDetailedUtil.GetSizeRating(pb8.HeightScalar)} ({pb8.HeightScalar})"; break;
+                        case PK8 pk8: scale = $"Scale: {PokeSizeDetailedUtil.GetSizeRating(pk8.HeightScalar)} ({pk8.HeightScalar})"; break;
+                    }
+
+                    var trademessage = $"Pokémon IVs: {emb.IV_HP}/{emb.IV_ATK}/{emb.IV_DEF}/{emb.IV_SPA}/{emb.IV_SPD}/{emb.IV_SPE}\n" +
+                        $"Ability: {GameInfo.GetStrings(1).Ability[emb.Ability]}\n" +
+                        $"{emb.Nature} Nature\n{scale}" +
+                        (StopConditionSettings.HasMark((IRibbonIndex)emb, out RibbonIndex mark) ? $"\nPokémon Mark: {mark.ToString().Replace("Mark", "")}{Environment.NewLine}" : "");
+
+                    string markEntryText = "";
+                    var index = (int)mark - (int)RibbonIndex.MarkLunchtime;
+                    if (index > 0)
+                        markEntryText = MarkTitle[index];
+
+                    var specitem = emb.HeldItem != 0 ? $"{SpeciesName.GetSpeciesNameGeneration(emb.Species, 2, (byte)(emb.Generation <= 8 ? 8 : 9))}{TradeExtensions<T>.FormOutput(emb.Species, emb.Form, out _) + " (" + ShowdownParsing.GetShowdownText(emb).Split('@', '\n')[1].Trim() + ")"}" : $"{SpeciesName.GetSpeciesNameGeneration(emb.Species, 2, (byte)(emb.Generation <= 8 ? 8 : 9)) + TradeExtensions<T>.FormOutput(emb.Species, emb.Form, out _)}{markEntryText}";
+
+                    var msg = "Displaying your ";
+                    var mode = info.Type;
+                    switch (mode)
+                    {
+                        case PokeTradeType.Specific: msg += "request!"; break;
+                        case PokeTradeType.Clone: msg += "clone!"; break;
+                        case PokeTradeType.Display: msg += "trophy!"; break;
+                        case PokeTradeType.SupportTrade or PokeTradeType.Giveaway: msg += $"gift!"; break;
+                        case PokeTradeType.FixOT: msg += $"fixed OT!"; break;
+                        case PokeTradeType.TradeCord: msg += $"prize!"; break;
+                        case PokeTradeType.Seed: msg += $"seed check!"; break;
+                    }
+                    string TIDFormatted = emb.Generation >= 7 ? $"{emb.TrainerTID7:000000}" : $"{emb.TID16:00000}";
+                    var footer = new EmbedFooterBuilder { Text = $"Trainer Info: {emb.OriginalTrainerName}/{TIDFormatted}" };
+                    var author = new EmbedAuthorBuilder { Name = $"{Context.User.Username}'s Pokémon" };
+                    if (!Hub.Config.TradeCord.UseLargerPokeBalls)
+                        ballImg = "";
+                    author.IconUrl = ballImg;
+                    var embed = new EmbedBuilder { Color = emb.IsShiny && emb.ShinyXor == 0 ? Color.Gold : emb.IsShiny ? Color.LighterGrey : Color.Teal, Author = author, Footer = footer, ThumbnailUrl = pokeImg };
+                    embed.AddField(x =>
+                    {
+                        x.Name = $"{shiny} {specitem}{gender}";
+                        x.Value = trademessage;
+                        x.IsInline = false;
+                    });
+                    Context.Channel.SendMessageAsync(Trader.Username + " - " + msg, embed: embed.Build()).ConfigureAwait(false);
+                }
+            }
         }
     }
 

@@ -207,6 +207,7 @@ public class TradeAdditionsModule<T> : ModuleBase<SocketCommandContext> where T 
         var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
         var pkm = sav.GetLegal(template, out var result);
         TradeExtensions<T>.DittoTrade((T)pkm);
+        pkm.LegalizePokemon();
 
         var la = new LegalityAnalysis(pkm);
         if (Info.Hub.Config.Trade.Memes && await TrollAsync(Context, pkm is not T || !la.Valid, pkm).ConfigureAwait(false))
@@ -717,8 +718,8 @@ public class TradeAdditionsModule<T> : ModuleBase<SocketCommandContext> where T 
     public async Task GetRaidHelpListAsync()
     {
         var embed = new EmbedBuilder();
-        List<string> cmds = new()
-        {
+        List<string> cmds =
+        [
             "$scl - Sets the catch limit for your raids.\n",
             "$crb - Clear all in raider ban list.\n",
             "$vrl - View all raids in the list.\n",
@@ -728,7 +729,7 @@ public class TradeAdditionsModule<T> : ModuleBase<SocketCommandContext> where T 
             "$tcrp - Toggle the parameter as Coded/Uncoded in the collection.\nEx: [Command] [Index]\n",
             "$trpk - Set a PartyPK for the parameter via a showdown set.\nEx: [Command] [Index] [ShowdownSet]\n",
             "$crpt - Set the title for the parameter.\nEx: [Command] [Index]"
-        };
+        ];
         string msg = string.Join("", cmds.ToList());
         embed.AddField(x =>
         {

@@ -7,7 +7,7 @@ namespace SysBot.Pokemon;
 
 public abstract class PokeRoutineExecutorBase : SwitchRoutineExecutor<PokeBotState>
 {
-    public const decimal BotbaseVersion = 2.3m;
+    public const decimal BotbaseVersion = 2.4m;
 
     protected PokeRoutineExecutorBase(IConsoleBotManaged<IConsoleConnection, IConsoleConnectionAsync> cfg) : base(cfg)
     {

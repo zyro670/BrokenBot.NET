@@ -30,6 +30,12 @@ public class PokeTradeLogNotifier<T> : IPokeTradeNotifier<T> where T : PKM, new(
         OnFinish?.Invoke(routine);
     }
 
+    public void TradeFinished(PokeRoutineExecutor<T> routine, PokeTradeDetail<T> info, T result, List<PKM> list)
+    {
+        LogUtil.LogInfo($"Finished trading {info.Trainer.TrainerName} {(Species)info.TradeData.Species} for {(Species)result.Species}", routine.Connection.Label);
+        OnFinish?.Invoke(routine);
+    }
+
     public void SendNotification(PokeRoutineExecutor<T> routine, PokeTradeDetail<T> info, string message)
     {
         LogUtil.LogInfo(message, routine.Connection.Label);

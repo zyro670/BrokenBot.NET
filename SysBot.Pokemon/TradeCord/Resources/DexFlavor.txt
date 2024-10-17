@@ -126,7 +126,7 @@ In certain parts of Galar, Jynx was once feared and worshiped as the Queen of Ic
 Many power plants keep Ground-type Pokémon around as a defense against Electabuzz that come seeking electricity.
 Magmar dispatches its prey with fire. But it regrets this habit once it realizes that it has burned its intended prey to a charred crisp.
 These Pokémon judge one another based on pincers. Thicker, more impressive pincers make for more popularity with the opposite gender.
-When Tauros begins whipping itself with its tails, it’s a warning that the Pokémon is about to charge with astounding speed.|This kind of Tauros, known as the Combat Breed, is distinguished by its thick, powerful muscles and its fierce disposition.|People call this kind of Tauros the Blaze Breed due to the hot air it snorts from its nostrils. Its three tails are intertwined.|It swims by jetting water from its horns. The most notable characteristic of the Aqua Breed is its high body fat, which allows it to float easily.
+When Tauros begins whipping itself with its tails, it’s a warning that the Pokémon is about to charge with astounding speed.
 It is virtually worthless in terms of both power and speed. It is the most weak and pathetic Pokémon in the world.
 It has an extremely aggressive nature. The Hyper Beam it shoots from its mouth totally incinerates all targets.
 A smart and kindhearted Pokémon, it glides across the surface of the sea while its beautiful song echoes around it.
@@ -568,8 +568,8 @@ This Pokémon was successfully restored from a fossil. As research suggested, Ar
 It needs a running start to take off. If Archeops wants to fly, it first needs to run nearly 25 mph, building speed over a course of about 2.5 miles.
 Its favorite places are unsanitary ones. If you leave trash lying around, you could even find one of these Pokémon living in your room.
 This Pokémon eats trash, which turns into poison inside its body. The main component of the poison depends on what sort of trash was eaten.
-Zorua is a timid Pokémon. This disposition seems to be what led to the development of Zorua’s ability to take on the forms of other creatures.|A once-departed soul, returned to life in Hisui. Derives power from resentment, which rises as energy atop its head and takes on the forms of foes. In this way, Zorua vents lingering malice.
-This Pokémon cares deeply about others of its kind, and it will conjure terrifying illusions to keep its den and pack safe.|With its disheveled white fur, it looks like an embodiment of death. Heedless of its own safety, Zoroark attacks its nemeses with a bitter energy so intense, it lacerates Zoroark's own body.
+Zorua is a timid Pokémon. This disposition seems to be what led to the development of Zorua’s ability to take on the forms of other creatures.
+This Pokémon cares deeply about others of its kind, and it will conjure terrifying illusions to keep its den and pack safe.
 The way it brushes away grime with its tail can be helpful when cleaning. But its focus on spotlessness can make cleaning more of a hassle.
 Its body secretes oil that this Pokémon spreads over its nest as a coating to protect it from dust. Cinccino won’t tolerate even a speck of the stuff.
 Though they’re still only babies, there’s psychic power stored in their ribbonlike feelers, and sometimes they use that power to fight.
@@ -772,7 +772,7 @@ Palossand is known as the Beach Nightmare. It pulls its prey down into the sand 
 It lives in warm, shallow waters. If it encounters a foe, it will spit out its internal organs as a means to punch them.
 Rumor has it that the theft of top-secret research notes led to a new instance of this Pokémon being created in the Galar region.
 A solid bond of trust between this Pokémon and its Trainer awakened the strength hidden within Silvally. It can change its type at will.
-It lives in the ozone layer, where it becomes food for stronger Pokémon. When it tries to run away, it falls to the ground.|It lives in the ozone layer, where it becomes food for stronger Pokémon. When it tries to run away, it falls to the ground.|It lives in the ozone layer, where it becomes food for stronger Pokémon. When it tries to run away, it falls to the ground.|It lives in the ozone layer, where it becomes food for stronger Pokémon. When it tries to run away, it falls to the ground.|It lives in the ozone layer, where it becomes food for stronger Pokémon. When it tries to run away, it falls to the ground.|It lives in the ozone layer, where it becomes food for stronger Pokémon. When it tries to run away, it falls to the ground.|It lives in the ozone layer, where it becomes food for stronger Pokémon. When it tries to run away, it falls to the ground.|It lives in the ozone layer, where it becomes food for stronger Pokémon. When it tries to run away, it falls to the ground.|It lives in the ozone layer, where it becomes food for stronger Pokémon. When it tries to run away, it falls to the ground.|It lives in the ozone layer, where it becomes food for stronger Pokémon. When it tries to run away, it falls to the ground.|It lives in the ozone layer, where it becomes food for stronger Pokémon. When it tries to run away, it falls to the ground.|It lives in the ozone layer, where it becomes food for stronger Pokémon. When it tries to run away, it falls to the ground.|It lives in the ozone layer, where it becomes food for stronger Pokémon. When it tries to run away, it falls to the ground.|It lives in the ozone layer, where it becomes food for stronger Pokémon. When it tries to run away, it falls to the ground.
+It lives in the ozone layer, where it becomes food for stronger Pokémon. When it tries to run away, it falls to the ground.
 It stays asleep from the moment it’s born. When it falls into a deep sleep, it stops moving altogether.
 Explosive substances coat the shell on its back. Enemies that dare attack it will be blown away by an immense detonation.
 With the long hairs on its back, this Pokémon takes in electricity from other electric Pokémon. It stores what it absorbs in an electric sac.
@@ -1010,19 +1010,19 @@ This seems to be the Iron Serpent mentioned in an old book. The Iron Serpent is 
 This Pokémon resembles the elegant Suicune, but is perched on its hind legs and has a far more ferocious nature.
 This seems to resemble one of the Swords of Justice, however its true origin remains unknown.
 Dipplin is two creatures in one Pokémon. Its evolution was triggered by a special apple grown only in one place.
-Supposedly, the regrets of a tea ceremony master who died before perfecting his craft lingered in some matcha and became a Pokémon.|Poltchageist looks like a regional form of Sinistea, but it was recently discovered that the two Pokémon are entirely unrelated.
-It pretends to be tea, trying to fool people into drinking it so it can drain their life-force. Its ruse is generally unsuccessful.|It prefers cool, dark places, such as the back of a shelf or the space beneath a home's floorboards. It wanders in search of prey after sunset.
+Supposedly, the regrets of a tea ceremony master who died before perfecting his craft lingered in some matcha and became a Pokémon.
+It pretends to be tea, trying to fool people into drinking it so it can drain their life-force. Its ruse is generally unsuccessful.
 After all its muscles were stimulated by the toxic chain around its neck, Okidogi transformed and gained a powerful physique.
 The chain is made from toxins that enhance capabilities. It stimulated Munkidori's brain and caused the Pokémon's psychic powers to bloom.
 Fezandipiti owes its beautiful looks and lovely voice to the toxic stimulants emanating from the chain wrapped around its body.
-This Pokémon's type changes based on which mask it's wearing. It confounds its enemies with nimble movements and kicks.|This form excels in both attack and defense. It ceaselessly unleashes moves like a spring gushes water.|This form is the most aggressive, bombarding enemies with the intensity of flames blazing within a hearth.|This form has excellent defenses, absorbing impacts solidly like the cornerstones that support houses.|This Pokémon's type changes based on which mask it's wearing. It confounds its enemies with nimble movements and kicks.|This form excels in both attack and defense. It ceaselessly unleashes moves like a spring gushes water.|This form is the most aggressive, bombarding enemies with the intensity of flames blazing within a hearth.|This form has excellent defenses, absorbing impacts solidly like the cornerstones that support houses.
+This Pokémon's type changes based on which mask it's wearing. It confounds its enemies with nimble movements and kicks.
 It gathers static electricity from its surroundings. The beams it launches when down on all fours are tremendously powerful.
 Seven syrpents live inside an apple made of syrup. The syrpent in the center is the commander.
 There are scant few reports of this creature being sighted. One short video shows it rampaging and spouting pillars of flame.
 It’s said to incinerate everything around it with lightning launched from its fur. Very little is known about this creature.
 It resembles a Pokémon described in a dubious magazine as a Terrakion that had been modified by an evil organization.
 It resembles a mysterious object introduced in a paranormal magazine as a cutting-edge weapon shaped like a Cobalion.
-Terapagos protects itself using its power to transform energy into hard crystals. This Pokémon is the source of the Terastal phenomenon.|Upon sensing danger, it prepares itself for battle by creating a sturdy shell of crystallized Terastal energy.
+Terapagos protects itself using its power to transform energy into hard crystals. This Pokémon is the source of the Terastal phenomenon.
 It feeds others toxic mochi that draw out desires and capabilities. Those who eat the mochi fall under Pecharunt’s control, chained to its will.
 
 
@@ -1116,7 +1116,6 @@ The Farfetch’d of the Galar region are brave warriors, and they wield thick, t
 
 They store their toxins inside their bodies, so unlike Grimer from other regions, they don’t smell bad even up close.
 There are over a hundred kinds of poison inside its body. Chemical reactions between different poisons are the source of its vitality.
-
 
 
 
@@ -1697,7 +1696,7 @@ The patterns on this Pokémon depend on the climate and topography of the land i
 
 
 This Flabébé rides a yellow flower. The Pokémon is defenseless and vulnerable before it has found and received power from a flower.|This Flabébé rides an orange flower. On its head, it wears a crown of pollen that has healing properties.|Once it finds a flower it likes, this Pokémon will spend the rest of its life taking care of its flower. This Flabébé rides a blue flower.|This Flabébé rides a white flower. The wind blows this Pokémon around as it drifts in search of flower gardens.
-This Pokémon can draw forth the power hidden within yellow flowers. This power then becomes the moves Floette uses to protect itself.|This Pokémon can draw forth the most power when in sync with orange flowers, compared to flowers of other colors.|	Whenever this Pokémon finds flowering plants that are withering, it will bring them back to its territory and care for them until they are healthy.|Floette that are fond of white flowers can also easily sync with flowers of other colors.
+This Pokémon draws forth what power is left in withered flowers to make them healthy again. It holds a red flower.|This Pokémon can draw forth the power hidden within yellow flowers. This power then becomes the moves Floette uses to protect itself.|This Pokémon can draw forth the most power when in sync with orange flowers, compared to flowers of other colors.|Whenever this Pokémon finds flowering plants that are withering, it will bring them back to its territory and care for them until they are healthy.|Floette that are fond of white flowers can also easily sync with flowers of other colors.
 It is said that there was once a Florges that protected the garden of a castle for over 300 years.|Its orange flowers fire off powerful beams, attacking as if they were a battery of artillery.|Though usually compassionate, Florges will hunt down anyone who vandalizes its flower garden, showing no mercy even if they beg for their lives.|A flower garden made by a white-flowered Florges will be beautifully decorated with flowering plants of many different colors.
 
 
@@ -1801,7 +1800,7 @@ On their own, they’re very weak. But when Wishiwashi pool their power together
 
 
 Thanks to its awakened powers, it can change to the Fighting type to match the memory it has equipped.|Thanks to its awakened powers, it can change to the Flying type to match the memory it has equipped.|Thanks to its awakened powers, it can change to the Poison type to match the memory it has equipped.|Thanks to its awakened powers, it can change to the Ground type to match the memory it has equipped.|Thanks to its awakened powers, it can change to the Rock type to match the memory it has equipped.|Thanks to its awakened powers, it can change to the Bug type to match the memory it has equipped.|Thanks to its awakened powers, it can change to the Ghost type to match the memory it has equipped.|Thanks to its awakened powers, it can change to the Steel type to match the memory it has equipped.|Thanks to its awakened powers, it can change to the Fire type to match the memory it has equipped.|Thanks to its awakened powers, it can change to the Water type to match the memory it has equipped.|Thanks to its awakened powers, it can change to the Grass type to match the memory it has equipped.|Thanks to its awakened powers, it can change to the Electric type to match the memory it has equipped.|Thanks to its awakened powers, it can change to the Psychic type to match the memory it has equipped.|Thanks to its awakened powers, it can change to the Ice type to match the memory it has equipped.|Thanks to its awakened powers, it can change to the Dragon type to match the memory it has equipped.|Thanks to its awakened powers, it can change to the Dark type to match the memory it has equipped.|Thanks to its awakened powers, it can change to the Fairy type to match the memory it has equipped.
-
+Minior that fall to the ground try to return to space, but their wish will not come true-all they can do is fade away.
 
 
 
@@ -2039,8 +2038,8 @@ This seems to be the Iron Serpent mentioned in an old book. The Iron Serpent is 
 
 
 
-
-
+Poltchageist looks like a regional form of Sinistea, but it was recently discovered that the two Pokémon are entirely unrelated.
+It prefers cool, dark places, such as the back of a shelf or the space beneath a home's floorboards. It wanders in search of prey after sunset.
 
 
 

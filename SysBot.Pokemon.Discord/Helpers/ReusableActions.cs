@@ -92,7 +92,7 @@ public static class ReusableActions
                 mark = $"\nPokémon has the **{encmark.ToString().Replace("Mark", "")} Mark**!";
         }
 
-        var extra = new string[] { $"\nOT: {pkm.OriginalTrainerName}", $"\nTID: {pkm.GetDisplayTID()}", $"\nSID: {pkm.GetDisplaySID()}", $"\nLanguage: {(LanguageID)pkm.Language}", $"{(pkm.IsEgg ? "\nIsEgg: Yes" : "")}", $"\n{mark.Trim()}" };
+        var extra = new string[] { $"\nOT: {pkm.OriginalTrainerName}", $"\nTID: {pkm.GetDisplayTID()}", $"\nSID: {pkm.GetDisplaySID()}", $"\nLanguage: {(LanguageID)pkm.Language}", $"{(pkm.IsEgg ? "\nIsEgg: Yes" : "")}", $"{mark.Trim()}" };
         newShowdown.InsertRange(1, extra);
         return Format.Code(string.Join("", newShowdown).Trim());
     }

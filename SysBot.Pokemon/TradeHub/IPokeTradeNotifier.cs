@@ -15,6 +15,8 @@ public interface IPokeTradeNotifier<T> where T : PKM, new()
     /// <summary> Notifies when a trade bot finishes the trade. </summary>
     void TradeFinished(PokeRoutineExecutor<T> routine, PokeTradeDetail<T> info, T result);
 
+    void TradeFinished(PokeRoutineExecutor<T> routine, PokeTradeDetail<T> info, T result, List<PKM> list);
+
     /// <summary> Sends a notification when called with parameters. </summary>
     void SendNotification(PokeRoutineExecutor<T> routine, PokeTradeDetail<T> info, string message);
     /// <summary> Sends a notification when called with parameters. </summary>

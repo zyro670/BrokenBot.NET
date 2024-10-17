@@ -17,7 +17,7 @@ namespace SysBot.Pokemon;
 public abstract class TradeCordBase<T> where T : PKM, new()
 {
     protected readonly List<EvolutionTemplate> Evolutions;
-    public static Dictionary<ushort, IReadOnlyCollection<byte>> Dex { get; private set; } = new();
+    public static Dictionary<ushort, IReadOnlyCollection<byte>> Dex { get; private set; } = [];
     protected TCRng Rng { get; private set; }
     private static bool Connected { get; set; }
 
@@ -26,25 +26,25 @@ public abstract class TradeCordBase<T> where T : PKM, new()
     private static SQLiteConnection Connection = new();
     protected static readonly Random Random = new();
 
-    protected readonly string[] SilvallyMemory = { "", " @ Fighting Memory"," @ Flying Memory", " @ Poison Memory", " @ Ground Memory", " @ Rock Memory",
+    protected readonly string[] SilvallyMemory = [ "", " @ Fighting Memory"," @ Flying Memory", " @ Poison Memory", " @ Ground Memory", " @ Rock Memory",
         " @ Bug Memory", " @ Ghost Memory", " @ Steel Memory", " @ Fire Memory", " @ Water Memory", " @ Grass Memory", " @ Electric Memory", " @ Psychic Memory",
-        " @ Ice Memory", " @ Dragon Memory", " @ Dark Memory", " @ Fairy Memory" };
-    protected readonly string[] GenesectDrives = { "", " @ Douse Drive", " @ Shock Drive", " @ Burn Drive", " @ Chill Drive" };
-    protected readonly string[] ArceusPlates = { "", " @ Fist Plate", " @ Sky Plate", " @ Toxic Plate", " @ Earth Plate", " @ Stone Plate", " @ Insect Plate",
+        " @ Ice Memory", " @ Dragon Memory", " @ Dark Memory", " @ Fairy Memory" ];
+    protected readonly string[] GenesectDrives = ["", " @ Douse Drive", " @ Shock Drive", " @ Burn Drive", " @ Chill Drive"];
+    protected readonly string[] ArceusPlates = [ "", " @ Fist Plate", " @ Sky Plate", " @ Toxic Plate", " @ Earth Plate", " @ Stone Plate", " @ Insect Plate",
         " @ Spooky Plate", " @ Iron Plate", " @ Flame Plate", " @ Splash Plate", " @ Meadow Plate", " @ Zap Plate", " @ Mind Plate", " @ Icicle Plate",
-        " @ Draco Plate", " @ Dread Plate", " @ Pixie Plate", " @ Legend Plate" };
-    protected readonly int[] CherishOnly = { 719, 721, 801, 802, 807, 893 };
+        " @ Draco Plate", " @ Dread Plate", " @ Pixie Plate", " @ Legend Plate" ];
+    protected readonly int[] CherishOnly = [719, 721, 801, 802, 807, 893];
 
-    protected readonly int[] UMWormhole = { 144, 145, 146, 150, 244, 245, 249, 380, 382, 384, 480, 481, 482, 484, 487, 488, 644, 645, 646, 642, 717, 793, 795, 796, 797, 799 };
-    protected readonly int[] USWormhole = { 144, 145, 146, 150, 245, 250, 381, 383, 384, 480, 481, 482, 487, 488, 645, 646, 793, 794, 796, 799, 483, 485, 641, 643, 716, 798 };
-    protected readonly int[] GalarFossils = { 880, 881, 882, 883 };
+    protected readonly int[] UMWormhole = [144, 145, 146, 150, 244, 245, 249, 380, 382, 384, 480, 481, 482, 484, 487, 488, 644, 645, 646, 642, 717, 793, 795, 796, 797, 799];
+    protected readonly int[] USWormhole = [144, 145, 146, 150, 245, 250, 381, 383, 384, 480, 481, 482, 487, 488, 645, 646, 793, 794, 796, 799, 483, 485, 641, 643, 716, 798];
+    protected readonly int[] GalarFossils = [880, 881, 882, 883];
 
     protected static readonly string ItemsValues = "@user_id, @id, @count";
     protected static readonly string CatchValues = "@user_id, @id, @is_shiny, @ball, @nickname, @species, @form, @is_egg, @is_favorite, @was_traded, @is_legendary, @is_event, @is_gmax";
     protected static readonly string BinaryCatchesValues = "@user_id, @id, @data";
 
     private readonly string[] TableCreateCommands =
-    {
+    [
         "create table if not exists users(user_id integer primary key, username text not null, catch_count int default 0, time_offset int default 0, last_played text default '', receive_ping int default 0)",
         "create table if not exists trainerinfo(user_id integer, ot text default 'Carp', ot_gender text default 'Male', tid int default 12345, sid int default 54321, language text default 'English', foreign key (user_id) references users (user_id) on delete cascade)",
         "create table if not exists dex(user_id integer, dex_count int default 0, entries text default '', foreign key (user_id) references users (user_id) on delete cascade)",
@@ -55,14 +55,14 @@ public abstract class TradeCordBase<T> where T : PKM, new()
         "create table if not exists items(user_id integer, id int default 0, count int default 0, foreign key (user_id) references users (user_id) on delete cascade)",
         "create table if not exists catches(user_id integer, id int default 0, is_shiny int default 0, ball text default '', nickname text default '', species text default '', form text default '', is_egg int default 0, is_favorite int default 0, was_traded int default 0, is_legendary int default 0, is_event int default 0, is_gmax int default 0, foreign key (user_id) references users (user_id) on delete cascade)",
         "create table if not exists binary_catches(user_id integer, id int default 0, data blob default null, foreign key (user_id) references users (user_id) on delete cascade)",
-    };
+    ];
 
     private readonly string[] IndexCreateCommands =
-    {
+    [
         "create index if not exists catch_index on catches(user_id, id, ball, nickname, species, form, is_shiny, is_egg, is_favorite, was_traded, is_legendary, is_event, is_gmax)",
         "create index if not exists item_index on items(user_id, id)",
         "create index if not exists binary_catches_index on binary_catches(user_id, id)",
-    };
+    ];
 
     public TradeCordBase()
     {
@@ -140,11 +140,11 @@ public abstract class TradeCordBase<T> where T : PKM, new()
             if (name != user.UserInfo.Username)
                 user.UserInfo.Username = name;
 
-            string[] names = new string[] { "@last_played", "@username", "@user_id" };
-            object[] values = new object[] { user.UserInfo.LastPlayed, user.UserInfo.Username, id };
+            string[] names = ["@last_played", "@username", "@user_id"];
+            object[] values = [user.UserInfo.LastPlayed, user.UserInfo.Username, id];
             var txt = "update users set last_played = ?, username = ? where user_id = ?";
             var cmd = new SQLCommand() { CommandText = txt, Names = names, Values = values };
-            List<SQLCommand> list = new() { cmd };
+            List<SQLCommand> list = [cmd];
             ProcessBulkCommands(list);
         }
         return user;
@@ -152,13 +152,13 @@ public abstract class TradeCordBase<T> where T : PKM, new()
 
     protected ulong[] GetUsersToPing()
     {
-        List<ulong> userIDs = new();
+        List<ulong> userIDs = [];
         var cmd = Connection.CreateCommand();
         cmd.CommandText = "select * from users where receive_ping = 1";
         using SQLiteDataReader reader = cmd.ExecuteReader();
         while (reader.Read())
             userIDs.Add(ulong.Parse(reader["user_id"].ToString()!));
-        return userIDs.ToArray();
+        return [.. userIDs];
     }
 
     protected bool IsLegendaryOrMythical(ushort species) => SpeciesCategory.IsLegendary(species) || SpeciesCategory.IsSubLegendary(species) || SpeciesCategory.IsMythical(species);
@@ -447,7 +447,7 @@ public abstract class TradeCordBase<T> where T : PKM, new()
         try
         {
             var dbPath = typeof(T) == typeof(PK8) ? "TradeCord/TradeCordDB_SWSH.db" : typeof(T) == typeof(PK9) ? "TradeCord/TradeCordDB_SV.db" : "TradeCord/TradeCordDB_BDSP.db";
-            var bckPath = typeof(T) == typeof(PK8) ? "TradeCord/TradeCordDB_SWSH_backup.db" : typeof(T) == typeof(PK9) ? "TradeCord/TradeCordDB_SV.db" : "TradeCord/TradeCordDB_BDSP_backup.db";
+            var bckPath = typeof(T) == typeof(PK8) ? "TradeCord/TradeCordDB_SWSH_backup.db" : typeof(T) == typeof(PK9) ? "TradeCord/TradeCordDB_SV_backup.db" : "TradeCord/TradeCordDB_BDSP_backup.db";
             var bckPath2 = $"{bckPath}2";
             TradeCordHelper<T>.VacuumLock = true;
             Thread.Sleep(0_500);
@@ -478,7 +478,7 @@ public abstract class TradeCordBase<T> where T : PKM, new()
 
     protected void ClearInactiveUsers()
     {
-        List<ulong> ids = new();
+        List<ulong> ids = [];
         var cmd = Connection.CreateCommand();
         cmd.CommandText = "select * from users";
 
@@ -662,7 +662,7 @@ public abstract class TradeCordBase<T> where T : PKM, new()
             cmd.CommandText = "alter table catches add column is_gmax int default 0";
             cmd.ExecuteNonQuery();
 
-            Dictionary<int, (ulong, int, PKM)> catches = new();
+            Dictionary<int, (ulong, int, PKM)> catches = [];
             int index = 0;
             cmd.CommandText = "select * from binary_catches";
             var reader = cmd.ExecuteReader();
@@ -716,30 +716,46 @@ public abstract class TradeCordBase<T> where T : PKM, new()
 
     private string DexText(ushort species, byte form, bool gmax)
     {
-        //bool patterns = form > 0 && species is (ushort)Arceus or (ushort)Unown or (ushort)Deoxys or (ushort)Burmy or (ushort)Wormadam or (ushort)Mothim or (ushort)Vivillon or (ushort)Furfrou;
-        if (FormInfo.IsBattleOnlyForm(species, form, 9) || FormInfo.IsFusedForm(species, form, 9) || FormInfo.IsTotemForm(species, form, EntityContext.Gen9) || FormInfo.IsLordForm(species, form, EntityContext.Gen9))// || patterns)
+        byte format = (byte)(Game == GameVersion.SV ? 9 : 8);
+        EntityContext context = Game == GameVersion.SV ? EntityContext.Gen9 : EntityContext.Gen8;
+        bool patterns = form > 0 && species is (ushort)Arceus or (ushort)Unown or (ushort)Deoxys or (ushort)Burmy or (ushort)Wormadam or (ushort)Mothim or (ushort)Vivillon or (ushort)Furfrou;
+
+        if (FormInfo.IsBattleOnlyForm(species, form, format) || FormInfo.IsFusedForm(species, form, format) || FormInfo.IsTotemForm(species, form, context) || FormInfo.IsLordForm(species, form, context) || patterns)
             return "";
 
         var resourcePath = "SysBot.Pokemon.TradeCord.Resources.DexFlavor.txt";
         using StreamReader reader = new(Assembly.GetExecutingAssembly().GetManifestResourceStream(resourcePath)!);
-        if (form > 0 && IsLegendaryOrMythical(species))
+        if (IsLegendaryOrMythical(species))
             form = 0;
 
-        if (!gmax)
+        try
         {
-            var index = species is (ushort)Slowbro && form is 2 ? 0 : species is (ushort)Tauros && form is 1 ? 0 : species is (ushort)Tauros && form is 2 ? 1 : species is (ushort)Tauros && form is 3 ? 2 : form - 1;
-            if (form > 0)
-                return reader.ReadToEnd().Split('_')[1].Split('\n')[species].Split('|')[index].Replace("'", "''");
-            else return reader.ReadToEnd().Split('\n')[species].Replace("'", "''");
-        }
+            var resource = reader.ReadToEnd();
+            var splitSpecies = resource.Split('_')[1].Split('\n')[species].Split('|');
+            if (!gmax)
+            {
+                var index = species is (ushort)Slowbro && form is 2 ? 0 : species is (ushort)Minior ? 0 : form - 1;
+                if (form > 0)
+                {
+                    var splitForm = splitSpecies[index].Replace("'", "''");
+                    return splitForm;
+                }
 
-        string[] str = reader.ReadToEnd().Split('_')[1].Split('\n')[species].Split('|');
-        return str[^1].Replace("'", "''");
+                var splitNoForm = resource.Split('\n')[species].Replace("'", "''");
+                return splitNoForm;
+            }
+
+            return splitSpecies[^1].Replace("'", "''");
+        }
+        catch (Exception ex)
+        {
+            return $"Exception: {ex.Message}";
+        }
     }
 
     private Dictionary<ushort, IReadOnlyCollection<byte>> GetPokedex()
     {
-        Dictionary<ushort, IReadOnlyCollection<byte>> dex = new();
+        Dictionary<ushort, IReadOnlyCollection<byte>> dex = [];
         var livingDex = Game is GameVersion.SWSH ? new SAV8SWSH().GetLivingDex().OrderBySpecies() : Game is GameVersion.SV ? new SAV9SV().GetLivingDex().OrderBySpecies() : new SAV8BS().GetLivingDex().OrderBySpecies();
         var groups = livingDex.GroupBy(p => p.Species).ToArray();
 
@@ -795,7 +811,7 @@ public abstract class TradeCordBase<T> where T : PKM, new()
     {
         Base.EchoUtil.Echo("Beginning to scan for and fix legality errors. This may take a while.");
         int updated = 0;
-        List<SQLCommand> cmds = new();
+        List<SQLCommand> cmds = [];
         var cmd = Connection.CreateCommand();
         cmd.CommandText = "select * from binary_catches";
 
@@ -881,8 +897,8 @@ public abstract class TradeCordBase<T> where T : PKM, new()
                 var obj = new object[] { pk.DecryptedPartyData, user_id, catch_id };
                 cmds.Add(new() { CommandText = "update binary_catches set data = ? where user_id = ? and id = ?", Names = names, Values = obj });
 
-                names = new string[] { "@is_shiny", "@ball", "@nickname", "@form", "@is_egg", "@is_event", "@user_id", "@id" };
-                obj = new object[] { pk.IsShiny, $"{(Ball)pk.Ball}", pk.Nickname, TradeExtensions<PK8>.FormOutput(pk.Species, pk.Form, out _), pk.IsEgg, pk.FatefulEncounter, user_id, catch_id };
+                names = ["@is_shiny", "@ball", "@nickname", "@form", "@is_egg", "@is_event", "@user_id", "@id"];
+                obj = [pk.IsShiny, $"{(Ball)pk.Ball}", pk.Nickname, TradeExtensions<PK8>.FormOutput(pk.Species, pk.Form, out _), pk.IsEgg, pk.FatefulEncounter, user_id, catch_id];
                 cmds.Add(new() { CommandText = "update catches set is_shiny = ?, ball = ?, nickname = ?, form = ?, is_egg = ?, is_event = ? where user_id = ? and id = ?", Names = names, Values = obj });
                 updated++;
             }
@@ -911,7 +927,7 @@ public abstract class TradeCordBase<T> where T : PKM, new()
     private static void EggBug()
     {
         Base.EchoUtil.Echo("Beginning to scan for species nicknamed \"Egg\". This may take a while.");
-        List<SQLCommand> cmds = new();
+        List<SQLCommand> cmds = [];
         int updated = 0;
 
         var cmd = Connection.CreateCommand();
@@ -946,12 +962,12 @@ public abstract class TradeCordBase<T> where T : PKM, new()
                     var obj = new object[] { pk.DecryptedPartyData, user_id, catch_id };
                     cmds.Add(new() { CommandText = "update binary_catches set data = ? where user_id = ? and id = ?", Names = names, Values = obj });
 
-                    names = new string[] { "@nickname", "@user_id", "@id" };
-                    obj = new object[] { pk.Nickname, user_id, catch_id };
+                    names = ["@nickname", "@user_id", "@id"];
+                    obj = [pk.Nickname, user_id, catch_id];
                     cmds.Add(new() { CommandText = "update catches set nickname = ? where user_id = ? and id = ?", Names = names, Values = obj });
 
-                    names = new string[] { "@name", "@ability", "@user_id", "@id" };
-                    obj = new object[] { pk.Nickname, pk.Ability, user_id, catch_id };
+                    names = ["@name", "@ability", "@user_id", "@id"];
+                    obj = [pk.Nickname, pk.Ability, user_id, catch_id];
                     cmds.Add(new() { CommandText = "update buddy set name = ?, ability = ? where user_id = ? and id = ?", Names = names, Values = obj });
                     updated++;
                 }
@@ -984,7 +1000,7 @@ public abstract class TradeCordBase<T> where T : PKM, new()
     {
         Base.EchoUtil.Echo("Beginning to scan for and fix legality errors. This may take a while.");
         int updated = 0;
-        List<SQLCommand> cmds = new();
+        List<SQLCommand> cmds = [];
         var cmd = Connection.CreateCommand();
 
         cmd.CommandText = "select * from binary_catches";
@@ -1346,7 +1362,7 @@ public abstract class TradeCordBase<T> where T : PKM, new()
         return array.Where(x => x > 0).Distinct().OrderBy(x => x).Any(x => x != (i += 1)) ? i : i + 1;
     }
 
-    private bool IsLevelUpEvolutionVariant(EvolutionType evoType)
+    private static bool IsLevelUpEvolutionVariant(EvolutionType evoType)
     {
         return evoType switch
         {
@@ -1376,7 +1392,7 @@ public abstract class TradeCordBase<T> where T : PKM, new()
         };
     }
 
-    private bool IsItemEvolutionVariant(EvolutionType evoType)
+    private static bool IsItemEvolutionVariant(EvolutionType evoType)
     {
         return evoType switch
         {
@@ -1568,8 +1584,8 @@ public abstract class TradeCordBase<T> where T : PKM, new()
         public TCBuddy Buddy { get; set; } = new();
         public TCDex Dex { get; set; } = new();
         public TCPerks Perks { get; set; } = new();
-        public List<TCItem> Items { get; set; } = new();
-        public Dictionary<int, TCCatch> Catches { get; set; } = new();
+        public List<TCItem> Items { get; set; } = [];
+        public Dictionary<int, TCCatch> Catches { get; set; } = [];
     }
 
     protected class TCRng

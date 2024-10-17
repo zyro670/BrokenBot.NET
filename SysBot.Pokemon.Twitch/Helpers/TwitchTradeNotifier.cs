@@ -55,6 +55,15 @@ public class TwitchTradeNotifier<T> : IPokeTradeNotifier<T> where T : PKM, new()
         SendMessage(message, Settings.TradeFinishDestination);
     }
 
+    public void TradeFinished(PokeRoutineExecutor<T> routine, PokeTradeDetail<T> info, T result, List<PKM> list)
+    {
+        OnFinish?.Invoke(routine);
+        var tradedToUser = Data.Species;
+        var message = $"@{info.Trainer.TrainerName}: " + (tradedToUser != 0 ? $"Trade finished. Enjoy your {(Species)tradedToUser}!" : "Trade finished!");
+        LogUtil.LogText(message);
+        SendMessage(message, Settings.TradeFinishDestination);
+    }
+
     public void TradeInitialize(PokeRoutineExecutor<T> routine, PokeTradeDetail<T> info)
     {
         var receive = Data.Species == 0 ? string.Empty : Data.IsEgg || Data.Species == 132 && Data.IsNicknamed ? $" ({Data.Species} ({Data.Nickname}))" : $" ({Data.Nickname})";

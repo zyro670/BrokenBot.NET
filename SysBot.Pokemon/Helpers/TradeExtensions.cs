@@ -126,14 +126,14 @@ public class TradeExtensions<T> where T : PKM, new()
         {
             PB8 => 400,
             PK9 => 28,
-            _ => 154, // PK8
+            _ => 186, // PK8
         };
 
         pkm.MetLevel = pkm switch
         {
             PB8 => 29,
             PK9 => 34,
-            _ => 55,
+            _ => 50,
         };
 
         if (pkm is PK9 pk9)
@@ -146,6 +146,7 @@ public class TradeExtensions<T> where T : PKM, new()
         pkm.IVs = [31, nickname.Contains(dittoStats[0]) ? 0 : 31, 31, nickname.Contains(dittoStats[1]) ? 0 : 31, nickname.Contains(dittoStats[2]) ? 0 : 31, 31];
         pkm.ClearHyperTraining();
         TrashBytes(pkm, new LegalityAnalysis(pkm));
+        pkm.ClearNickname();
     }
 
     public static void EggTrade(PKM pk, IBattleTemplate template)

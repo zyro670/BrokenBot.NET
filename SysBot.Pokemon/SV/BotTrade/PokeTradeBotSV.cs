@@ -2,6 +2,7 @@
 using PKHeX.Core.Searching;
 using SysBot.Base;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
@@ -821,6 +822,7 @@ public class PokeTradeBotSV : PokeRoutineExecutor9SV, ICountBot
         var start = DateTime.Now;
         var pkprev = new PK9();
         PK9 shinypk = new();
+        List<PKM> shinylist = [];
         var bctr = 0;
         while (ctr < Hub.Config.Trade.MaxDumpsPerTrade && DateTime.Now - start < time)
         {
@@ -852,14 +854,14 @@ public class PokeTradeBotSV : PokeRoutineExecutor9SV, ICountBot
             var eggstring = pk.IsEgg ? "Egg " : string.Empty;
             var gender = pk.Gender == 0 ? " - (M)" : pk.Gender == 1 ? " - (F)" : "";
             msg += pk.IsShiny ? $"\n**This Pokémon {eggstring}is shiny!**" : string.Empty;
-            if ((Species)pk.Species is Species.Dunsparce && pk.EncryptionConstant % 100 == 0)
-                msg += $"3 Segment Dunsparce!";
-            if ((Species)pk.Species is Species.Dunsparce && pk.EncryptionConstant % 100 != 0)
-                msg += $"2 Segment Dunsparce!";
-            if ((Species)pk.Species is Species.Maushold && pk.EncryptionConstant % 100 == 0)
-                msg += $"Family of 3 Maus!";
-            if ((Species)pk.Species is Species.Maushold && pk.EncryptionConstant % 100 != 0)
-                msg += $"Family of 4 Maus!";
+            if ((Species)pk.Species is Species.Dunsparce)
+                msg += pk.EncryptionConstant % 100 == 0 ? $"3 Segment Dunsparce" : $"2 Segment Dunsparce";
+            if ((Species)pk.Species is Species.Dudunsparce)
+                msg += pk.EncryptionConstant % 100 == 0 ? $"3 Segment Dunsparce" : $"2 Segment Dunsparce";
+            if ((Species)pk.Species is Species.Tandemaus)
+                msg += pk.EncryptionConstant % 100 == 0 ? $"Family of 3 Maus" : $"Family of 4 Maus";
+            if ((Species)pk.Species is Species.Maushold)
+                msg += pk.EncryptionConstant % 100 == 0 ? $"Family of 3 Maus" : $"Family of 4 Maus";
             string scale = $"Scale: {PokeSizeDetailedUtil.GetSizeRating(pk.Scale)} ({pk.Scale})";
             string TIDFormatted = pk.Generation >= 7 ? $"{pk.TrainerTID7:000000}" : $"{pk.TID16:00000}";
             detail.SendNotification(this, $"Displaying: {(pk.ShinyXor == 0 ? "■ - " : pk.ShinyXor <= 16 ? "★ - " : "")}{SpeciesName.GetSpeciesNameGeneration(pk.Species, 2, 9) + TradeExtensions<PK9>.FormOutput(pk.Species, pk.Form, out _)}{gender}\n{pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}\n" +
@@ -869,7 +871,10 @@ public class PokeTradeBotSV : PokeRoutineExecutor9SV, ICountBot
             ctr++;
 
             if (pk.IsShiny)
+            {
                 shinypk = pk;
+                shinylist.Add(pk);
+            }
         }
 
         Log($"Ended Display loop after processing {ctr} Pokémon.");
@@ -881,7 +886,10 @@ public class PokeTradeBotSV : PokeRoutineExecutor9SV, ICountBot
         if (shinypk.Species != 0)
             detail.TradeData = shinypk;
 
-        detail.Notifier.TradeFinished(this, detail, detail.TradeData); // blank PK9
+        if (shinylist.Count > 1)
+            detail.Notifier.TradeFinished(this, detail, detail.TradeData, shinylist); // blank PK9
+        else
+            detail.Notifier.TradeFinished(this, detail, detail.TradeData); // blank PK9
         return PokeTradeResult.Success;
     }
 
