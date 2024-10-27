@@ -48,6 +48,9 @@ public class RotatingRaidSettingsSV : IBotStateSettings, ICountSettings
     [Category(FeatureToggle), Description("When enabled, the embed will countdown the amount of seconds in \"TimeToWait\" until starting the raid.")]
     public bool IncludeCountdown { get; set; } = false;
 
+    [Category(Hosting), Description("Recovery Settings"), DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
+    public RotatingRaidRecoveryFiltersCategory RecoveryFilters { get; set; } = new();
+
     [Category(Hosting), Description("Lobby Options"), DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
     public LobbyFiltersCategory LobbyOptions { get; set; } = new();
 
@@ -104,6 +107,32 @@ public class RotatingRaidSettingsSV : IBotStateSettings, ICountSettings
         public string Seed { get; set; } = "0";
         public MoveType TeraType { get; set; } = MoveType.Any;
         public string Title { get; set; } = string.Empty;
+    }
+
+    [Category(Hosting), TypeConverter(typeof(CategoryConverter<RotatingRaidRecoveryFiltersCategory>))]
+    public class RotatingRaidRecoveryFiltersCategory
+    {
+        public override string ToString() => "Recovery Settings";
+        [Category(Hosting), Description("Set whether or not Mighty is active or not.")]
+        public bool MightyActive { get; set; } = false;
+
+        [Category(Hosting), Description("Automatically detect the start/end of Distribution.")]
+        public bool AutoSetDistribution { get; set; } = false;
+
+        [Category(Hosting), Description("Override for Distribution Active.")]
+        public bool DistributionActive { get; set; } = false;
+
+        [Category(Hosting), Description("Nothing = Do nothing, Disable = Sets ActiveInRotation to false, Delete = Deletes the Parameter")]
+        public RecoveryAction ActionOnEnd { get; set; } = RecoveryAction.Nothing;
+
+        [Category(Hosting), Description("Set the crystal type to look for, Base = Any.")]
+        public TeraCrystalType CrystalType { get; set; } = TeraCrystalType.Base;
+
+        [Category(Hosting), Description("Set the targeted difficulty for the den, 0 = Any.")]
+        public int TargetDifficulty { get; set; } = 0;
+
+        [Category(Hosting), Description("Set the target Pokemon, None = Any.")]
+        public Species TargetSpecies { get; set; } = Species.None;
     }
 
     [Category(Hosting), TypeConverter(typeof(CategoryConverter<RotatingRaidPresetFiltersCategory>))]

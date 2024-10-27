@@ -28,6 +28,13 @@ namespace SysBot.Pokemon
         MashA,
     }
 
+    public enum RecoveryAction
+    {
+        Nothing,
+        Disable,
+        Delete,
+    }
+
     public class BanList
     {
         public bool enabled { get; set; }

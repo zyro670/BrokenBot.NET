@@ -43,6 +43,7 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
     private int LostRaid;
     private byte FieldID = 0;
     public int RotationCount;
+    private int dayRoll = 0;
     private ulong TodaySeed;
     private ulong OverworldOffset;
     private ulong ConnectedOffset;
@@ -216,7 +217,6 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
         bool partyReady;
         List<(ulong, TradeMyStatus)> lobbyTrainers;
         StartTime = DateTime.Now;
-        var dayRoll = 0;
         RotationCount = 0;
         RaidCount = 0;
         WinCount = 0;
@@ -254,17 +254,24 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
 
                 // Check if there's a lobby.
                 await GetLobbyReady(true, token).ConfigureAwait(false);
-                await Task.Delay(0_750, token).ConfigureAwait(false);
+                await Task.Delay(0_500, token).ConfigureAwait(false);
 
                 await Click(B, 3_000, token).ConfigureAwait(false);
                 await Click(A, 6_000, token).ConfigureAwait(false);
                 await Click(B, 1_000, token).ConfigureAwait(false);
                 await Click(B, 2_000, token).ConfigureAwait(false);
-
                 SeedIndexToReplace = await InteractedDens(token).ConfigureAwait(false);
 
                 if (SeedIndexToReplace != -1)
                 {
+                    await CloseGame(Hub.Config, token);
+                    await StartGameRaid(Hub.Config, token);
+                    continue;
+                }
+                else
+                {
+                    await InitializeSessionOffsets(token).ConfigureAwait(false);
+                    await RecoverRaidDen(token).ConfigureAwait(false);
                     await CloseGame(Hub.Config, token);
                     await StartGameRaid(Hub.Config, token);
                     continue;
@@ -299,78 +306,12 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
                 if (dayRoll != 0 && SeedIndexToReplace != -1 && RaidCount != 0)
                 {
                     Log(msg + "Raid Lost initiating recovery sequence.");
-                    bool denFound = true;
+                    SeedIndexToReplace = -1;
+                    botStartDate = null;
+                    await ResetAndSetSwitchTime(token).ConfigureAwait(false);
 
-                    while (!await IsConnectedOnline(ConnectedOffset, token).ConfigureAwait(false))
-                    {
-                        Log("Connecting...");
-                        await RecoverToOverworld(token).ConfigureAwait(false);
-                        if (!await ConnectToOnline(Hub.Config, token).ConfigureAwait(false))
-                            continue;
-                    }
-
-                    await RecoverToOverworld(token).ConfigureAwait(false);
-
-                    await ReadRaids(true, token).ConfigureAwait(false);
-
-                    // Check if there's a lobby.
-                    if (!await GetLobbyReady(true, token).ConfigureAwait(false))
-                        denFound = false;
-
-                    if (!denFound)
-                    {
-                        while (!denFound)
-                        {
-                            await RecoverToOverworld(token).ConfigureAwait(false);
-
-                            if (Settings.RolloverFilters.RolloverPrevention == RolloverPrevention.TimeSkip)
-                            {
-                                Log("When this baby hits 88 Miles an hour..");
-                                await TimeSkipFwd(token).ConfigureAwait(false);
-                                await Task.Delay(1_000, token).ConfigureAwait(false);
-                                await TimeSkipBwd(token).ConfigureAwait(false);
-                                await Task.Delay(1_000, token).ConfigureAwait(false);
-                            }
-                            else
-                            {
-                                await Click(B, 0_500, token).ConfigureAwait(false);
-                                await Click(HOME, 3_500, token).ConfigureAwait(false);
-                                Log("Closed out of the game!");
-
-                                await RolloverCorrectionSV(token).ConfigureAwait(false);
-                                await Click(A, 1_500, token).ConfigureAwait(false);
-                                Log("Back in the game!");
-                            }
-
-                            // Check if there's a lobby.
-                            if (!await GetLobbyReady(true, token).ConfigureAwait(false))
-                                continue;
-
-                            await Task.Delay(0_500, token).ConfigureAwait(false);
-
-                            await Click(B, 3_000, token).ConfigureAwait(false);
-                            await Click(A, 6_000, token).ConfigureAwait(false);
-                            await Click(B, 1_000, token).ConfigureAwait(false);
-                            await Click(B, 2_000, token).ConfigureAwait(false);
-
-                            denFound = true;
-                        };
-
-                        await Task.Delay(0_050, token).ConfigureAwait(false);
-
-                        if (denFound)
-                        {
-                            LobbyError = 0;
-                            await SVSaveGameOverworld(token).ConfigureAwait(false);
-                            await Task.Delay(0_500, token).ConfigureAwait(false);
-                            await Click(B, 1_000, token).ConfigureAwait(false);
-                        }
-                    }
-                    ofs = await SwitchConnection.PointerAll(Offsets.RaidBlockPointerP, token).ConfigureAwait(false);
-                    TodaySeed = BitConverter.ToUInt64(await SwitchConnection.ReadBytesAbsoluteAsync(ofs, 8, token).ConfigureAwait(false), 0);
-                    SeedIndexToReplace = await InteractedDens(token).ConfigureAwait(false);
-                    LobbyError = 0;
-                    Log("Den Found, moving on!");
+                    await InitializeSessionOffsets(token).ConfigureAwait(false);
+                    await RecoverRaidDen(token).ConfigureAwait(false);
                 }
 
                 Log(msg);
@@ -481,6 +422,152 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
         Log($"No dens found with interactions.");
         return -1;
     }
+
+    private async Task RecoverRaidDen(CancellationToken token)
+    {
+        while (!await IsConnectedOnline(ConnectedOffset, token).ConfigureAwait(false))
+        {
+            Log("Connecting...");
+            await RecoverToOverworld(token).ConfigureAwait(false);
+            if (!await ConnectToOnline(Hub.Config, token).ConfigureAwait(false))
+                continue;
+        }
+
+        await RecoverToOverworld(token).ConfigureAwait(false);
+
+        await ReadRaids(true, token).ConfigureAwait(false);
+
+        bool denFound;
+        // Check if there's a lobby.
+        if (await GetLobbyReady(true, token).ConfigureAwait(false))
+        {
+            int indexToCheck = await InteractedDens(token).ConfigureAwait(false);
+
+            denFound = await CheckRaid(indexToCheck, token).ConfigureAwait(false);
+        }
+        else
+        {
+            denFound = false;
+        }
+
+        if (!denFound && SeedIndexToReplace == -1)
+        {
+            while (!denFound)
+            {
+                await RecoverToOverworld(token).ConfigureAwait(false);
+
+                if (Settings.RolloverFilters.RolloverPrevention == RolloverPrevention.TimeSkip)
+                {
+                    Log("When this baby hits 88 Miles an hour..");
+                    await TimeSkipFwd(token).ConfigureAwait(false);
+                    await Task.Delay(1_000, token).ConfigureAwait(false);
+                    await TimeSkipBwd(token).ConfigureAwait(false);
+                    await Task.Delay(1_000, token).ConfigureAwait(false);
+                }
+                else
+                {
+                    await Click(B, 0_500, token).ConfigureAwait(false);
+                    await Click(HOME, 3_500, token).ConfigureAwait(false);
+                    Log("Closed out of the game!");
+
+                    await RolloverCorrectionSV(token).ConfigureAwait(false);
+                    await Click(A, 1_500, token).ConfigureAwait(false);
+                    Log("Back in the game!");
+                }
+
+                // Check if there's a lobby.
+                if (!await GetLobbyReady(true, token).ConfigureAwait(false))
+                    continue;
+
+                await Task.Delay(0_500, token).ConfigureAwait(false);
+
+                await Click(B, 3_000, token).ConfigureAwait(false);
+                await Click(A, 6_000, token).ConfigureAwait(false);
+                await Click(B, 1_000, token).ConfigureAwait(false);
+                await Click(B, 2_000, token).ConfigureAwait(false);
+
+                int indexToCheck = await InteractedDens(token).ConfigureAwait(false);
+
+                if (!await CheckRaid(indexToCheck, token).ConfigureAwait(false))
+                    continue;
+
+                denFound = true;
+            };
+
+            await Task.Delay(0_050, token).ConfigureAwait(false);
+
+            if (denFound)
+            {
+                await SVSaveGameOverworld(token).ConfigureAwait(false);
+                await Task.Delay(0_500, token).ConfigureAwait(false);
+                await Click(B, 1_000, token).ConfigureAwait(false);
+            }
+        }
+        var ofs = await SwitchConnection.PointerAll(Offsets.RaidBlockPointerP, token).ConfigureAwait(false);
+        TodaySeed = BitConverter.ToUInt64(await SwitchConnection.ReadBytesAbsoluteAsync(ofs, 8, token).ConfigureAwait(false), 0);
+
+        SeedIndexToReplace = await InteractedDens(token).ConfigureAwait(false);
+        LobbyError = 0;
+        Log("Den Found, moving on!");
+    }
+
+    private async Task SanitizeDistributionRaids()
+    {
+        if (Settings.RecoveryFilters.ActionOnEnd == RecoveryAction.Nothing)
+        {
+            return;
+        }
+
+        for (int i = Settings.RaidEmbedParameters.Count - 1; i >= 0; i--)
+        {
+            if (Settings.RaidEmbedParameters[i].CrystalType == TeraCrystalType.Distribution)
+            {
+                switch (Settings.RecoveryFilters.ActionOnEnd)
+                {
+                    case RecoveryAction.Disable:
+                        Settings.RaidEmbedParameters[i].ActiveInRotation = false;
+                        break;
+                    case RecoveryAction.Delete:
+                        Settings.RaidEmbedParameters.RemoveAt(i);
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+
+        var nonDistributionParams = Settings.RaidEmbedParameters
+            .Where(param => param.CrystalType != TeraCrystalType.Distribution)
+            .ToList();
+
+        if (nonDistributionParams.Count == 0 || Settings.RaidEmbedParameters.Count == 0)
+        {
+            Log("No parameters left after processing Distribution types. Stopping bot.");
+            await HardStop().ConfigureAwait(false);
+            return;
+        }
+
+        if (Settings.RecoveryFilters.ActionOnEnd == RecoveryAction.Disable)
+        {
+            if (Settings.RaidEmbedParameters.First().CrystalType == TeraCrystalType.Distribution)
+            {
+                var firstNonDistribution = nonDistributionParams.First();
+                Settings.RaidEmbedParameters.Remove(firstNonDistribution);
+                Settings.RaidEmbedParameters.Insert(0, firstNonDistribution);
+            }
+
+            if (Settings.RaidEmbedParameters.Last().CrystalType == TeraCrystalType.Distribution)
+            {
+                var lastNonDistribution = nonDistributionParams.Last();
+                Settings.RaidEmbedParameters.Remove(lastNonDistribution);
+                Settings.RaidEmbedParameters.Add(lastNonDistribution);
+            }
+        }
+
+        Log("Sanitization of Distribution types complete.");
+    }
+
+
 
     private async Task LocateSeedIndex(CancellationToken token)
     {
@@ -691,34 +778,16 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
 
     public async Task ResetAndSetSwitchTime(CancellationToken token)
     {
-        long unixTime = await SwitchConnection.GetCurrentTime(token).ConfigureAwait(false);
-        DateTime epoch = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        DateTime currentTime = epoch.AddSeconds(unixTime);
+        DateTime epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        DateTime currentDate = DateTime.UtcNow.Date.AddMinutes(1);
+        botStartDate = currentDate;
 
-        if (botStartDate == null)
-        {
-            botStartDate = currentTime;
-        }
-
-        int hoursToAdjustBack = currentTime.Hour + (Math.Abs((botStartDate.Value.Date - currentTime.Date).Days) * 24);
-
-        if (hoursToAdjustBack != 0)
-        {
-            Log($"Time on Switch does not match the start date, rolling back {hoursToAdjustBack} hours.");
-            await CloseGame(Hub.Config, token).ConfigureAwait(false);
-
-            if (hoursToAdjustBack > 0)
-            {
-                for (int i = 0; i < hoursToAdjustBack; i++)
-                {
-                    await TimeSkipBwd(token).ConfigureAwait(false);
-                    await Task.Delay(0_050, token).ConfigureAwait(false);
-                }
-            }
-            await Task.Delay(0_500, token).ConfigureAwait(false);
-            await StartGame(Hub.Config, token).ConfigureAwait(false);
-            Log($"Time on Switch set to {currentTime.Date:d} {currentTime.Hour:00}:{currentTime.Minute:00}");
-        }
+        long targetUnixTime = (long)(currentDate - epoch).TotalSeconds;
+        await CloseGame(Hub.Config, token).ConfigureAwait(false);
+        await SetDateTime((ulong)targetUnixTime, token).ConfigureAwait(false);
+        await Task.Delay(500, token).ConfigureAwait(false);
+        await StartGame(Hub.Config, token).ConfigureAwait(false);
+        Log($"Switch time set to {targetUnixTime:yyyy-MM-dd HH:mm}.");
     }
 
     public async Task HourlyCheckAndAdjust(CancellationToken token)
@@ -1464,6 +1533,89 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
 
     #region RaidCrawler
     // via RaidCrawler modified for this proj
+    private async Task<bool> CheckRaid(int index, CancellationToken token)
+    {
+        string id = await SwitchConnection.GetTitleID(token).ConfigureAwait(false);
+        var game = id switch
+        {
+            RaidCrawler.Core.Structures.Offsets.ScarletID => "Scarlet",
+            RaidCrawler.Core.Structures.Offsets.VioletID => "Violet",
+            _ => "",
+        };
+        container = new(game);
+        container.SetGame(game);
+        StoryProgress = await GetStoryProgress(BaseBlockKeyPointer, token).ConfigureAwait(false);
+        EventProgress = Math.Min(StoryProgress, 3);
+
+        await ReadEventRaids(BaseBlockKeyPointer, container, token).ConfigureAwait(false);
+
+        var data = await SwitchConnection.ReadBytesAbsoluteAsync(RaidBlockPointer, RaidBlockSize, token).ConfigureAwait(false);
+
+        (int delivery, int enc) = container.ReadAllRaids(data, StoryProgress, EventProgress, 0, RaidMap);
+        if (enc > 0)
+            Log($"Failed to find encounters for {enc} raid(s).");
+
+        if (delivery > 0)
+            Log($"Invalid delivery group ID for {delivery} raid(s). Try deleting the \"cache\" folder.");
+
+        var raid = container.Raids[index];
+        var stars = raid.IsEvent ? container.Encounters[index].Stars : RaidExtensions.GetStarCount(raid, raid.Difficulty, StoryProgress, raid.IsBlack);
+
+        var crystal = DetermineCrystalType(raid, stars);
+
+        Log($"Den details: {(Species)container.Encounters[index].Species} | {stars}☆ | {crystal} raid");
+
+        if (!IsValidDifficulty(stars) || !IsValidCrystalType(crystal) || !IsValidSpecies((Species)container.Encounters[index].Species))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool IsValidSpecies(Species species)
+    {
+        return Settings.RecoveryFilters.TargetSpecies == species || Settings.RecoveryFilters.TargetSpecies == Species.None;
+    }
+
+    private bool IsValidDifficulty(int stars)
+    {
+        return Settings.RecoveryFilters.TargetDifficulty == stars || Settings.RecoveryFilters.TargetDifficulty == 0;
+    }
+
+    private bool IsValidCrystalType(TeraCrystalType crystal)
+    {
+        var targetCrystal = Settings.RecoveryFilters.CrystalType;
+
+        if ((FieldID == 0 && (targetCrystal == TeraCrystalType.Distribution || targetCrystal == TeraCrystalType.Might)) ||
+            (targetCrystal == TeraCrystalType.Distribution && !Settings.RecoveryFilters.DistributionActive) ||
+            (targetCrystal == TeraCrystalType.Might && !Settings.RecoveryFilters.MightyActive))
+        {
+            return true;
+        }
+
+        return crystal == targetCrystal;
+    }
+
+
+    private static TeraCrystalType DetermineCrystalType(Raid raid, int stars)
+    {
+        if (raid.IsBlack)
+        {
+            return TeraCrystalType.Black;
+        }
+        if (raid.IsEvent)
+        {
+            if (stars == 7)
+            {
+                return TeraCrystalType.Might;
+            }
+            return TeraCrystalType.Distribution;
+        }
+        return TeraCrystalType.Base;
+    }
+
+
     private async Task ReadRaids(bool init, CancellationToken token)
     {
         Log("Starting raid reads..");
@@ -1474,6 +1626,7 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
             RaidCrawler.Core.Structures.Offsets.VioletID => "Violet",
             _ => "",
         };
+        bool hasDistributionActiveBeenSet = false;
 
         container = new(game);
         container.SetGame(game);
@@ -1515,8 +1668,27 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
         bool done = false;
         for (int i = 0; i < container.Raids.Count; i++)
         {
-            if (done is true)
+            if (FieldID == 0 && Settings.RecoveryFilters.AutoSetDistribution)
+            {
+                var checkstars = container.Raids[i].IsEvent ? container.Encounters[i].Stars : RaidExtensions.GetStarCount(container.Raids[i], container.Raids[i].Difficulty, StoryProgress, container.Raids[i].IsBlack);
+
+                if (!hasDistributionActiveBeenSet && container.Raids[i].IsEvent && checkstars != 7)
+                {
+                    if (!Settings.RecoveryFilters.DistributionActive)
+                    {
+                        Log("Event Start detected, rolling for specific dens!");
+                        dayRoll++;
+                        LobbyError = 3;
+                    }
+                    Settings.RecoveryFilters.DistributionActive = true;
+                    hasDistributionActiveBeenSet = true;
+                }
+            }
+
+            if (done && !Settings.RecoveryFilters.AutoSetDistribution)
                 break;
+            else if (done)
+                continue;
 
             var (pk, seed) = IsSeedReturned(container.Encounters[i], container.Raids[i]);
             for (int a = 0; a < Settings.RaidEmbedParameters.Count; a++)
@@ -1619,6 +1791,18 @@ public class RotatingRaidBotSV : PokeRoutineExecutor9SV, ICountBot
                     done = true;
                 }
             }
+        }
+
+        if (!hasDistributionActiveBeenSet && FieldID == 0)
+        {
+            if (Settings.RecoveryFilters.DistributionActive)
+            {
+                Log("Event Ending Detected for: Distribution, clearing Raid Params");
+                dayRoll++;
+                LobbyError = 3;
+                await SanitizeDistributionRaids();
+            }
+            Settings.RecoveryFilters.DistributionActive = false;
         }
     }
     #endregion
