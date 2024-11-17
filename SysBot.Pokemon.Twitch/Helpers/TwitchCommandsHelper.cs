@@ -27,7 +27,7 @@ public static class TwitchCommandsHelper<T> where T : PKM, new()
             return false;
         }
         var template = AutoLegalityWrapper.GetTemplate(set);
-        if (template.Species < 1)
+        if (template.Species == 0)
         {
             msg = $"Skipping trade, @{username}: Please read what you are supposed to type as the command argument.";
             return false;

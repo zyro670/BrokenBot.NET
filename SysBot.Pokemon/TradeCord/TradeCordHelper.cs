@@ -521,7 +521,7 @@ public class TradeCordHelper<T> : TradeCordDatabase<T> where T : PKM, new()
             bool isShiny = filters.FirstOrDefault(x => x == "Shiny") != default;
             bool gmax = filters.FirstOrDefault(x => x == "Gmax") != default;
             var filterBall = filters.FirstOrDefault(x => x != "Shiny" && x != "Gmax");
-            var formStrings = GameInfo.GetStrings(LanguageID.English.GetLanguage2CharName()).forms;
+            var formStrings = GameInfo.GetStrings(LanguageID.English.GetLanguageCode()).forms;
             bool isForm = formStrings.Contains(input);
             //bool isParadox = IsParadox((ushort)speciesID);
 

@@ -12,11 +12,10 @@ using static SysBot.Pokemon.BasePokeDataOffsetsBS;
 namespace SysBot.Pokemon;
 
 // ReSharper disable once ClassWithVirtualMembersNeverInherited.Global
-public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot
+public class PokeTradeBotBS(PokeTradeHub<PB8> Hub, PokeBotState Config) : PokeRoutineExecutor8BS(Config), ICountBot
 {
-    private readonly PokeTradeHub<PB8> Hub;
-    private readonly TradeSettings TradeSettings;
-    private readonly TradeAbuseSettings AbuseSettings;
+    private readonly TradeSettings TradeSettings = Hub.Config.Trade;
+    private readonly TradeAbuseSettings AbuseSettings = Hub.Config.TradeAbuse;
 
     public ICountSettings Counts => TradeSettings;
 
@@ -24,7 +23,7 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot
     /// Folder to dump received trade data to.
     /// </summary>
     /// <remarks>If null, will skip dumping.</remarks>
-    private readonly IDumper DumpSetting;
+    private readonly FolderSettings DumpSetting = Hub.Config.Folder;
 
     /// <summary>
     /// Synchronized start for multiple bots.
@@ -36,15 +35,6 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot
     /// </summary>
     public int FailedBarrier { get; private set; }
 
-    public PokeTradeBotBS(PokeTradeHub<PB8> hub, PokeBotState cfg) : base(cfg)
-    {
-        Hub = hub;
-        TradeSettings = hub.Config.Trade;
-        AbuseSettings = hub.Config.TradeAbuse;
-        DumpSetting = hub.Config.Folder;
-        lastOffered = new byte[8];
-    }
-
     // Cached offsets that stay the same per session.
     private ulong BoxStartOffset;
     private ulong UnionGamingOffset;
@@ -55,7 +45,7 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot
     // Count up how many trades we did without rebooting.
     private int sessionTradeCount;
     // Track the last Pokémon we were offered since it persists between trades.
-    private byte[] lastOffered;
+    private byte[] lastOffered = new byte[8];
 
     public override async Task MainLoop(CancellationToken token)
     {
@@ -634,10 +624,10 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot
 
             // If we detected a change, they offered something.
             var pk = await ReadPokemon(LinkTradePokemonOffset, BoxFormatSlotSize, token).ConfigureAwait(false);
-            var newEC = await SwitchConnection.ReadBytesAbsoluteAsync(LinkTradePokemonOffset, 8, token).ConfigureAwait(false);
-            if (pk.Species < 1 || !pk.ChecksumValid || lastOffered == newEC)
+            var newECchk = await SwitchConnection.ReadBytesAbsoluteAsync(LinkTradePokemonOffset, 8, token).ConfigureAwait(false);
+            if (pk.Species == 0 || !pk.ChecksumValid || lastOffered.SequenceEqual(newECchk))
                 continue;
-            lastOffered = newEC;
+            lastOffered = newECchk;
 
             // Send results from separate thread; the bot doesn't need to wait for things to be calculated.
             if (DumpSetting.Dump)
