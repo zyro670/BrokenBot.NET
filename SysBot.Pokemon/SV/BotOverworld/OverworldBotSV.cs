@@ -609,7 +609,7 @@ public class OverworldBotSV : PokeRoutineExecutor9SV, IEncounterBot
             case MarkSetting.AnyMark: if (hasAMark) satisfied = true; break;
             case MarkSetting.DisableMarkCheck: satisfied = true; break;
             case MarkSetting.Scalar:
-                if (pk.Scale is not 0 or 255)
+                if (pk.Scale != 0 && pk.Scale != 255)
                 {
                     satmsg = $"Undesired Scale: {pk.Scale} found..";
                     satisfied = false;
