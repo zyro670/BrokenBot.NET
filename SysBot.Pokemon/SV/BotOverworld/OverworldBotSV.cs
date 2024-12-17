@@ -609,7 +609,7 @@ public class OverworldBotSV : PokeRoutineExecutor9SV, IEncounterBot
             case MarkSetting.AnyMark: if (hasAMark) satisfied = true; break;
             case MarkSetting.DisableMarkCheck: satisfied = true; break;
             case MarkSetting.Scalar:
-                if (pk.Scale is not 0 or 255)
+                if (pk.Scale != 0 && pk.Scale != 255)
                 {
                     satmsg = $"Undesired Scale: {pk.Scale} found..";
                     satisfied = false;
@@ -627,7 +627,8 @@ public class OverworldBotSV : PokeRoutineExecutor9SV, IEncounterBot
                     satisfied = true;
                 break;
             case MarkSetting.TimeAndUpANDScalar:
-                if (hasAMark && specialmark is not RibbonIndex.MarkUncommon && pk.Scale is 0 or 255)
+                if (hasAMark && specialmark is not RibbonIndex.MarkUncommon && pk.Scale == 0 
+                    || hasAMark && specialmark is not RibbonIndex.MarkUncommon && pk.Scale == 255)
                     satisfied = true;
                 else
                     satisfied = false;
@@ -642,7 +643,8 @@ public class OverworldBotSV : PokeRoutineExecutor9SV, IEncounterBot
                     satisfied = true;
                 break;
             case MarkSetting.WeatherAndUpAndScalar:
-                if (hasAMark && specialmark > RibbonIndex.MarkDawn && specialmark is not RibbonIndex.MarkUncommon && pk.Scale is 0 or 255)
+                if (hasAMark && specialmark > RibbonIndex.MarkDawn && specialmark is not RibbonIndex.MarkUncommon && pk.Scale == 0 
+                    || hasAMark && specialmark > RibbonIndex.MarkDawn && specialmark is not RibbonIndex.MarkUncommon && pk.Scale == 255)
                     satisfied = true;
                 else
                     satisfied = false;
@@ -657,13 +659,14 @@ public class OverworldBotSV : PokeRoutineExecutor9SV, IEncounterBot
                     satisfied = true;
                 break;
             case MarkSetting.PersonalityAndUpORScalar:
-                if (hasAMark && specialmark > RibbonIndex.MarkMisty && specialmark is not RibbonIndex.MarkUncommon || pk.Scale is 0 or 255)
+                if (hasAMark && specialmark > RibbonIndex.MarkMisty && specialmark is not RibbonIndex.MarkUncommon || pk.Scale == 0 || pk.Scale == 255)
                     satisfied = true;
                 else
                     satisfied = false;
                 break;
             case MarkSetting.PersonalityAndUpANDScalar:
-                if (hasAMark && specialmark > RibbonIndex.MarkMisty && pk.Scale is 0 or 255 && specialmark is not RibbonIndex.MarkUncommon)
+                if (hasAMark && specialmark > RibbonIndex.MarkMisty && specialmark is not RibbonIndex.MarkUncommon && pk.Scale == 0
+                    || hasAMark && specialmark > RibbonIndex.MarkMisty && specialmark is not RibbonIndex.MarkUncommon && pk.Scale == 255)
                     satisfied = true;
                 else
                     satisfied = false;
