@@ -150,8 +150,9 @@ public sealed class SysCord<T> where T : PKM, new()
         foreach (var t in genericTypes)
         {
             var genModule = t.MakeGenericType(typeof(T));
-            if (!initTC && t.Name == "TradeCordModule`1")
+            if (!initTC && t.Name.Contains("TradeCordModule"))
                 continue;
+
             await _commands.AddModuleAsync(genModule, _services).ConfigureAwait(false);
         }
         var modules = _commands.Modules.ToList();
