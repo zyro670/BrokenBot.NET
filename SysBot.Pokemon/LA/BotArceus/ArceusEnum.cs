@@ -11,7 +11,6 @@
         PlayerCoordScan = 6,
         MultiSpawnPathSearch = 7,
         GenieScanner = 8,
-        ManaphyReset = 9,
         OtherLegendReset = 10,
         AdvanceTimeDelay = 11,
     }
@@ -25,6 +24,7 @@
         Mesprit = 4,
         Uxie = 5,
         Azelf = 6,
+        Manaphy = 7,
     }
 
     public enum ArceusAutoFill

@@ -196,9 +196,11 @@ public abstract class PokeRoutineExecutor8LA : PokeRoutineExecutor<PA8>
         // Switch Logo and game load screen
         await Task.Delay(12_000 + timing.ExtraTimeLoadGame, token).ConfigureAwait(false);
 
-        for (int i = 0; i < 8; i++)
+        Log($"Waited 12 seconds + our extra time to load... Mashing A 10x in 10 seconds!");
+        for (int i = 0; i < 10; i++)
             await Click(A, 1_000, token).ConfigureAwait(false);
 
+        Log("Timer check for rescue protocol initiated...");
         var timer = 60_000;
         while (!await IsOnOverworldTitle(token).ConfigureAwait(false))
         {

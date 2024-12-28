@@ -143,6 +143,9 @@ public class ArceusBotSettings : IBotStateSettings, ICountSettings
         [Category(Arceus), Description("Toggle true if you want to run to the professor instead of teleport.")]
         public bool RunToProfessor { get; set; } = true;
 
+        [Category(Arceus), Description("When enabled, the bot will use the Player Invincible cheat to not black out.")]
+        public bool UsePlayerInvincibleCheat { get; set; } = true;
+
         [Category(Arceus), Description("Select the Location of the map you are hunting for. Ignore this setting if you are running MMOHunter")]
         public ArceusMap ScanLocation { get; set; } = ArceusMap.ObsidianFieldlands;
 

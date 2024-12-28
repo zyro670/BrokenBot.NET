@@ -65,16 +65,33 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
     public override async Task MainLoop(CancellationToken token)
     {
         Log("Identifying trainer data of the host console.");
-        var trainersav = await IdentifyTrainer(token).ConfigureAwait(false);
+        await IdentifyTrainer(token).ConfigureAwait(false);
+        PokedexSaveData? dex = null;
         await InitializeHardware(Settings, token).ConfigureAwait(false);
         try
         {
             Log($"Starting main {GetType().Name} loop.");
             Config.IterateNextRoutine();
-            HasCharm = await CheckForCharm(token).ConfigureAwait(false);
-            var dex = await ReadPokedex(token).ConfigureAwait(false);
+            if (Settings.BotType != ArceusMode.GenieScanner && Settings.BotType != ArceusMode.OtherLegendReset)
+                HasCharm = await CheckForCharm(token).ConfigureAwait(false);
+
+            if (Settings.BotType == ArceusMode.DistortionReader || Settings.BotType == ArceusMode.MassiveOutbreakHunter || Settings.BotType == ArceusMode.MultiSpawnPathSearch)
+                dex = await ReadPokedex(token).ConfigureAwait(false);
+
             await ResetStick(token).ConfigureAwait(false);
-            MainNsoBase = await SwitchConnection.GetMainNsoBaseAsync(token).ConfigureAwait(false);
+
+            if (Settings.SpecialConditions.UsePlayerInvincibleCheat)
+            {
+                Log("Checking MainNSOBase...");
+                MainNsoBase = await SwitchConnection.GetMainNsoBaseAsync(token).ConfigureAwait(false);
+            }
+
+            if (!Settings.SpecialConditions.UsePlayerInvincibleCheat && Settings.BotType != ArceusMode.OtherLegendReset || !Settings.SpecialConditions.UsePlayerInvincibleCheat && Settings.BotType != ArceusMode.GenieScanner)
+            {
+                Log("Checking MainNSOBase...");
+                MainNsoBase = await SwitchConnection.GetMainNsoBaseAsync(token).ConfigureAwait(false);
+            }
+
             var task = Hub.Config.ArceusLA.BotType switch
             {
                 ArceusMode.PlayerCoordScan => PlayerCoordScan(token),
@@ -82,11 +99,11 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
                 ArceusMode.TimeSeedAdvancer => TimeSeedAdvancer(token),
                 ArceusMode.StaticAlphaScan => ScanForSpawners(token),
                 ArceusMode.DistortionSpammer => DistortionSpammer(token),
-                ArceusMode.DistortionReader => DistortionReader(dex, token),
-                ArceusMode.MassiveOutbreakHunter => MassiveOutbreakHunter(dex, token),
-                ArceusMode.MultiSpawnPathSearch => PerformMultiSpawnerScan(dex, token),
+                ArceusMode.DistortionReader => DistortionReader(dex!, token),
+                ArceusMode.MassiveOutbreakHunter => MassiveOutbreakHunter(dex!, token),
+                ArceusMode.MultiSpawnPathSearch => PerformMultiSpawnerScan(dex!, token),
                 ArceusMode.GenieScanner => ScanForSpawners(token),
-                ArceusMode.ManaphyReset => ManaphyReset(token),
+                //ArceusMode.ManaphyReset => ManaphyReset(token),
                 ArceusMode.OtherLegendReset => ScanForSpawners(token),
                 ArceusMode.AdvanceTimeDelay => AdvanceTimeDelay(token),
                 _ => PlayerCoordScan(token),
@@ -246,8 +263,8 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
 
     private async Task DistortionReader(PokedexSaveData dex, CancellationToken token)
     {
-        List<PA8> matchlist = new();
-        List<string> loglist = new();
+        List<PA8> matchlist = [];
+        List<string> loglist = [];
         Log($"Starting Distortion Scanner for {Settings.DistortionConditions.DistortionLocation}...");
         int tries = 1;
         int count = Settings.DistortionConditions.DistortionLocation switch
@@ -269,11 +286,11 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
                 long[] disofs;
                 switch (Settings.DistortionConditions.DistortionLocation)
                 {
-                    case ArceusMap.ObsidianFieldlands: disofs = new long[] { 0x42CC4D8, 0xC0, 0x1C0, 0x990 + i * 0x8, 0x18, 0x430, 0xC0 }; encounter_slot_sum = 112; common_sum = 546; break;
-                    case ArceusMap.CrimsonMirelands: disofs = new long[] { 0x42CC4D8, 0xC0, 0x1C0, 0xC78 + i * 0x8, 0x18, 0x430, 0xC0 }; encounter_slot_sum = 276; common_sum = 480; break;
-                    case ArceusMap.CobaltCoastlands: disofs = new long[] { 0x42CC4D8, 0xC0, 0x1C0, 0xCC0 + i * 0x8, 0x18, 0x430, 0xC0 }; encounter_slot_sum = 163; common_sum = 529; break;
-                    case ArceusMap.CoronetHighlands: disofs = new long[] { 0x42CC4D8, 0xC0, 0x1C0, 0x818 + i * 0x8, 0x18, 0x430, 0xC0 }; encounter_slot_sum = 382; common_sum = 382; break;
-                    case ArceusMap.AlabasterIcelands: disofs = new long[] { 0x42CC4D8, 0xC0, 0x1C0, 0x948 + i * 0x8, 0x18, 0x430, 0xC0 }; encounter_slot_sum = 259; common_sum = 675; break;
+                    case ArceusMap.ObsidianFieldlands: disofs = [0x42CC4D8, 0xC0, 0x1C0, 0x990 + i * 0x8, 0x18, 0x430, 0xC0]; encounter_slot_sum = 112; common_sum = 546; break;
+                    case ArceusMap.CrimsonMirelands: disofs = [0x42CC4D8, 0xC0, 0x1C0, 0xC78 + i * 0x8, 0x18, 0x430, 0xC0]; encounter_slot_sum = 276; common_sum = 480; break;
+                    case ArceusMap.CobaltCoastlands: disofs = [0x42CC4D8, 0xC0, 0x1C0, 0xCC0 + i * 0x8, 0x18, 0x430, 0xC0]; encounter_slot_sum = 163; common_sum = 529; break;
+                    case ArceusMap.CoronetHighlands: disofs = [0x42CC4D8, 0xC0, 0x1C0, 0x818 + i * 0x8, 0x18, 0x430, 0xC0]; encounter_slot_sum = 382; common_sum = 382; break;
+                    case ArceusMap.AlabasterIcelands: disofs = [0x42CC4D8, 0xC0, 0x1C0, 0x948 + i * 0x8, 0x18, 0x430, 0xC0]; encounter_slot_sum = 259; common_sum = 675; break;
                     default: throw new NotImplementedException("Invalid distortion location.");
                 }
 
@@ -307,9 +324,12 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
 
                         if (Settings.DistortionConditions.AnyAlpha && match.IsAlpha)
                         {
-                            // Activates invcincible trainer cheat so we don't faint from teleporting or a Pokemon attacking and infinite PP
-                            await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0xD65F03C0), MainNsoBase + InvincibleTrainer1, token).ConfigureAwait(false);
-                            await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0xD65F03C0), MainNsoBase + InvincibleTrainer2, token).ConfigureAwait(false);
+                            if (Settings.SpecialConditions.UsePlayerInvincibleCheat)
+                            {
+                                // Activates invcincible trainer cheat so we don't faint from teleporting or a Pokemon attacking and infinite PP
+                                await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0xD65F03C0), MainNsoBase + InvincibleTrainer1, token).ConfigureAwait(false);
+                                await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0xD65F03C0), MainNsoBase + InvincibleTrainer2, token).ConfigureAwait(false);
+                            }
 
                             Log($"Found an Alpha {(Species)match.Species}. Storing its coordinates...\nPress continue if a desired encounter to teleport to, otherwise toss to toss.\nReference the image guide if needed: https://imgur.com/a/OyBIIbR");
                             string url = TradeExtensions<PK9>.PokeImg(match, false, false);
@@ -650,7 +670,7 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
     {
         int success = 0;
         int heal = 0;
-        string[] coords = { Settings.SpecialConditions.SpawnZoneX, Settings.SpecialConditions.SpawnZoneY, Settings.SpecialConditions.SpawnZoneZ };
+        string[] coords = [Settings.SpecialConditions.SpawnZoneX, Settings.SpecialConditions.SpawnZoneY, Settings.SpecialConditions.SpawnZoneZ];
         for (int a = 0; a < coords.Length; a++)
         {
             if (string.IsNullOrEmpty(coords[a]))
@@ -660,12 +680,15 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
             }
         }
         OverworldOffset = await SwitchConnection.PointerAll(Offsets.OverworldPointer, token).ConfigureAwait(false);
-        // Activates invcincible trainer cheat so we don't faint from teleporting or a Pokemon attacking and infinite PP
-        await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0xD65F03C0), MainNsoBase + InvincibleTrainer1, token).ConfigureAwait(false);
-        await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0xD65F03C0), MainNsoBase + InvincibleTrainer2, token).ConfigureAwait(false);
+        if (Settings.SpecialConditions.UsePlayerInvincibleCheat)
+        {
+            // Activates invcincible trainer cheat so we don't faint from teleporting or a Pokemon attacking and infinite PP
+            await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0xD65F03C0), MainNsoBase + InvincibleTrainer1, token).ConfigureAwait(false);
+            await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0xD65F03C0), MainNsoBase + InvincibleTrainer2, token).ConfigureAwait(false);
 
-        await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0xD28008AA), MainNsoBase + InfPP1, token).ConfigureAwait(false);
-        await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0xD28008A9), MainNsoBase + InfPP2, token).ConfigureAwait(false);
+            await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0xD28008AA), MainNsoBase + InfPP1, token).ConfigureAwait(false);
+            await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0xD28008A9), MainNsoBase + InfPP2, token).ConfigureAwait(false);
+        }
 
         GetDefaultCampCoords();
         while (!token.IsCancellationRequested)
@@ -813,7 +836,7 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
     }
     private async Task SeedAdvancer(CancellationToken token)
     {
-        string[] coords = { Settings.SpecialConditions.CampZoneX, Settings.SpecialConditions.CampZoneY, Settings.SpecialConditions.CampZoneZ, Settings.SpecialConditions.SpawnZoneX, Settings.SpecialConditions.SpawnZoneY, Settings.SpecialConditions.SpawnZoneZ };
+        string[] coords = [Settings.SpecialConditions.CampZoneX, Settings.SpecialConditions.CampZoneY, Settings.SpecialConditions.CampZoneZ, Settings.SpecialConditions.SpawnZoneX, Settings.SpecialConditions.SpawnZoneY, Settings.SpecialConditions.SpawnZoneZ];
         for (int a = 0; a < coords.Length; a++)
         {
             if (string.IsNullOrEmpty(coords[a]))
@@ -823,9 +846,12 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
             }
         }
         OverworldOffset = await SwitchConnection.PointerAll(Offsets.OverworldPointer, token).ConfigureAwait(false);
-        // Activates invcincible trainer cheat so we don't faint from teleporting or a Pokemon attacking
-        await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0xD65F03C0), MainNsoBase + InvincibleTrainer1, token).ConfigureAwait(false);//invi
-        await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0xD65F03C0), MainNsoBase + InvincibleTrainer2, token).ConfigureAwait(false);//invi
+        if (Settings.SpecialConditions.UsePlayerInvincibleCheat)
+        {
+            // Activates invcincible trainer cheat so we don't faint from teleporting or a Pokemon attacking
+            await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0xD65F03C0), MainNsoBase + InvincibleTrainer1, token).ConfigureAwait(false);//invi
+            await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0xD65F03C0), MainNsoBase + InvincibleTrainer2, token).ConfigureAwait(false);//invi
+        }
 
         while (!token.IsCancellationRequested)
         {
@@ -1057,36 +1083,44 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
             await Click(B, 0_500, token).ConfigureAwait(false);
         Log("Searching for a match!");
         GetDefaultCoords();
-        if (Settings.SpecialConditions.RunToProfessor == false && Settings.SpecialConditions.TypeOfLegend is not LegendsOnMap.Heatran or LegendsOnMap.Azelf or LegendsOnMap.Mesprit or LegendsOnMap.Uxie)
+        if (Settings.SpecialConditions.RunToProfessor == false && Settings.SpecialConditions.TypeOfLegend is not LegendsOnMap.Heatran or LegendsOnMap.Azelf or LegendsOnMap.Mesprit or LegendsOnMap.Uxie or LegendsOnMap.Manaphy)
             await TeleportToCampZone(token);
         while (!token.IsCancellationRequested)
         {
             Log($"Search #{attempts}");
-            if (Settings.BotType == ArceusMode.StaticAlphaScan)
-                await SpawnerScan(token).ConfigureAwait(false);
-            if (Settings.BotType == ArceusMode.GenieScanner)
-                await GenieScan(token).ConfigureAwait(false);
-            if (Settings.BotType == ArceusMode.OtherLegendReset)
+            switch (Settings.BotType)
             {
-                if (Settings.SpecialConditions.TypeOfLegend is LegendsOnMap.Heatran or LegendsOnMap.Azelf or LegendsOnMap.Mesprit or LegendsOnMap.Uxie)
-                {
-                    await Click(A, 0_800, token).ConfigureAwait(false);
-
-                    while (!await IsOnOverworldTitle(token).ConfigureAwait(false))
+                case
+                    ArceusMode.StaticAlphaScan:
+                    await SpawnerScan(token).ConfigureAwait(false); break;
+                case
+                    ArceusMode.GenieScanner:
+                    await GenieScan(token).ConfigureAwait(false); break;
+                case
+                    ArceusMode.OtherLegendReset:
+                    if (Settings.SpecialConditions.TypeOfLegend is LegendsOnMap.Heatran || Settings.SpecialConditions.TypeOfLegend is LegendsOnMap.Azelf ||
+                        Settings.SpecialConditions.TypeOfLegend is LegendsOnMap.Mesprit || Settings.SpecialConditions.TypeOfLegend is LegendsOnMap.Uxie || Settings.SpecialConditions.TypeOfLegend is LegendsOnMap.Manaphy)
+                    {
                         await Click(A, 0_800, token).ConfigureAwait(false);
 
-                    await Task.Delay(2_000, token).ConfigureAwait(false);
-                }
-                await OtherLegendsReset(token).ConfigureAwait(false);
+                        while (!await IsOnOverworldTitle(token).ConfigureAwait(false))
+                            await Click(A, 0_700, token).ConfigureAwait(false);
+
+                    }
+                    await OtherLegendsReset(token).ConfigureAwait(false); break;
             }
+
             if (Settings.AlphaScanConditions.StopOnMatch)
             {
                 Log($"{Hub.Config.StopConditions.MatchFoundEchoMention} a match has been found!");
                 await Click(HOME, 0_700, token).ConfigureAwait(false);
                 if (Settings.ContinueAfterMatch == ContinueAfterMatch.PauseWaitAcknowledge)
                 {
-                    await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0xD65F03C0), MainNsoBase + InvincibleTrainer1, token).ConfigureAwait(false);
-                    await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0xD65F03C0), MainNsoBase + InvincibleTrainer2, token).ConfigureAwait(false);
+                    if (Settings.SpecialConditions.UsePlayerInvincibleCheat)
+                    {
+                        await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0xD65F03C0), MainNsoBase + InvincibleTrainer1, token).ConfigureAwait(false);
+                        await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0xD65F03C0), MainNsoBase + InvincibleTrainer2, token).ConfigureAwait(false);
+                    }
 
                     IsWaiting = true;
                     while (IsWaiting)
@@ -1098,7 +1132,7 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
                 else
                     return;
             }
-            if (Settings.BotType == ArceusMode.OtherLegendReset && Settings.SpecialConditions.TypeOfLegend is LegendsOnMap.Azelf or LegendsOnMap.Heatran or LegendsOnMap.Mesprit or LegendsOnMap.Uxie)
+            if (Settings.SpecialConditions.TypeOfLegend is LegendsOnMap.Heatran || Settings.SpecialConditions.TypeOfLegend is LegendsOnMap.Azelf || Settings.SpecialConditions.TypeOfLegend is LegendsOnMap.Mesprit || Settings.SpecialConditions.TypeOfLegend is LegendsOnMap.Uxie)
             {
                 await CloseGame(Hub.Config, token).ConfigureAwait(false);
                 await StartGame(Hub.Config, token).ConfigureAwait(false);
@@ -1267,15 +1301,15 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
             if (!isSpawner)
             {
                 groupID--;
-                Log($"Bad SpawnerID {bytes:X16}\nTrying again with SpawnerID: {groupID}.");
+               // Log($"Bad SpawnerID {bytes:X16}\nTrying again with SpawnerID: {groupID}.");
                 continue;
             }
-            Log($"Checking SpawnerID: {groupID}...");
+           // Log($"Checking SpawnerID: {groupID}...");
             var SpawnerOffpoint = new long[] { 0x42a6ee0, 0x330, 0x70 + groupID * 0x440 + 0x20 };
             var SpawnerOff = await SwitchConnection.PointerAll(SpawnerOffpoint, token).ConfigureAwait(false);
             var GeneratorSeed = await SwitchConnection.ReadBytesAbsoluteAsync(SpawnerOff, 8, token).ConfigureAwait(false);
 
-            Log($"SpawnerID {bytes:X16} - Generator Seed: {BitConverter.ToString(GeneratorSeed).Replace("-", "")}");
+         //   Log($"SpawnerID {bytes:X16} - Generator Seed: {BitConverter.ToString(GeneratorSeed).Replace("-", "")}");
             var group_seed = (BitConverter.ToUInt64(GeneratorSeed, 0) - 0x82A2B175229D6A5B) & 0xFFFFFFFFFFFFFFFF;
             GenerateNextShiny(0, group_seed);
         }
@@ -1302,6 +1336,7 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
             LegendsOnMap.Mesprit => "375CE0719E93B5CF",
             LegendsOnMap.Uxie => "5A67A8230FAF4B95",
             LegendsOnMap.Azelf => "33DB175E98E892F7",
+            LegendsOnMap.Manaphy => "E1CBACBBA2D63665",
             _ => throw new NotImplementedException("Invalid scan location."),
         };
 
@@ -1315,15 +1350,15 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
             if (!isSpawner)
             {
                 groupID--;
-                Log($"Bad SpawnerID {bytes:X16}\nTrying again with SpawnerID: {groupID}.");
+               // Log($"Bad SpawnerID {bytes:X16}\nTrying again with SpawnerID: {groupID}.");
                 continue;
             }
-            Log($"Checking SpawnerID: {groupID}...");
+          //  Log($"Checking SpawnerID: {groupID}...");
             var SpawnerOffpoint = new long[] { 0x42a6ee0, 0x330, 0x70 + groupID * 0x440 + 0x20 };
             var SpawnerOff = await SwitchConnection.PointerAll(SpawnerOffpoint, token).ConfigureAwait(false);
             var GeneratorSeed = await SwitchConnection.ReadBytesAbsoluteAsync(SpawnerOff, 8, token).ConfigureAwait(false);
 
-            Log($"SpawnerID {bytes:X16} - Generator Seed: {BitConverter.ToString(GeneratorSeed).Replace("-", "")}");
+           // Log($"SpawnerID {bytes:X16} - Generator Seed: {BitConverter.ToString(GeneratorSeed).Replace("-", "")}");
             var group_seed = (BitConverter.ToUInt64(GeneratorSeed, 0) - 0x82A2B175229D6A5B) & 0xFFFFFFFFFFFFFFFF;
             GenerateNextShiny(0, group_seed);
         }
@@ -1360,15 +1395,15 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
                 if (!isSpawner)
                 {
                     i--;
-                    Log($"Bad SpawnerID {bytes:X16}\nTrying again with SpawnerID: {i}.");
+                  //  Log($"Bad SpawnerID {bytes:X16}\nTrying again with SpawnerID: {i}.");
                     continue;
                 }
-                Log($"Checking SpawnerID: {i}...");
+                //  Log($"Checking SpawnerID: {i}...");
                 var SpawnerOffpoint = new long[] { 0x42a6ee0, 0x330, 0x70 + i * 0x440 + 0x20 };
                 var SpawnerOff = await SwitchConnection.PointerAll(SpawnerOffpoint, token).ConfigureAwait(false);
                 var GeneratorSeed = await SwitchConnection.ReadBytesAbsoluteAsync(SpawnerOff, 8, token).ConfigureAwait(false);
 
-                Log($"SpawnerID {bytes:X16} - Generator Seed: {BitConverter.ToString(GeneratorSeed).Replace("-", "")}");
+                //  Log($"SpawnerID {bytes:X16} - Generator Seed: {BitConverter.ToString(GeneratorSeed).Replace("-", "")}");
                 var group_seed = (BitConverter.ToUInt64(GeneratorSeed, 0) - 0x82A2B175229D6A5B) & 0xFFFFFFFFFFFFFFFF;
                 if (i == 409)
                     GenerateCaveFamily(true, group_seed);
@@ -1381,8 +1416,11 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
                     await Click(HOME, 0_700, token).ConfigureAwait(false);
                     if (Settings.ContinueAfterMatch == ContinueAfterMatch.PauseWaitAcknowledge)
                     {
-                        await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0xD65F03C0), MainNsoBase + InvincibleTrainer1, token).ConfigureAwait(false);
-                        await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0xD65F03C0), MainNsoBase + InvincibleTrainer2, token).ConfigureAwait(false);
+                        if (Settings.SpecialConditions.UsePlayerInvincibleCheat)
+                        {
+                            await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0xD65F03C0), MainNsoBase + InvincibleTrainer1, token).ConfigureAwait(false);
+                            await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0xD65F03C0), MainNsoBase + InvincibleTrainer2, token).ConfigureAwait(false);
+                        }
 
                         IsWaiting = true;
                         while (IsWaiting)
@@ -1753,7 +1791,7 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
                 var print = Hub.Config.StopConditions.GetAlphaPrintName(pk);
                 EchoUtil.EchoEmbed(Hub.Config.StopConditions.MatchFoundEchoMention, print, url, "", true);
             }
-            Log($"\n{(Species)pk.Species}\nEC: {pk.EncryptionConstant:X8}\nPID: {pk.PID:X8}\nIVs: {pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}\nNature: {(Nature)pk.Nature}\nGenerator Seed: {generator_seed:X16}");
+          //  Log($"\n{(Species)pk.Species}\nEC: {pk.EncryptionConstant:X8}\nPID: {pk.PID:X8}\nIVs: {pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}\nNature: {(Nature)pk.Nature}\nGenerator Seed: {generator_seed:X16}");
         }
     }
 
@@ -1802,6 +1840,7 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
                         LegendsOnMap.Cresselia => Species.Cresselia,
                         LegendsOnMap.Shaymin => Species.Shaymin,
                         LegendsOnMap.Darkrai => Species.Darkrai,
+                        LegendsOnMap.Manaphy => Species.Manaphy,
                         _ => throw new NotImplementedException("Invalid location."),
                     };
                 }
@@ -1811,7 +1850,7 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
                 var rng = new Xoroshiro128Plus(generator_seed);
                 rng.Next();
 
-                var genderratio = Settings.SpecialConditions.TypeOfLegend is LegendsOnMap.Heatran ? 127 : -1;
+                var genderratio = Settings.SpecialConditions.TypeOfLegend is LegendsOnMap.Heatran ? 127 : 0;
                 var gen = GenerateFromSeed(rng.Next(), 1, 3, genderratio);
                 pk.Species = (ushort)species;
                 pk.EncryptionConstant = gen.EC;
@@ -1827,14 +1866,14 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
 
                 if (StopConditionSettings.EncounterFound(pk, DesiredMinIVs, DesiredMaxIVs, Hub.Config.StopConditions, null))
                 {
-                    Log($"\nAdvance: {i} - {species}\nEC: {pk.EncryptionConstant:X8}\nPID: {pk.PID:X8}\nIVs: {pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}\nNature: {(Nature)pk.Nature}\nGenerator Seed: {generator_seed:X16}");
+                    Log($"\nAdvance: {i} - {species}\nEC: {pk.EncryptionConstant:X8}\nPID: {pk.PID:X8}\nIVs: {pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}\nNature: {pk.Nature}\nGenerator Seed: {generator_seed:X16}");
                     Settings.AlphaScanConditions.StopOnMatch = true;
                     string url = TradeExtensions<PK9>.PokeImg(pk, false, false);
                     var print = Hub.Config.StopConditions.GetAlphaPrintName(pk);
                     EchoUtil.EchoEmbed(Hub.Config.StopConditions.MatchFoundEchoMention, print, url, "", true);
                     return (newseed, pk);
                 }
-                Log($"\nAdvance: {i} - {species}\nEC: {pk.EncryptionConstant:X8}\nPID: {pk.PID:X8}\nIVs: {pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}\nNature: {(Nature)pk.Nature}\nGenerator Seed: {generator_seed:X16}");
+               // Log($"\nAdvance: {i} - {species}\nEC: {pk.EncryptionConstant:X8}\nPID: {pk.PID:X8}\nIVs: {pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}\nNature: {pk.Nature}\nGenerator Seed: {generator_seed:X16}");
 
                 mainrng = new Xoroshiro128Plus(mainrng.Next());
             }
@@ -1860,7 +1899,7 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
                 rng.Next();
 
                 var gen = GenerateFromSeed(rng.Next(), (int)Settings.AlphaScanConditions.StaticAlphaShinyRolls, givs, 0);
-                Log($"\nAdvances: {i}\nAlpha: {species} - {gen.shinyXor} | SpawnerID: {spawnerid}\nEC: {gen.EC:X8}\nPID: {gen.PID:X8}\nIVs: {string.Join("/", gen.IVs)}\nNature: {gen.Item8}\nSeed: {gen.Item9:X16}");
+               // Log($"\nAdvances: {i}\nAlpha: {species} - {gen.shinyXor} | SpawnerID: {spawnerid}\nEC: {gen.EC:X8}\nPID: {gen.PID:X8}\nIVs: {string.Join("/", gen.IVs)}\nNature: {gen.Item8}\nSeed: {gen.Item9:X16}");
                 if (gen.shiny)
                 {
                     if (Settings.SpeciesToHunt.Length != 0 && !Settings.SpeciesToHunt.Contains(species))
@@ -1868,21 +1907,21 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
 
                     if (StopConditionSettings.EncounterFound(pk, DesiredMinIVs, DesiredMaxIVs, Hub.Config.StopConditions, null))
                     {
-                        Log($"\nAdvances: {i}\nAlpha: {species} - {gen.shinyXor} | SpawnerID: {spawnerid}\nEC: {gen.EC:X8}\nPID: {gen.PID:X8}\nIVs: {string.Join("/", gen.IVs)}\nNature: {gen.Item8}\nSeed: {gen.Item9:X16}");
+                        //Log($"\nAdvances: {i}\nAlpha: {species} - {gen.shinyXor} | SpawnerID: {spawnerid}\nEC: {gen.EC:X8}\nPID: {gen.PID:X8}\nIVs: {string.Join("/", gen.IVs)}\nNature: {gen.Item8}\nSeed: {gen.Item9:X16}");
                         newseed = generator_seed;
                         Settings.AlphaScanConditions.StopOnMatch = true;
                         hits++;
 
                         if (hits == 3)
                         {
-                            Log($"First three shiny results for {species} found.");
+                           // Log($"First three shiny results for {species} found.");
                             break;
                         }
                     }
                 }
                 mainrng = new Xoroshiro128Plus(mainrng.Next());
-                if (i == Settings.SpecialConditions.MaxAdvancesToSearch - 1 && !gen.shiny)
-                    Log($"No results within {Settings.SpecialConditions.MaxAdvancesToSearch} advances for {species} | SpawnerID: {spawnerid}.");
+               // if (i == Settings.SpecialConditions.MaxAdvancesToSearch - 1 && !gen.shiny);
+                    //Log($"No results within {Settings.SpecialConditions.MaxAdvancesToSearch} advances for {species} | SpawnerID: {spawnerid}.");
             }
         }
 
@@ -1891,8 +1930,8 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
 
     private async Task PerformOutbreakScan(PokedexSaveData dex, CancellationToken token)
     {
-        List<string> speclist = new();
-        List<string> result = new();
+        List<string> speclist = [];
+        List<string> result = [];
         string[] list = Settings.SpeciesToHunt.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
         var ofs = new long[] { 0x42BA6B0, 0x2B0, 0x58, 0x18, 0x20 };
         var outbreakptr = await SwitchConnection.PointerAll(ofs, token).ConfigureAwait(false);
@@ -2093,8 +2132,11 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
                 await Task.Delay(1_000, token).ConfigureAwait(false);
                 if (!IsWaitingConfirmation)
                 {
-                    await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0xD65F03C0), MainNsoBase + InvincibleTrainer1, token).ConfigureAwait(false);
-                    await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0xD65F03C0), MainNsoBase + InvincibleTrainer2, token).ConfigureAwait(false);
+                    if (Settings.SpecialConditions.UsePlayerInvincibleCheat)
+                    {
+                        await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0xD65F03C0), MainNsoBase + InvincibleTrainer1, token).ConfigureAwait(false);
+                        await SwitchConnection.WriteBytesAbsoluteAsync(BitConverter.GetBytes(0xD65F03C0), MainNsoBase + InvincibleTrainer2, token).ConfigureAwait(false);
+                    }
 
                     await TeleportToMMOGroupZone(token).ConfigureAwait(false);
                     await Click(HOME, 1_000, token).ConfigureAwait(false);
@@ -2387,8 +2429,8 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
 
     private async Task PerformMMOScan(PokedexSaveData dex, CancellationToken token)
     {
-        List<string> logs = new();
-        List<string> mmoactive = new();
+        List<string> logs = [];
+        List<string> mmoactive = [];
         var ofs = new long[] { 0x42BA6B0, 0x2B0, 0x58, 0x18, 0x1B0 };
         var outbreakptr = await SwitchConnection.PointerAll(ofs, token).ConfigureAwait(false);
         var info = await SwitchConnection.ReadBytesAbsoluteAsync(outbreakptr, 14720, token).ConfigureAwait(false);
@@ -2396,7 +2438,7 @@ public sealed class ArceusBot : PokeRoutineExecutor8LA, IEncounterBot, IArceusBo
         for (int mapcount = 0; mapcount < 5; mapcount++)
         {
             ResultsUtil.Log($"Checking map #{mapcount + 1}...", "");
-            ofs = new long[] { 0x42BA6B0, 0x2B0, 0x58, 0x18, 0x1B0 + (mapcount * 0xB80) };
+            ofs = [0x42BA6B0, 0x2B0, 0x58, 0x18, 0x1B0 + (mapcount * 0xB80)];
             outbreakptr = await SwitchConnection.PointerAll(ofs, token).ConfigureAwait(false);
             var active = BitConverter.ToUInt16(await SwitchConnection.ReadBytesAbsoluteAsync(outbreakptr, 2, token).ConfigureAwait(false), 0);
             bool areavalid = $"{active:X4}" is not ("0000" or "2645");
